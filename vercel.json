@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/recurring-income/process",
+      "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/recurring-transactions/process",
+      "schedule": "0 1 * * *"
+    }
+  ]
+}
+

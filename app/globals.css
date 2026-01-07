@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* RTL Support */
+[dir='rtl'] {
+  direction: rtl;
+}
+
+/* RTL-specific utilities */
+.rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* Ensure proper text alignment in RTL */
+[dir='rtl'] .text-left {
+  text-align: right;
+}
+
+[dir='rtl'] .text-right {
+  text-align: left;
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 142 71% 45%;
+    --chart-3: 47 96% 53%;
+    --chart-4: 262 83% 58%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 199 89% 48%;
+  }
+
+  .dark {
+    --background: 224 71% 4%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 142 76% 36%;
+    --chart-3: 48 96% 53%;
+    --chart-4: 263 70% 50%;
+    --chart-5: 340 75% 55%;
+    --chart-6: 199 89% 48%;
+  }
+
+  * {
+    @apply border-light-border dark:border-dark-border;
+  }
+  
+  html {
+    @apply antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  body {
+    @apply bg-light-bg dark:bg-dark-bg text-light-text-primary dark:text-dark-text-primary;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* Focus visible for accessibility */
+@layer utilities {
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-dark-bg;
+  }
+}
+
