@@ -1,8 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Wallet, Building2, CreditCard, Banknote, ArrowRight, ArrowLeft, Lightbulb } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Wallet, Building2, CreditCard, Banknote, ArrowRight, ArrowLeft, Lightbulb, AlertCircle } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 
@@ -11,10 +11,15 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [selectedType, setSelectedType] = useState('bank')
+  const [shake, setShake] = useState(false)
+  const [errors, setErrors] = useState({
+    name: false,
+    balance: false,
+  })
   
   const [formData, setFormData] = useState({
     name: '',
-    balance: '',
+    balance: '0',
   })
 
   const accountTypes = [
@@ -23,16 +28,36 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
     { id: 'credit', icon: CreditCard, label: t('onboarding.account.typeCredit') },
   ]
 
+  const triggerShake = () => {
+    setShake(true)
+    setTimeout(() => setShake(false), 500)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     
+    // Reset errors
+    setErrors({ name: false, balance: false })
+    
+    // Validate
+    let hasError = false
+    const newErrors = { name: false, balance: false }
+    
     if (!formData.name.trim()) {
-      toast.error(t('onboarding.account.errorName'))
-      return
+      newErrors.name = true
+      hasError = true
     }
 
-    if (!formData.balance || isNaN(Number(formData.balance))) {
-      toast.error(t('onboarding.account.errorBalance'))
+    // Balance is optional, default is 0. Only validate if user entered invalid value
+    const balanceValue = formData.balance.trim()
+    if (balanceValue && isNaN(Number(balanceValue))) {
+      newErrors.balance = true
+      hasError = true
+    }
+    
+    if (hasError) {
+      setErrors(newErrors)
+      triggerShake()
       return
     }
 
@@ -45,7 +70,7 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
         body: JSON.stringify({
           name: formData.name.trim(),
           type: selectedType,
-          balance: Number(formData.balance),
+          balance: Number(formData.balance) || 0,
           currency: currency,
         }),
       })
@@ -62,6 +87,21 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
       toast.error(t('common.error'), error.message)
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  // Clear error when user starts typing
+  const handleNameChange = (e) => {
+    setFormData(prev => ({ ...prev, name: e.target.value }))
+    if (errors.name && e.target.value.trim()) {
+      setErrors(prev => ({ ...prev, name: false }))
+    }
+  }
+
+  const handleBalanceChange = (e) => {
+    setFormData(prev => ({ ...prev, balance: e.target.value }))
+    if (errors.balance && e.target.value && !isNaN(Number(e.target.value))) {
+      setErrors(prev => ({ ...prev, balance: false }))
     }
   }
 
@@ -85,6 +125,32 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
     },
   }
 
+  const shakeVariants = {
+    shake: {
+      x: [0, -10, 10, -10, 10, -5, 5, 0],
+      transition: { duration: 0.5 },
+    },
+    still: {
+      x: 0,
+    },
+  }
+
+  const errorVariants = {
+    hidden: { opacity: 0, y: -10, height: 0 },
+    visible: { 
+      opacity: 1, 
+      y: 0, 
+      height: 'auto',
+      transition: { type: 'spring', stiffness: 500, damping: 30 }
+    },
+    exit: { 
+      opacity: 0, 
+      y: -10, 
+      height: 0,
+      transition: { duration: 0.2 }
+    },
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -104,7 +170,11 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
         </p>
       </motion.div>
 
-      <form onSubmit={handleSubmit}>
+      <motion.form 
+        onSubmit={handleSubmit}
+        variants={shakeVariants}
+        animate={shake ? 'shake' : 'still'}
+      >
         {/* Account Type Selection */}
         <motion.div variants={itemVariants} className="mb-6">
           <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-3">
@@ -143,13 +213,35 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
         <motion.div variants={itemVariants} className="mb-4">
           <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
             {t('onboarding.account.nameLabel')}
+            <span className="text-rose-500 ml-1">*</span>
           </label>
+          
+          {/* Error Message */}
+          <AnimatePresence>
+            {errors.name && (
+              <motion.div
+                variants={errorVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="flex items-center gap-2 mb-2 text-rose-500"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">{t('onboarding.account.errorName')}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <input
             type="text"
             value={formData.name}
-            onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+            onChange={handleNameChange}
             placeholder={t('onboarding.account.namePlaceholder')}
-            className="w-full px-4 py-3.5 rounded-xl bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent focus:border-transparent transition-all"
+            className={`w-full px-4 py-3.5 rounded-xl bg-light-elevated dark:bg-dark-elevated border text-light-text-primary dark:text-dark-text-primary placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary focus:outline-none focus:ring-2 focus:border-transparent transition-all ${
+              errors.name 
+                ? 'border-rose-500 focus:ring-rose-500' 
+                : 'border-light-border dark:border-dark-border focus:ring-light-accent dark:focus:ring-dark-accent'
+            }`}
             autoFocus
           />
         </motion.div>
@@ -159,6 +251,23 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
           <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
             {t('onboarding.account.balanceLabel')}
           </label>
+          
+          {/* Error Message */}
+          <AnimatePresence>
+            {errors.balance && (
+              <motion.div
+                variants={errorVariants}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                className="flex items-center gap-2 mb-2 text-rose-500"
+              >
+                <AlertCircle className="w-4 h-4" />
+                <span className="text-sm font-medium">{t('onboarding.account.errorBalance')}</span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-light-text-tertiary dark:text-dark-text-tertiary font-medium">
               {currencySymbol}
@@ -166,9 +275,13 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
             <input
               type="number"
               value={formData.balance}
-              onChange={(e) => setFormData(prev => ({ ...prev, balance: e.target.value }))}
+              onChange={handleBalanceChange}
               placeholder="0"
-              className="w-full px-4 py-3.5 rounded-xl bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent focus:border-transparent transition-all text-start"
+              className={`w-full px-4 py-3.5 rounded-xl bg-light-elevated dark:bg-dark-elevated border text-light-text-primary dark:text-dark-text-primary placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary focus:outline-none focus:ring-2 focus:border-transparent transition-all text-start ${
+                errors.balance 
+                  ? 'border-rose-500 focus:ring-rose-500' 
+                  : 'border-light-border dark:border-dark-border focus:ring-light-accent dark:focus:ring-dark-accent'
+              }`}
               style={{ paddingInlineStart: '2.5rem' }}
               dir="ltr"
             />
@@ -211,8 +324,7 @@ export function AddAccountStep({ onNext, onBack, currency, currencySymbol }) {
             )}
           </button>
         </motion.div>
-      </form>
+      </motion.form>
     </motion.div>
   )
 }
-

@@ -6,6 +6,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { WelcomeStep } from './components/WelcomeStep'
+import { ProfileStep } from './components/ProfileStep'
+import { GoalsStep } from './components/GoalsStep'
+import { GoalSetupStep } from './components/GoalSetupStep'
 import { AddAccountStep } from './components/AddAccountStep'
 import { QuickSetupStep } from './components/QuickSetupStep'
 import { CompletionStep } from './components/CompletionStep'
@@ -19,12 +22,29 @@ export function OnboardingClient({ categories }) {
   
   // Store the data collected during onboarding
   const [onboardingData, setOnboardingData] = useState({
+    profile: {
+      name: '',
+      language: locale || 'en',
+      currency: currency || 'USD',
+      monthStartDay: 1,
+    },
+    selectedGoals: [], // Just the goal IDs
+    configuredGoals: [], // Full goal configurations
     account: null,
     recurringIncome: null,
     recurringExpenses: [],
   })
 
-  const totalSteps = 4
+  // Steps:
+  // 0: Welcome
+  // 1: Profile
+  // 2: Goals (select which goals)
+  // 3: GoalSetup (configure each selected goal) - skipped if no goals
+  // 4: Account
+  // 5: QuickSetup
+  // 6: Completion
+  const totalSteps = 7
+  const progressSteps = 5 // Profile through QuickSetup (excluding GoalSetup if skipped)
   
   const handleNext = () => {
     if (currentStep < totalSteps - 1) {
@@ -34,8 +54,77 @@ export function OnboardingClient({ categories }) {
 
   const handleBack = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1)
+      // If we're on Account step (4) and no goals were selected, go back to Goals (2)
+      if (currentStep === 4 && onboardingData.selectedGoals.length === 0) {
+        setCurrentStep(2)
+      } else {
+        setCurrentStep(currentStep - 1)
+      }
     }
+  }
+
+  const handleProfileComplete = async (profileData) => {
+    setOnboardingData(prev => ({ ...prev, profile: profileData }))
+    
+    // Save profile to database
+    try {
+      await fetch('/api/onboarding/profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileData),
+      })
+    } catch (error) {
+      console.error('Error saving profile:', error)
+    }
+    
+    handleNext()
+  }
+
+  const handleGoalsSelected = async (goals) => {
+    setOnboardingData(prev => ({ ...prev, selectedGoals: goals }))
+    
+    // Save selected goals to database
+    try {
+      await fetch('/api/onboarding/goals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goals }),
+      })
+    } catch (error) {
+      console.error('Error saving goals:', error)
+    }
+    
+    // If goals were selected, go to GoalSetup step, otherwise skip to Account
+    if (goals.length > 0) {
+      setCurrentStep(3) // GoalSetup
+    } else {
+      setCurrentStep(4) // Account
+    }
+  }
+
+  const handleGoalSetupComplete = async (configuredGoals) => {
+    setOnboardingData(prev => ({ ...prev, configuredGoals }))
+    
+    // Create savings goals in the database
+    try {
+      for (const goal of configuredGoals) {
+        await fetch('/api/goals', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: goal.name,
+            icon: goal.icon,
+            targetAmount: goal.targetAmount,
+            targetDate: goal.targetDate,
+            currentAmount: goal.initialAmount || 0,
+          }),
+        })
+      }
+    } catch (error) {
+      console.error('Error creating goals:', error)
+    }
+    
+    setCurrentStep(4) // Go to Account
   }
 
   const handleAccountCreated = (account) => {
@@ -78,6 +167,10 @@ export function OnboardingClient({ categories }) {
       setIsLoading(false)
     }
   }
+
+  // Get the current currency based on onboarding data
+  const currentCurrency = onboardingData.profile.currency || currency
+  const currentCurrencySymbol = currentCurrency === 'ILS' ? '₪' : '$'
 
   // Page transition variants
   const pageVariants = {
@@ -122,15 +215,44 @@ export function OnboardingClient({ categories }) {
         )
       case 1:
         return (
+          <ProfileStep 
+            key="profile"
+            onNext={handleProfileComplete}
+            onBack={handleBack}
+            initialData={onboardingData.profile}
+          />
+        )
+      case 2:
+        return (
+          <GoalsStep 
+            key="goals"
+            onNext={handleGoalsSelected}
+            onBack={handleBack}
+            onSkip={() => setCurrentStep(4)} // Skip to Account
+            initialGoals={onboardingData.selectedGoals}
+          />
+        )
+      case 3:
+        return (
+          <GoalSetupStep 
+            key="goalsetup"
+            selectedGoals={onboardingData.selectedGoals}
+            onComplete={handleGoalSetupComplete}
+            onBack={handleBack}
+            currencySymbol={currentCurrencySymbol}
+          />
+        )
+      case 4:
+        return (
           <AddAccountStep 
             key="account"
             onNext={handleAccountCreated}
             onBack={handleBack}
-            currency={currency}
-            currencySymbol={currencySymbol}
+            currency={currentCurrency}
+            currencySymbol={currentCurrencySymbol}
           />
         )
-      case 2:
+      case 5:
         return (
           <QuickSetupStep 
             key="quicksetup"
@@ -139,24 +261,55 @@ export function OnboardingClient({ categories }) {
             onSkip={handleNext}
             account={onboardingData.account}
             categories={categories}
-            currency={currency}
-            currencySymbol={currencySymbol}
+            currency={currentCurrency}
+            currencySymbol={currentCurrencySymbol}
           />
         )
-      case 3:
+      case 6:
         return (
           <CompletionStep 
             key="completion"
             onComplete={handleComplete}
             isLoading={isLoading}
             data={onboardingData}
-            currencySymbol={currencySymbol}
+            currencySymbol={currentCurrencySymbol}
           />
         )
       default:
         return null
     }
   }
+
+  // Calculate progress - adjust for skipped GoalSetup step
+  const getProgress = () => {
+    if (currentStep === 0 || currentStep === totalSteps - 1) return 0
+    
+    // Adjust step number for progress calculation
+    let adjustedStep = currentStep
+    if (currentStep > 3 && onboardingData.selectedGoals.length === 0) {
+      adjustedStep = currentStep - 1 // Account for skipped GoalSetup
+    }
+    
+    return (adjustedStep / progressSteps) * 100
+  }
+
+  // Get current step number for display
+  const getDisplayStep = () => {
+    if (currentStep === 0 || currentStep === totalSteps - 1) return { current: 0, total: 0 }
+    
+    let current = currentStep
+    let total = progressSteps
+    
+    // If no goals selected and we're past GoalSetup, adjust
+    if (onboardingData.selectedGoals.length === 0 && currentStep > 3) {
+      current = currentStep - 1
+      total = progressSteps - 1
+    }
+    
+    return { current, total }
+  }
+
+  const displayStep = getDisplayStep()
 
   return (
     <div 
@@ -170,20 +323,20 @@ export function OnboardingClient({ categories }) {
         <div className="absolute top-1/2 right-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl" />
       </div>
 
-      {/* Progress indicator */}
+      {/* Progress indicator - show for steps 1-5 (not Welcome or Completion) */}
       {currentStep > 0 && currentStep < totalSteps - 1 && (
         <div className="fixed top-0 left-0 right-0 z-50 px-4 pt-4 lg:pt-6">
           <div className="max-w-md mx-auto">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('onboarding.step', { current: currentStep, total: totalSteps - 2 })}
+                {displayStep.current > 0 && t('onboarding.step', { current: displayStep.current, total: displayStep.total })}
               </span>
             </div>
             <div className="h-1 bg-light-border dark:bg-dark-border rounded-full overflow-hidden">
               <motion.div 
                 className="h-full bg-gradient-to-r from-light-accent to-blue-500 dark:from-dark-accent dark:to-blue-400 rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: `${((currentStep) / (totalSteps - 2)) * 100}%` }}
+                animate={{ width: `${getProgress()}%` }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
               />
             </div>
@@ -212,4 +365,3 @@ export function OnboardingClient({ categories }) {
     </div>
   )
 }
-

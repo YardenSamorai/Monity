@@ -16,6 +16,14 @@ model User {
   id            String    @id @default(cuid())
   clerkUserId   String    @unique
   email         String?
+  
+  // Profile
+  name          String?
+  preferredLanguage String @default("en") // "en" or "he"
+  preferredCurrency String @default("USD") // "USD" or "ILS"
+  monthStartDay Int       @default(1) // 1-28, day of month when budget period starts
+  financialGoals String?  // JSON array of goals: ["emergency_fund", "vacation", etc.]
+  
   hasCompletedOnboarding Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
