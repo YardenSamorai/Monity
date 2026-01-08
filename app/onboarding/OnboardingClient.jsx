@@ -192,20 +192,22 @@ export function OnboardingClient({ categories }) {
       )}
 
       {/* Main content */}
-      <div className="relative min-h-screen flex items-center justify-center p-4 lg:p-8">
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={currentStep}
-            custom={direction}
-            variants={pageVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            className="w-full max-w-md"
-          >
-            {renderStep()}
-          </motion.div>
-        </AnimatePresence>
+      <div className="relative min-h-screen flex items-center justify-center p-4 lg:p-8 overflow-y-auto">
+        <div className="w-full max-w-md my-auto py-8 sm:py-4">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={currentStep}
+              custom={direction}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              className="w-full"
+            >
+              {renderStep()}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </div>
   )
