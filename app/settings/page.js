@@ -1,29 +1,39 @@
 import { redirect } from 'next/navigation'
-import { Suspense } from 'react'
-import { auth } from '@clerk/nextjs/server'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { SettingsClient } from './SettingsClient'
+import { serializePrismaData } from '@/lib/utils'
+
+// Enable caching for this route
+export const revalidate = 60 // Revalidate every 60 seconds
 
 export default async function SettingsPage() {
-  const { userId } = await auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
-  
   const user = await getOrCreateUser()
   if (!user) {
     redirect('/sign-in')
   }
   
   // Get accounts, categories, API tokens, recurring incomes, and recurring transactions
+  // Using Promise.all for parallel execution and select for optimized queries
   const [accounts, categories, apiTokens, recurringIncomes, recurringTransactions] = await Promise.all([
+    // Accounts - only select needed fields
     prisma.account.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        balance: true,
+        currency: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     }),
+    
+    // Categories - only select needed fields
     prisma.category.findMany({
       where: {
         OR: [
@@ -32,7 +42,20 @@ export default async function SettingsPage() {
         ],
       },
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        color: true,
+        icon: true,
+        isDefault: true,
+        userId: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     }),
+    
+    // API Tokens - already optimized with select
     prisma.apiToken.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -46,20 +69,70 @@ export default async function SettingsPage() {
         createdAt: true,
       },
     }),
+    
+    // Recurring Incomes - select only needed fields from relations
     prisma.recurringIncome.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
-      include: {
-        account: true,
-        category: true,
+      select: {
+        id: true,
+        amount: true,
+        description: true,
+        dayOfMonth: true,
+        isActive: true,
+        nextRunDate: true,
+        lastRunDate: true,
+        createdAt: true,
+        updatedAt: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
       },
     }),
+    
+    // Recurring Transactions - select only needed fields from relations
     prisma.recurringTransaction.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
-      include: {
-        account: true,
-        category: true,
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        description: true,
+        dayOfMonth: true,
+        isActive: true,
+        nextRunDate: true,
+        lastRunDate: true,
+        endDate: true,
+        createdAt: true,
+        updatedAt: true,
+        account: {
+          select: {
+            id: true,
+            name: true,
+            type: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            icon: true,
+          },
+        },
       },
     }),
   ])
@@ -67,30 +140,14 @@ export default async function SettingsPage() {
   return (
     <AppShell>
       <div className="min-h-screen p-4 lg:p-8">
-        <Suspense fallback={<SettingsLoadingSkeleton />}>
-          <SettingsClient
-            initialAccounts={JSON.parse(JSON.stringify(accounts))}
-            initialCategories={JSON.parse(JSON.stringify(categories))}
-            initialTokens={JSON.parse(JSON.stringify(apiTokens))}
-            initialRecurringIncomes={JSON.parse(JSON.stringify(recurringIncomes))}
-            initialRecurringTransactions={JSON.parse(JSON.stringify(recurringTransactions))}
-          />
-        </Suspense>
+        <SettingsClient
+          initialAccounts={serializePrismaData(accounts)}
+          initialCategories={serializePrismaData(categories)}
+          initialTokens={serializePrismaData(apiTokens)}
+          initialRecurringIncomes={serializePrismaData(recurringIncomes)}
+          initialRecurringTransactions={serializePrismaData(recurringTransactions)}
+        />
       </div>
     </AppShell>
-  )
-}
-
-function SettingsLoadingSkeleton() {
-  return (
-    <div className="space-y-6 animate-pulse">
-      <div className="h-10 bg-light-surface dark:bg-dark-surface rounded-xl w-48" />
-      <div className="flex gap-2">
-        {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="h-10 bg-light-surface dark:bg-dark-surface rounded-xl w-32" />
-        ))}
-      </div>
-      <div className="h-64 bg-light-surface dark:bg-dark-surface rounded-2xl" />
-    </div>
   )
 }

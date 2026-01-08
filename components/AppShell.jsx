@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
@@ -24,14 +24,59 @@ import { IconButton } from './ui/Button'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
 
+// Separate component for settings sub-items that uses searchParams
+function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t }) {
+  const searchParams = useSearchParams()
+  const currentTab = searchParams.get('tab')
+
+  const settingsSubItems = [
+    { id: 'general', name: t('settings.tabs.general'), icon: Palette, href: '/settings?tab=general' },
+    { id: 'accounts', name: t('settings.tabs.accounts'), icon: Wallet, href: '/settings?tab=accounts' },
+    { id: 'recurring', name: t('settings.tabs.recurring'), icon: Repeat, href: '/settings?tab=recurring' },
+    { id: 'api', name: t('settings.tabs.api'), icon: Key, href: '/settings?tab=api' },
+  ]
+
+  return (
+    <div className={cn(
+      "overflow-hidden transition-all duration-300",
+      settingsExpanded ? "max-h-64 opacity-100 mt-1" : "max-h-0 opacity-0"
+    )}>
+      <div className={cn(
+        "space-y-1",
+        isRTL ? "pr-4" : "pl-4"
+      )}>
+        {settingsSubItems.map((subItem) => {
+          const SubIcon = subItem.icon
+          const isSubActive = isSettingsActive && currentTab === subItem.id
+          const isDefaultActive = isSettingsActive && !currentTab && subItem.id === 'general'
+          const active = isSubActive || isDefaultActive
+          
+          return (
+            <Link
+              key={subItem.id}
+              href={subItem.href}
+              className={cn(
+                'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                active
+                  ? 'bg-light-accent/10 dark:bg-dark-accent/20 text-light-accent dark:text-dark-accent'
+                  : 'text-light-text-tertiary dark:text-dark-text-tertiary hover:bg-light-surface dark:hover:bg-dark-elevated hover:text-light-text-secondary dark:hover:text-dark-text-secondary'
+              )}
+            >
+              <SubIcon className="w-4 h-4 flex-shrink-0" />
+              {subItem.name}
+            </Link>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 export default function AppShell({ children }) {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(pathname.startsWith('/settings'))
   const { t, isRTL } = useI18n()
-
-  const currentTab = searchParams.get('tab')
 
   const navigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
@@ -39,13 +84,6 @@ export default function AppShell({ children }) {
     { name: t('nav.budget'), href: '/budget', icon: Target },
     { name: t('nav.analytics'), href: '/analytics', icon: TrendingUp },
     { name: t('nav.goals'), href: '/goals', icon: PiggyBank },
-  ]
-
-  const settingsSubItems = [
-    { id: 'general', name: t('settings.tabs.general'), icon: Palette, href: '/settings?tab=general' },
-    { id: 'accounts', name: t('settings.tabs.accounts'), icon: Wallet, href: '/settings?tab=accounts' },
-    { id: 'recurring', name: t('settings.tabs.recurring'), icon: Repeat, href: '/settings?tab=recurring' },
-    { id: 'api', name: t('settings.tabs.api'), icon: Key, href: '/settings?tab=api' },
   ]
 
   const mobileNav = [
@@ -92,6 +130,7 @@ export default function AppShell({ children }) {
                 <Link
                   key={item.name}
                   href={item.href}
+                  prefetch={true}
                   className={cn(
                     'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
                     isActive
@@ -126,39 +165,15 @@ export default function AppShell({ children }) {
                 )} />
               </button>
 
-              {/* Sub-items */}
-              <div className={cn(
-                "overflow-hidden transition-all duration-300",
-                settingsExpanded ? "max-h-64 opacity-100 mt-1" : "max-h-0 opacity-0"
-              )}>
-                <div className={cn(
-                  "space-y-1",
-                  isRTL ? "pr-4" : "pl-4"
-                )}>
-                  {settingsSubItems.map((subItem) => {
-                    const SubIcon = subItem.icon
-                    const isSubActive = isSettingsActive && currentTab === subItem.id
-                    const isDefaultActive = isSettingsActive && !currentTab && subItem.id === 'general'
-                    const active = isSubActive || isDefaultActive
-                    
-                    return (
-                      <Link
-                        key={subItem.id}
-                        href={subItem.href}
-                        className={cn(
-                          'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                          active
-                            ? 'bg-light-accent/10 dark:bg-dark-accent/20 text-light-accent dark:text-dark-accent'
-                            : 'text-light-text-tertiary dark:text-dark-text-tertiary hover:bg-light-surface dark:hover:bg-dark-elevated hover:text-light-text-secondary dark:hover:text-dark-text-secondary'
-                        )}
-                      >
-                        <SubIcon className="w-4 h-4 flex-shrink-0" />
-                        {subItem.name}
-                      </Link>
-                    )
-                  })}
-                </div>
-              </div>
+              {/* Sub-items - wrapped in Suspense to prevent blocking */}
+              <Suspense fallback={null}>
+                <SettingsSubNav 
+                  isSettingsActive={isSettingsActive} 
+                  settingsExpanded={settingsExpanded} 
+                  isRTL={isRTL} 
+                  t={t} 
+                />
+              </Suspense>
             </div>
           </nav>
 

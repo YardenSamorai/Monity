@@ -1,30 +1,17 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { DashboardClient } from './DashboardClient'
-import { getMonthRange } from '@/lib/utils'
+import { getMonthRange, serializePrismaData } from '@/lib/utils'
+
+// Enable dynamic rendering with caching
+export const revalidate = 30 // Revalidate every 30 seconds
 
 export default async function DashboardPage() {
-  const { userId } = await auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
-  
   const user = await getOrCreateUser()
   if (!user) {
     redirect('/sign-in')
-  }
-  
-  // Check if user needs onboarding
-  const accountCount = await prisma.account.count({
-    where: { userId: user.id }
-  })
-  
-  if (!user.hasCompletedOnboarding && accountCount === 0) {
-    redirect('/onboarding')
   }
   
   // Get current month data
@@ -33,42 +20,118 @@ export default async function DashboardPage() {
   const currentYear = now.getFullYear()
   const { start, end } = getMonthRange(currentYear, currentMonth)
   
-  // Get accounts
-  const accounts = await prisma.account.findMany({
-    where: { userId: user.id, isActive: true },
-    orderBy: { createdAt: 'asc' },
-  })
+  // Single parallel fetch for all data including onboarding check
+  const [
+    accounts,
+    monthlyTransactions,
+    recurringIncomes,
+    recurringTransactions,
+    recentTransactions,
+    categories,
+  ] = await Promise.all([
+    // Accounts - select only needed fields
+    prisma.account.findMany({
+      where: { userId: user.id, isActive: true },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        balance: true,
+        currency: true,
+      },
+    }),
+    
+    // Monthly transactions - select only needed fields
+    prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        date: { gte: start, lte: end },
+      },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        description: true,
+        date: true,
+        recurringTransactionId: true,
+        account: { select: { id: true, name: true, type: true } },
+        category: { select: { id: true, name: true, color: true, icon: true } },
+      },
+    }),
+    
+    // Recurring incomes - select only needed fields
+    prisma.recurringIncome.findMany({
+      where: { userId: user.id, isActive: true },
+      select: {
+        id: true,
+        amount: true,
+        nextRunDate: true,
+        lastRunDate: true,
+      },
+    }),
+    
+    // Recurring transactions - select only needed fields
+    prisma.recurringTransaction.findMany({
+      where: { userId: user.id, isActive: true },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        description: true,
+        dayOfMonth: true,
+        nextRunDate: true,
+        lastRunDate: true,
+        endDate: true,
+        account: { select: { id: true, name: true, type: true } },
+        category: { select: { id: true, name: true, color: true, icon: true } },
+      },
+    }),
+    
+    // Recent transactions
+    prisma.transaction.findMany({
+      where: { userId: user.id },
+      take: 5,
+      orderBy: { date: 'desc' },
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        description: true,
+        date: true,
+        account: { select: { id: true, name: true, type: true } },
+        category: { select: { id: true, name: true, color: true, icon: true } },
+      },
+    }),
+    
+    // Categories - select only needed fields
+    prisma.category.findMany({
+      where: {
+        OR: [
+          { userId: user.id },
+          { isDefault: true },
+        ],
+      },
+      orderBy: { name: 'asc' },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        color: true,
+        icon: true,
+      },
+    }),
+  ])
   
-  // Get monthly transactions
-  const monthlyTransactions = await prisma.transaction.findMany({
-    where: {
-      userId: user.id,
-      date: { gte: start, lte: end },
-    },
-    include: {
-      account: true,
-      category: true,
-    },
-  })
+  // Check if user needs onboarding (using already fetched accounts)
+  if (!user.hasCompletedOnboarding && accounts.length === 0) {
+    redirect('/onboarding')
+  }
   
-  // Get monthly expenses (for the modal)
+  // Process data - derive everything from fetched data
   const monthlyExpenses = monthlyTransactions.filter(t => t.type === 'expense')
-  
-  // Get active recurring incomes (for expected monthly income)
-  const recurringIncomes = await prisma.recurringIncome.findMany({
-    where: {
-      userId: user.id,
-      isActive: true,
-    },
-  })
-  
-  // Get active recurring transactions (for expected monthly expenses/income)
-  const recurringTransactions = await prisma.recurringTransaction.findMany({
-    where: {
-      userId: user.id,
-      isActive: true,
-    },
-  })
+  const actualRecurringExpenses = monthlyExpenses.filter(t => t.recurringTransactionId)
+  const recurringExpenseDefinitions = recurringTransactions.filter(rt => rt.type === 'expense')
   
   const totalIncome = monthlyTransactions
     .filter(t => t.type === 'income')
@@ -76,9 +139,7 @@ export default async function DashboardPage() {
   
   // Add recurring incomes that should have been processed this month
   const recurringIncomeAmount = recurringIncomes.reduce((sum, ri) => {
-    // Check if this recurring income should have been processed this month
     const shouldBeProcessed = ri.nextRunDate <= end && ri.nextRunDate >= start
-    // Or if it's scheduled for this month but hasn't run yet
     const scheduledThisMonth = new Date(ri.nextRunDate).getMonth() === now.getMonth() && 
                                 new Date(ri.nextRunDate).getFullYear() === now.getFullYear()
     
@@ -92,7 +153,6 @@ export default async function DashboardPage() {
   const recurringTransactionIncomeAmount = recurringTransactions
     .filter(rt => rt.type === 'income')
     .reduce((sum, rt) => {
-      // For income, check if it should be processed this month
       const shouldBeProcessed = rt.nextRunDate <= end && rt.nextRunDate >= start
       const scheduledThisMonth = new Date(rt.nextRunDate).getMonth() === now.getMonth() && 
                                   new Date(rt.nextRunDate).getFullYear() === now.getFullYear()
@@ -106,37 +166,7 @@ export default async function DashboardPage() {
   // Total income includes both actual transactions and expected recurring income
   const totalIncomeWithRecurring = totalIncome + recurringIncomeAmount + recurringTransactionIncomeAmount
   
-  const totalExpenses = monthlyTransactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + Number(t.amount), 0)
-  
-  // Get actual recurring expense transactions (that were created)
-  const actualRecurringExpenses = await prisma.transaction.findMany({
-    where: {
-      userId: user.id,
-      type: 'expense',
-      date: { gte: start, lte: end },
-      recurringTransactionId: { not: null },
-    },
-    include: {
-      account: true,
-      category: true,
-      recurringTransaction: true,
-    },
-  })
-  
-  // Get recurring expense definitions (to show even if transaction not created yet)
-  const recurringExpenseDefinitions = await prisma.recurringTransaction.findMany({
-    where: {
-      userId: user.id,
-      type: 'expense',
-      isActive: true,
-    },
-    include: {
-      account: true,
-      category: true,
-    },
-  })
+  const totalExpenses = monthlyExpenses.reduce((sum, t) => sum + Number(t.amount), 0)
   
   // Get IDs of recurring expenses that already have transactions this month
   const recurringExpenseIdsWithTransactions = new Set(
@@ -144,42 +174,18 @@ export default async function DashboardPage() {
   )
   
   // Calculate recurring expense amount - only for definitions that DON'T have transactions yet
-  // (to avoid double counting: if transaction exists, it's already in totalExpenses)
   const recurringExpenseAmount = recurringExpenseDefinitions
     .filter(re => !recurringExpenseIdsWithTransactions.has(re.id))
     .filter(re => !re.endDate || new Date(re.endDate) >= now)
     .reduce((sum, re) => sum + Number(re.amount), 0)
   
-  // Total expenses = actual transactions (which includes recurring transactions that were created)
-  // + recurring definitions that haven't created transactions yet (pending)
+  // Total expenses = actual transactions + recurring definitions that haven't created transactions yet
   const totalExpensesWithRecurring = totalExpenses + recurringExpenseAmount
   
   const netCashFlow = totalIncomeWithRecurring - totalExpensesWithRecurring
   
-  // Get recent transactions
-  const recentTransactions = await prisma.transaction.findMany({
-    where: { userId: user.id },
-    take: 5,
-    orderBy: { date: 'desc' },
-    include: {
-      account: true,
-      category: true,
-    },
-  })
-  
   // Total balance
   const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0)
-
-  // Get categories for the modal
-  const categories = await prisma.category.findMany({
-    where: {
-      OR: [
-        { userId: user.id },
-        { isDefault: true },
-      ],
-    },
-    orderBy: { name: 'asc' },
-  })
 
   return (
     <AppShell>
@@ -188,17 +194,17 @@ export default async function DashboardPage() {
         totalIncome={totalIncomeWithRecurring}
         totalExpenses={totalExpensesWithRecurring}
         netCashFlow={netCashFlow}
-        accounts={JSON.parse(JSON.stringify(accounts))}
-        recentTransactions={JSON.parse(JSON.stringify(recentTransactions))}
+        accounts={serializePrismaData(accounts)}
+        recentTransactions={serializePrismaData(recentTransactions)}
         currentDate={now.toISOString()}
         recurringIncomeAmount={recurringIncomeAmount + recurringTransactionIncomeAmount}
         recurringExpenseAmount={recurringExpenseAmount}
         actualIncome={totalIncome}
         actualExpenses={totalExpenses}
-        categories={JSON.parse(JSON.stringify(categories))}
-        monthlyExpenses={JSON.parse(JSON.stringify(monthlyExpenses))}
-        recurringExpenses={JSON.parse(JSON.stringify(actualRecurringExpenses))}
-        recurringExpenseDefinitions={JSON.parse(JSON.stringify(recurringExpenseDefinitions))}
+        categories={serializePrismaData(categories)}
+        monthlyExpenses={serializePrismaData(monthlyExpenses)}
+        recurringExpenses={serializePrismaData(actualRecurringExpenses)}
+        recurringExpenseDefinitions={serializePrismaData(recurringExpenseDefinitions)}
       />
     </AppShell>
   )

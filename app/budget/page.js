@@ -1,18 +1,13 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { BudgetClient } from './BudgetClient'
-import { getMonthRange } from '@/lib/utils'
+import { getMonthRange, serializePrismaData } from '@/lib/utils'
+
+export const revalidate = 30
 
 export default async function BudgetPage() {
-  const { userId } = await auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
-  
   const user = await getOrCreateUser()
   if (!user) {
     redirect('/sign-in')
@@ -24,39 +19,47 @@ export default async function BudgetPage() {
   const currentYear = now.getFullYear()
   const { start, end } = getMonthRange(currentYear, currentMonth)
   
-  // Get budgets for current month
-  const budgets = await prisma.budget.findMany({
-    where: {
-      userId: user.id,
-      month: currentMonth,
-      year: currentYear,
-    },
-    include: {
-      category: true,
-    },
-  })
-  
-  // Get all expense categories
-  const categories = await prisma.category.findMany({
-    where: {
-      OR: [
-        { userId: user.id, type: 'expense' },
-        { userId: user.id, type: 'both' },
-        { isDefault: true, type: 'expense' },
-        { isDefault: true, type: 'both' },
-      ],
-    },
-    orderBy: { name: 'asc' },
-  })
-  
-  // Get actual expenses for current month
-  const expenses = await prisma.transaction.findMany({
-    where: {
-      userId: user.id,
-      type: 'expense',
-      date: { gte: start, lte: end },
-    },
-  })
+  // Fetch all data in parallel with optimized select
+  const [budgets, categories, expenses] = await Promise.all([
+    // Get budgets for current month
+    prisma.budget.findMany({
+      where: {
+        userId: user.id,
+        month: currentMonth,
+        year: currentYear,
+      },
+      select: {
+        id: true,
+        amount: true,
+        categoryId: true,
+        category: { select: { id: true, name: true, color: true, icon: true } },
+      },
+    }),
+    
+    // Get all expense categories
+    prisma.category.findMany({
+      where: {
+        OR: [
+          { userId: user.id, type: 'expense' },
+          { userId: user.id, type: 'both' },
+          { isDefault: true, type: 'expense' },
+          { isDefault: true, type: 'both' },
+        ],
+      },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, type: true, color: true, icon: true },
+    }),
+    
+    // Get actual expenses for current month - only needed fields
+    prisma.transaction.findMany({
+      where: {
+        userId: user.id,
+        type: 'expense',
+        date: { gte: start, lte: end },
+      },
+      select: { id: true, amount: true, categoryId: true },
+    }),
+  ])
   
   // Calculate actuals per category
   const actualsByCategory = {}
@@ -77,8 +80,8 @@ export default async function BudgetPage() {
   return (
     <AppShell>
       <BudgetClient
-        initialBudgets={JSON.parse(JSON.stringify(budgetData))}
-        categories={JSON.parse(JSON.stringify(categories))}
+        initialBudgets={serializePrismaData(budgetData)}
+        categories={serializePrismaData(categories)}
         totalBudget={totalBudget}
         totalActual={totalActual}
         month={currentMonth}

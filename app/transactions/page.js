@@ -1,37 +1,40 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { TransactionsClient } from './TransactionsClient'
 import { TransactionsPageHeader } from './TransactionsPageHeader'
+import { serializePrismaData } from '@/lib/utils'
+
+export const revalidate = 30
 
 export default async function TransactionsPage() {
-  const { userId } = await auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
-  
   const user = await getOrCreateUser()
   if (!user) {
     redirect('/sign-in')
   }
   
-  // Get transactions, accounts, and categories
+  // Get transactions, accounts, and categories with optimized select
   const [transactions, accounts, categories] = await Promise.all([
     prisma.transaction.findMany({
       where: { userId: user.id },
       take: 100,
       orderBy: { date: 'desc' },
-      include: {
-        account: true,
-        category: true,
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        description: true,
+        date: true,
+        notes: true,
+        account: { select: { id: true, name: true, type: true } },
+        category: { select: { id: true, name: true, color: true, icon: true } },
       },
     }),
     prisma.account.findMany({
       where: { userId: user.id, isActive: true },
       orderBy: { name: 'asc' },
+      select: { id: true, name: true, type: true, balance: true, currency: true },
     }),
     prisma.category.findMany({
       where: {
@@ -41,6 +44,7 @@ export default async function TransactionsPage() {
         ],
       },
       orderBy: { name: 'asc' },
+      select: { id: true, name: true, type: true, color: true, icon: true },
     }),
   ])
 
@@ -50,9 +54,9 @@ export default async function TransactionsPage() {
         <TransactionsPageHeader transactionsCount={transactions.length} />
         
         <TransactionsClient
-          initialTransactions={JSON.parse(JSON.stringify(transactions))}
-          accounts={JSON.parse(JSON.stringify(accounts))}
-          categories={JSON.parse(JSON.stringify(categories))}
+          initialTransactions={serializePrismaData(transactions)}
+          accounts={serializePrismaData(accounts)}
+          categories={serializePrismaData(categories)}
         />
       </div>
     </AppShell>

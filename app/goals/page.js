@@ -1,28 +1,35 @@
 import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { GoalsClient } from './GoalsClient'
 
+export const revalidate = 30
+
 export default async function GoalsPage() {
-  const { userId } = await auth()
-  
-  if (!userId) {
-    redirect('/sign-in')
-  }
-  
   const user = await getOrCreateUser()
   if (!user) {
     redirect('/sign-in')
   }
 
-  // Fetch goals from database
+  // Fetch goals from database with optimized select
   const goals = await prisma.savingsGoal.findMany({
     where: { userId: user.id },
-    include: {
+    select: {
+      id: true,
+      name: true,
+      icon: true,
+      targetAmount: true,
+      currentAmount: true,
+      targetDate: true,
+      priority: true,
+      contributionMode: true,
+      fixedMonthlyAmount: true,
+      isPaused: true,
+      createdAt: true,
       contributions: {
         orderBy: { date: 'desc' },
+        select: { amount: true, date: true, note: true },
       },
     },
     orderBy: [
