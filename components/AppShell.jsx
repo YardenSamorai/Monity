@@ -13,7 +13,6 @@ import {
   Settings,
   Menu,
   X,
-  Plus,
   ChevronDown,
   Wallet,
   Repeat,
@@ -243,16 +242,6 @@ export default function AppShell({ children }) {
         </nav>
       </div>
 
-      {/* Floating Action Button (Mobile) */}
-      <button
-        className={cn(
-          "lg:hidden fixed bottom-24 z-50 w-14 h-14 rounded-full bg-light-accent dark:bg-dark-accent text-white shadow-glass flex items-center justify-center active:scale-95 transition-transform",
-          isRTL ? "left-4" : "right-4"
-        )}
-        aria-label="Add transaction"
-      >
-        <Plus className="w-6 h-6" />
-      </button>
     </div>
   )
 }

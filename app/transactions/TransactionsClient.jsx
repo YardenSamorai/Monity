@@ -2,16 +2,15 @@
 
 import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
-import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TransactionModal } from '@/components/forms/TransactionModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { formatCurrency, cn } from '@/lib/utils'
-import { Receipt, Plus, Search, Filter, Edit, Trash2 } from 'lucide-react'
-import { Input, Select } from '@/components/ui/Input'
+import { cn } from '@/lib/utils'
+import { Receipt, Plus, Search } from 'lucide-react'
+import { Select } from '@/components/ui/Input'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
+import { SwipeableTransactionItem } from '@/components/transactions/SwipeableTransactionItem'
 
 export function TransactionsClient({ initialTransactions, accounts, categories }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
@@ -126,7 +125,7 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
       </Card>
 
       {/* Transactions List */}
-      <Card>
+      <Card className="overflow-visible">
         {filteredTransactions.length === 0 ? (
           <EmptyState
             icon={<Receipt className="w-8 h-8" />}
@@ -134,69 +133,16 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
             description={searchTerm || filterType !== 'all' || filterAccount !== 'all' ? t('transactions.adjustFilters') : t('dashboard.startAdding')}
           />
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {filteredTransactions.map((transaction) => (
-              <div
+              <SwipeableTransactionItem
                 key={transaction.id}
-                className="group flex items-center justify-between py-4 px-4 -mx-4 rounded-xl hover:bg-light-surface dark:hover:bg-dark-surface transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
-                      {transaction.description}
-                    </span>
-                    {transaction.category && (
-                      <Badge variant="default" className="flex-shrink-0">
-                        {transaction.category.name}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {new Date(transaction.date).toLocaleDateString(localeString, { day: 'numeric', month: 'short' })} • {transaction.account.name}
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                  <div
-                    className={`text-right font-semibold whitespace-nowrap ${
-                      transaction.type === 'income'
-                        ? 'text-light-success dark:text-dark-success'
-                        : 'text-light-danger dark:text-dark-danger'
-                    }`}
-                  >
-                    {transaction.type === 'income' ? '+' : '-'}
-                    {formatCurrency(Number(transaction.amount), { locale: localeString, symbol: currencySymbol })}
-                  </div>
-                  
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleEdit(transaction)
-                      }}
-                      className="h-9 w-9 p-0"
-                      aria-label={t('common.edit')}
-                    >
-                      <Edit className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleDelete(transaction)
-                      }}
-                      className="h-9 w-9 p-0 text-light-danger dark:text-dark-danger hover:text-light-danger-dark dark:hover:text-dark-danger-dark"
-                      aria-label={t('common.delete')}
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                transaction={transaction}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+                currencySymbol={currencySymbol}
+                localeString={localeString}
+              />
             ))}
           </div>
         )}

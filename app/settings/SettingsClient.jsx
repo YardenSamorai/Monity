@@ -16,7 +16,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { LanguageSelector } from '@/components/ui/LanguageSelector'
 import { Tabs, TabPanel } from '@/components/ui/Tabs'
 import { formatCurrency } from '@/lib/utils'
-import { Wallet, Tag, Key, Repeat, ArrowDownCircle, ArrowUpCircle, Globe, Settings as SettingsIcon, Link2, Edit, Trash2 } from 'lucide-react'
+import { Wallet, Tag, Key, Repeat, ArrowDownCircle, ArrowUpCircle, Globe, Settings as SettingsIcon, Edit, Trash2 } from 'lucide-react'
 import { useToast } from '@/lib/toast-context'
 import { useI18n } from '@/lib/i18n-context'
 import { translations } from '@/lib/translations'
@@ -93,7 +93,6 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
       const data = await response.json()
 
       if (!response.ok) {
-        // Check for specific error types
         if (data.error === 'Category is in use') {
           toast.error(t('settings.categoryInUse'), t('settings.categoryInUseDesc'))
         } else if (data.error === 'Cannot delete default categories') {
@@ -106,18 +105,12 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
         return
       }
 
-      // Success - update UI immediately
       toast.success(t('settings.categoryDeleted'))
-      
-      // Remove the category from the local state immediately
       setCategories(prevCategories => 
         prevCategories.filter(cat => cat.id !== categoryToDelete.id)
       )
-      
       setCategoryToDelete(null)
       setIsDeleteCategoryDialogOpen(false)
-      
-      // Refresh from server to ensure consistency
       await handleCategorySuccess()
     } catch (error) {
       console.error('Error deleting category:', error)
@@ -248,8 +241,6 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
           accountsCount: data.results?.length || 0 
         })
       )
-      
-      // Refresh page to show updated balances
       window.location.reload()
     } catch (error) {
       console.error('Error recalculating balances:', error)
@@ -360,13 +351,9 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
       if (!response.ok) throw new Error('Failed to generate token')
 
       const data = await response.json()
-      
-      // Copy to clipboard
       await navigator.clipboard.writeText(data.token.token)
-      
       toast.success('Token generated', 'Token copied to clipboard. Save it securely!')
       
-      // Refresh tokens list
       const tokensResponse = await fetch('/api/api-tokens')
       const tokensData = await tokensResponse.json()
       setApiTokens(tokensData.tokens)
@@ -409,11 +396,12 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
 
   return (
     <>
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
+      {/* Header - Mobile Optimized */}
+      <div className="mb-6 lg:mb-8">
+        <h1 className="text-2xl lg:text-3xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-1 lg:mb-2">
           {t('settings.title')}
         </h1>
-        <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary max-w-2xl">
+        <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
           {t('settings.subtitle')}
         </p>
       </div>
@@ -422,15 +410,15 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
 
       {/* General Tab */}
       <TabPanel active={activeTab === 'general'} id="general">
-        <div className="space-y-6">
-          {/* Language & Region Section */}
-          <Card>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center">
+        <div className="space-y-4 lg:space-y-6">
+          {/* Language Section */}
+          <Card className="p-4 lg:p-6">
+            <div className="flex items-start gap-3 mb-4 lg:mb-6">
+              <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center flex-shrink-0">
                 <Globe className="w-5 h-5 text-light-accent dark:text-dark-accent" />
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-0.5">
                   {t('settings.language')}
                 </h2>
                 <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
@@ -441,14 +429,14 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
             <LanguageSelector />
           </Card>
 
-          {/* Theme Settings */}
-          <Card>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center">
+          {/* Theme Section */}
+          <Card className="p-4 lg:p-6">
+            <div className="flex items-start gap-3 mb-4 lg:mb-6">
+              <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center flex-shrink-0">
                 <SettingsIcon className="w-5 h-5 text-light-accent dark:text-dark-accent" />
               </div>
-              <div>
-                <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-0.5">
                   {t('settings.theme')}
                 </h2>
                 <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
@@ -456,440 +444,481 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                 </p>
               </div>
             </div>
-            <div className="space-y-3">
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <div className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                    {t('settings.theme')}
-                  </div>
-                  <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {t('settings.themeDescription')}
-                  </div>
-                </div>
-                <ThemeToggle showLabel />
-              </div>
-            </div>
+            <ThemeToggle showLabel />
           </Card>
         </div>
       </TabPanel>
 
       {/* Accounts & Categories Tab */}
       <TabPanel active={activeTab === 'accounts'} id="accounts">
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           {/* Accounts Section */}
-          <Card>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center">
-              <Wallet className="w-5 h-5 text-light-accent dark:text-dark-accent" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('settings.accounts')}
-              </h2>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('settings.accountsDescription')}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              size="sm" 
-              variant="secondary"
-              onClick={handleRecalculateBalances}
-              disabled={recalculatingBalances}
-            >
-              {recalculatingBalances ? t('common.loading') : t('settings.recalculateBalances')}
-            </Button>
-            <Button size="sm" onClick={() => {
-              setEditingAccount(null)
-              setIsAccountModalOpen(true)
-            }}>
-              {t('settings.addAccount')}
-            </Button>
-          </div>
-        </div>
-        
-        {accounts.length === 0 ? (
-          <EmptyState
-            icon={<Wallet className="w-8 h-8" />}
-            title={t('settings.noAccounts')}
-            description={t('settings.createFirstAccount')}
-            action={() => setIsAccountModalOpen(true)}
-            actionLabel={t('settings.addAccount')}
-          />
-        ) : (
-          <div className="space-y-3">
-            {accounts.map((account) => (
-              <div
-                key={account.id}
-                className="group flex items-center justify-between py-3 px-3 -mx-3 border border-light-border-light dark:border-dark-border-light rounded-xl hover:border-light-border dark:hover:border-dark-border transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                    {account.name}
-                  </div>
-                  <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary capitalize">
-                    {t(`settings.${account.type}`)} • {account.currency}
-                  </div>
+          <Card className="p-4 lg:p-6">
+            {/* Header - Stacked on mobile */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 lg:mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center flex-shrink-0">
+                  <Wallet className="w-5 h-5 text-light-accent dark:text-dark-accent" />
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <div className="font-semibold text-light-text-primary dark:text-dark-text-primary">
-                      {formatCurrency(Number(account.balance), { locale: localeString, symbol: account.currency === 'ILS' ? '₪' : '$' })}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {t('settings.accounts')}
+                  </h2>
+                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {t('settings.accountsDescription')}
+                  </p>
+                </div>
+              </div>
+              {/* Buttons - Full width on mobile */}
+              <div className="flex flex-col sm:flex-row gap-2 sm:flex-shrink-0">
+                <Button 
+                  size="sm" 
+                  variant="secondary"
+                  onClick={handleRecalculateBalances}
+                  disabled={recalculatingBalances}
+                  className="w-full sm:w-auto text-xs lg:text-sm"
+                >
+                  {recalculatingBalances ? t('common.loading') : t('settings.recalculateBalances')}
+                </Button>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setEditingAccount(null)
+                    setIsAccountModalOpen(true)
+                  }}
+                  className="w-full sm:w-auto"
+                >
+                  {t('settings.addAccount')}
+                </Button>
+              </div>
+            </div>
+            
+            {accounts.length === 0 ? (
+              <EmptyState
+                icon={<Wallet className="w-8 h-8" />}
+                title={t('settings.noAccounts')}
+                description={t('settings.createFirstAccount')}
+                action={() => setIsAccountModalOpen(true)}
+                actionLabel={t('settings.addAccount')}
+              />
+            ) : (
+              <div className="space-y-2">
+                {accounts.map((account) => (
+                  <div
+                    key={account.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border border-light-border-light dark:border-dark-border-light rounded-xl hover:border-light-border dark:hover:border-dark-border transition-colors"
+                  >
+                    {/* Account Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                          {account.name}
+                        </span>
+                        <Badge variant={account.isActive ? 'success' : 'default'} className="text-xs">
+                          {account.isActive ? t('settings.active') : t('settings.inactive')}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary capitalize">
+                        {t(`settings.${account.type}`)} • {account.currency}
+                      </div>
+                    </div>
+                    
+                    {/* Balance & Actions */}
+                    <div className="flex items-center justify-between sm:justify-end gap-3">
+                      <div className="font-semibold text-light-text-primary dark:text-dark-text-primary" dir="ltr">
+                        {formatCurrency(Number(account.balance), { locale: localeString, symbol: account.currency === 'ILS' ? '₪' : '$' })}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingAccount(account)
+                            setIsAccountModalOpen(true)
+                          }}
+                          aria-label={t('common.edit')}
+                          className="p-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDeleteAccount(account)}
+                          aria-label={t('common.delete')}
+                          className="p-2 text-light-danger dark:text-dark-danger hover:text-light-danger dark:hover:text-dark-danger"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <Badge variant={account.isActive ? 'success' : 'default'}>
-                    {account.isActive ? t('settings.active') : t('settings.inactive')}
-                  </Badge>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditingAccount(account)
-                        setIsAccountModalOpen(true)
-                      }}
-                      aria-label={t('common.edit')}
-                    >
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDeleteAccount(account)}
-                      aria-label={t('common.delete')}
-                      className="text-light-danger dark:text-dark-danger hover:text-light-danger dark:hover:text-dark-danger"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
+            )}
+          </Card>
 
           {/* Categories Section */}
-          <Card>
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-light-success-light dark:bg-dark-success-light flex items-center justify-center">
-              <Tag className="w-5 h-5 text-light-success dark:text-dark-success" />
+          <Card className="p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-light-success-light dark:bg-dark-success-light flex items-center justify-center flex-shrink-0">
+                  <Tag className="w-5 h-5 text-light-success dark:text-dark-success" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {t('settings.categories')}
+                  </h2>
+                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {t('settings.categoriesDescription')}
+                  </p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                onClick={() => {
+                  setEditingCategory(null)
+                  setIsCategoryModalOpen(true)
+                }}
+                className="w-full sm:w-auto"
+              >
+                {t('settings.addCategory')}
+              </Button>
             </div>
-            <div>
-              <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('settings.categories')}
-              </h2>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('settings.categoriesDescription')}
+
+            {/* Info message */}
+            <div className="mb-4 p-3 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border-light dark:border-dark-border-light">
+              <p className="text-xs lg:text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                {t('settings.categoriesInfo')}
               </p>
             </div>
-          </div>
-          <Button size="sm" onClick={() => {
-            setEditingCategory(null)
-            setIsCategoryModalOpen(true)
-          }}>
-            {t('settings.addCategory')}
-          </Button>
-        </div>
+            
+            <div className="flex flex-wrap gap-2">
+              {categories.map((category) => {
+                let categoryName = category.name
+                if (category.isDefault) {
+                  const categoryTranslations = translations[locale]?.settings?.categoryNames
+                  if (categoryTranslations && categoryTranslations[category.name]) {
+                    categoryName = categoryTranslations[category.name]
+                  }
+                }
 
-        {/* Info message about default categories */}
-        <div className="mb-4 p-3 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border-light dark:border-dark-border-light">
-          <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
-            {t('settings.categoriesInfo')}
-          </p>
-        </div>
-        
-        <div className="flex flex-wrap gap-2">
-          {categories.map((category) => {
-            // Get translated name if it's a default category
-            let categoryName = category.name
-            if (category.isDefault) {
-              const categoryTranslations = translations[locale]?.settings?.categoryNames
-              if (categoryTranslations && categoryTranslations[category.name]) {
-                categoryName = categoryTranslations[category.name]
-              }
-            }
-
-            return (
-              <div
-                key={category.id}
-                className="group inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all"
-                style={{ backgroundColor: `${category.color}15` }}
-              >
-                <span 
-                  className="text-sm font-medium"
-                  style={{ color: category.color }}
-                >
-                  {categoryName}
-                </span>
-                <button
-                  onClick={() => handleDeleteCategory(category)}
-                  className="ml-1 p-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/10 dark:hover:bg-white/10"
-                  aria-label={t('common.delete')}
-                >
-                  <Trash2 className="w-3 h-3" style={{ color: category.color }} />
-                </button>
-              </div>
-            )
-          })}
-        </div>
-      </Card>
+                return (
+                  <div
+                    key={category.id}
+                    className="group inline-flex items-center gap-1 px-3 py-1.5 rounded-full transition-all"
+                    style={{ backgroundColor: `${category.color}15` }}
+                  >
+                    <span 
+                      className="text-sm font-medium"
+                      style={{ color: category.color }}
+                    >
+                      {categoryName}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteCategory(category)}
+                      className="p-1 rounded-full opacity-60 sm:opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/10 dark:hover:bg-white/10"
+                      aria-label={t('common.delete')}
+                    >
+                      <Trash2 className="w-3.5 h-3.5" style={{ color: category.color }} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </Card>
         </div>
       </TabPanel>
 
       {/* Recurring Tab */}
       <TabPanel active={activeTab === 'recurring'} id="recurring">
-        <div className="space-y-6">
+        <div className="space-y-4 lg:space-y-6">
           {/* Recurring Income Section */}
-          <Card>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-light-success-light dark:bg-dark-success-light flex items-center justify-center">
-              <Repeat className="w-5 h-5 text-light-success dark:text-dark-success" />
-            </div>
-              <div>
-                <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
-                  {t('settings.recurringIncome')}
-                </h2>
-                <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                  {t('settings.recurringIncomeDescription')}
-                </p>
-              </div>
-            </div>
-            <Button 
-              size="sm" 
-              variant="success"
-              onClick={() => {
-                setEditingRecurringIncome(null)
-                setIsRecurringIncomeModalOpen(true)
-              }}
-            >
-              {t('settings.addRecurringIncome')}
-            </Button>
-          </div>
-          
-          {recurringIncomes.length === 0 ? (
-            <EmptyState
-              icon={<Repeat className="w-8 h-8" />}
-              title={t('settings.noRecurringIncome')}
-              description={t('settings.setUpRecurringIncome')}
-              action={() => setIsRecurringIncomeModalOpen(true)}
-              actionLabel={t('settings.addRecurringIncome')}
-            />
-        ) : (
-          <div className="space-y-3">
-            {recurringIncomes.map((income) => (
-              <div
-                key={income.id}
-                className="flex items-center justify-between py-3 border-b border-light-border-light dark:border-dark-border-light last:border-0"
-              >
+          <Card className="p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 lg:mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-light-success-light dark:bg-dark-success-light flex items-center justify-center flex-shrink-0">
+                  <Repeat className="w-5 h-5 text-light-success dark:text-dark-success" />
+                </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
-                    {income.description}
-                  </div>
-                  <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {formatCurrency(Number(income.amount), { locale: localeString, symbol: currencySymbol })} • {t('settings.dayOfMonthOption', { day: income.dayOfMonth })}
-                    {income.lastRunDate && ` • ${t('settings.lastUsed')}: ${new Date(income.lastRunDate).toLocaleDateString(localeString)}`}
-                    {income.nextRunDate && ` • ${t('settings.next')}: ${new Date(income.nextRunDate).toLocaleDateString(localeString)}`}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-                  <Badge variant={income.isActive ? 'success' : 'default'}>
-                    {income.isActive ? t('settings.active') : t('settings.paused')}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingRecurringIncome(income)
-                      setIsRecurringIncomeModalOpen(true)
-                    }}
-                  >
-                    {t('common.edit')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleToggleRecurringIncome(income.id, income.isActive)}
-                  >
-                    {income.isActive ? t('settings.pause') : t('settings.activate')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDeleteRecurringIncome(income)}
-                  >
-                    {t('common.delete')}
-                  </Button>
+                  <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {t('settings.recurringIncome')}
+                  </h2>
+                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {t('settings.recurringIncomeDescription')}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              <Button 
+                size="sm" 
+                variant="success"
+                onClick={() => {
+                  setEditingRecurringIncome(null)
+                  setIsRecurringIncomeModalOpen(true)
+                }}
+                className="w-full sm:w-auto"
+              >
+                {t('settings.addRecurringIncome')}
+              </Button>
+            </div>
+            
+            {recurringIncomes.length === 0 ? (
+              <EmptyState
+                icon={<Repeat className="w-8 h-8" />}
+                title={t('settings.noRecurringIncome')}
+                description={t('settings.setUpRecurringIncome')}
+                action={() => setIsRecurringIncomeModalOpen(true)}
+                actionLabel={t('settings.addRecurringIncome')}
+              />
+            ) : (
+              <div className="space-y-3">
+                {recurringIncomes.map((income) => (
+                  <div
+                    key={income.id}
+                    className="p-3 border border-light-border-light dark:border-dark-border-light rounded-xl"
+                  >
+                    {/* Info Row */}
+                    <div className="flex items-start justify-between gap-2 mb-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                            {income.description}
+                          </span>
+                          <Badge variant={income.isActive ? 'success' : 'default'} className="text-xs">
+                            {income.isActive ? t('settings.active') : t('settings.paused')}
+                          </Badge>
+                        </div>
+                        <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                          <span dir="ltr" className="inline-block">
+                            {formatCurrency(Number(income.amount), { locale: localeString, symbol: currencySymbol })}
+                          </span>
+                          {' • '}{t('settings.dayOfMonthOption', { day: income.dayOfMonth })}
+                        </div>
+                        {(income.lastRunDate || income.nextRunDate) && (
+                          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                            {income.nextRunDate && `${t('settings.next')}: ${new Date(income.nextRunDate).toLocaleDateString(localeString)}`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-light-border-light dark:border-dark-border-light">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setEditingRecurringIncome(income)
+                          setIsRecurringIncomeModalOpen(true)
+                        }}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleRecurringIncome(income.id, income.isActive)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        {income.isActive ? t('settings.pause') : t('settings.activate')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteRecurringIncome(income)}
+                        className="flex-1 sm:flex-none text-xs text-light-danger dark:text-dark-danger"
+                      >
+                        {t('common.delete')}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
 
           {/* Recurring Expenses Section */}
-          <Card>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center">
-              <Repeat className="w-5 h-5 text-light-accent dark:text-dark-accent" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('settings.recurringExpenses')}
-              </h2>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('settings.recurringExpensesDescription')}
-              </p>
-            </div>
-          </div>
-          <Button 
-            size="sm" 
-            variant="destructive"
-            onClick={() => {
-              setRecurringTransactionType('expense')
-              setEditingRecurringTransaction(null)
-              setIsRecurringTransactionModalOpen(true)
-            }}
-          >
-            <ArrowDownCircle className="w-4 h-4 mr-2" />
-            {t('settings.addRecurringExpense')}
-          </Button>
-        </div>
-        
-        {recurringTransactions.filter(t => t.type === 'expense').length === 0 ? (
-          <EmptyState
-            icon={<Repeat className="w-8 h-8" />}
-            title={t('settings.noRecurringExpenses')}
-            description={t('settings.createFirstRecurringExpense')}
-            action={() => {
-              setRecurringTransactionType('expense')
-              setIsRecurringTransactionModalOpen(true)
-            }}
-            actionLabel={t('settings.addRecurringExpense')}
-            actionVariant="destructive"
-          />
-        ) : (
-          <div className="space-y-3">
-            {recurringTransactions.filter(t => t.type === 'expense').map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between py-3 px-4 border border-light-border-light dark:border-dark-border-light rounded-xl hover:border-light-border dark:hover:border-dark-border transition-colors"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    {transaction.type === 'income' ? (
-                      <ArrowUpCircle className="w-4 h-4 text-light-success dark:text-dark-success" />
-                    ) : (
-                      <ArrowDownCircle className="w-4 h-4 text-light-danger dark:text-dark-danger" />
-                    )}
-                    <div className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                      {transaction.description}
-                    </div>
-                    {!transaction.isActive && (
-                      <Badge variant="default" className="text-xs">
-                        {t('settings.paused')}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {formatCurrency(Number(transaction.amount), { locale: localeString, symbol: currencySymbol })} • {t('settings.dayOfMonthOption', { day: transaction.dayOfMonth })} • {transaction.account.name}
-                    {transaction.category && ` • ${transaction.category.name}`}
-                    {transaction.endDate && ` • ${t('settings.endsOn')} ${new Date(transaction.endDate).toLocaleDateString(localeString)}`}
-                  </div>
+          <Card className="p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 lg:mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center flex-shrink-0">
+                  <Repeat className="w-5 h-5 text-light-accent dark:text-dark-accent" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleEditRecurringTransaction(transaction)}
-                  >
-                    {t('common.edit')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleToggleRecurringTransaction(transaction.id, transaction.isActive)}
-                  >
-                    {transaction.isActive ? t('settings.pause') : t('settings.activate')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => handleDeleteRecurringTransaction(transaction)}
-                  >
-                    {t('common.delete')}
-                  </Button>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {t('settings.recurringExpenses')}
+                  </h2>
+                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {t('settings.recurringExpensesDescription')}
+                  </p>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              <Button 
+                size="sm" 
+                variant="destructive"
+                onClick={() => {
+                  setRecurringTransactionType('expense')
+                  setEditingRecurringTransaction(null)
+                  setIsRecurringTransactionModalOpen(true)
+                }}
+                className="w-full sm:w-auto"
+              >
+                <ArrowDownCircle className="w-4 h-4 mr-2" />
+                {t('settings.addRecurringExpense')}
+              </Button>
+            </div>
+            
+            {recurringTransactions.filter(t => t.type === 'expense').length === 0 ? (
+              <EmptyState
+                icon={<Repeat className="w-8 h-8" />}
+                title={t('settings.noRecurringExpenses')}
+                description={t('settings.createFirstRecurringExpense')}
+                action={() => {
+                  setRecurringTransactionType('expense')
+                  setIsRecurringTransactionModalOpen(true)
+                }}
+                actionLabel={t('settings.addRecurringExpense')}
+                actionVariant="destructive"
+              />
+            ) : (
+              <div className="space-y-3">
+                {recurringTransactions.filter(t => t.type === 'expense').map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="p-3 border border-light-border-light dark:border-dark-border-light rounded-xl"
+                  >
+                    {/* Info Row */}
+                    <div className="flex items-start gap-2 mb-2">
+                      <ArrowDownCircle className="w-4 h-4 text-light-danger dark:text-dark-danger flex-shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                            {transaction.description}
+                          </span>
+                          {!transaction.isActive && (
+                            <Badge variant="default" className="text-xs">
+                              {t('settings.paused')}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                          <span dir="ltr" className="inline-block">
+                            {formatCurrency(Number(transaction.amount), { locale: localeString, symbol: currencySymbol })}
+                          </span>
+                          {' • '}{t('settings.dayOfMonthOption', { day: transaction.dayOfMonth })}
+                          {' • '}{transaction.account.name}
+                        </div>
+                        {(transaction.category || transaction.endDate) && (
+                          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                            {transaction.category && transaction.category.name}
+                            {transaction.category && transaction.endDate && ' • '}
+                            {transaction.endDate && `${t('settings.endsOn')} ${new Date(transaction.endDate).toLocaleDateString(localeString)}`}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {/* Actions Row */}
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-light-border-light dark:border-dark-border-light">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleEditRecurringTransaction(transaction)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        {t('common.edit')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleToggleRecurringTransaction(transaction.id, transaction.isActive)}
+                        className="flex-1 sm:flex-none text-xs"
+                      >
+                        {transaction.isActive ? t('settings.pause') : t('settings.activate')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleDeleteRecurringTransaction(transaction)}
+                        className="flex-1 sm:flex-none text-xs text-light-danger dark:text-dark-danger"
+                      >
+                        {t('common.delete')}
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </TabPanel>
 
       {/* API & Integration Tab */}
       <TabPanel active={activeTab === 'api'} id="api">
-        <div className="space-y-6">
-          {/* API Tokens Section */}
-          <Card>
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-light-warning-light dark:bg-dark-warning-light flex items-center justify-center">
-              <Key className="w-5 h-5 text-light-warning dark:text-dark-warning" />
-            </div>
-            <div>
-              <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('settings.apiTokens')}
-              </h2>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('settings.apiTokensDescription')}
-              </p>
-            </div>
-          </div>
-          <Button size="sm" onClick={handleGenerateToken} disabled={generatingToken}>
-            {generatingToken ? t('common.loading') : t('settings.generateToken')}
-          </Button>
-        </div>
-        
-        {apiTokens.length === 0 ? (
-          <EmptyState
-            icon={<Key className="w-8 h-8" />}
-            title={t('settings.noTokens')}
-            description={t('settings.createToken')}
-            action={handleGenerateToken}
-            actionLabel={t('settings.generateToken')}
-          />
-        ) : (
-          <div className="space-y-3">
-            {apiTokens.map((token) => (
-              <div
-                key={token.id}
-                className="flex items-center justify-between py-3 border-b border-light-border-light dark:border-dark-border-light last:border-0"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-light-text-primary dark:text-dark-text-primary mb-1">
-                    {token.name}
-                  </div>
-                  <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {token.token.substring(0, 16)}... •
-                    {new Date(token.createdAt).toLocaleDateString(localeString)}
-                    {token.lastUsedAt && ` • ${t('settings.lastUsed')} ${new Date(token.lastUsedAt).toLocaleDateString(localeString)}`}
-                  </div>
+        <div className="space-y-4 lg:space-y-6">
+          <Card className="p-4 lg:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 lg:mb-6">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-light-warning-light dark:bg-dark-warning-light flex items-center justify-center flex-shrink-0">
+                  <Key className="w-5 h-5 text-light-warning dark:text-dark-warning" />
                 </div>
-                <Badge variant={token.isActive ? 'success' : 'default'}>
-                  {token.isActive ? t('settings.active') : t('settings.paused')}
-                </Badge>
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+                    {t('settings.apiTokens')}
+                  </h2>
+                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {t('settings.apiTokensDescription')}
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
-        )}
-      </Card>
+              <Button 
+                size="sm" 
+                onClick={handleGenerateToken} 
+                disabled={generatingToken}
+                className="w-full sm:w-auto"
+              >
+                {generatingToken ? t('common.loading') : t('settings.generateToken')}
+              </Button>
+            </div>
+            
+            {apiTokens.length === 0 ? (
+              <EmptyState
+                icon={<Key className="w-8 h-8" />}
+                title={t('settings.noTokens')}
+                description={t('settings.createToken')}
+                action={handleGenerateToken}
+                actionLabel={t('settings.generateToken')}
+              />
+            ) : (
+              <div className="space-y-3">
+                {apiTokens.map((token) => (
+                  <div
+                    key={token.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border border-light-border-light dark:border-dark-border-light rounded-xl"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                          {token.name}
+                        </span>
+                        <Badge variant={token.isActive ? 'success' : 'default'} className="text-xs">
+                          {token.isActive ? t('settings.active') : t('settings.paused')}
+                        </Badge>
+                      </div>
+                      <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary font-mono mt-1">
+                        {token.token.substring(0, 16)}...
+                      </div>
+                      <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                        {new Date(token.createdAt).toLocaleDateString(localeString)}
+                        {token.lastUsedAt && ` • ${t('settings.lastUsed')} ${new Date(token.lastUsedAt).toLocaleDateString(localeString)}`}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </Card>
         </div>
       </TabPanel>
 
@@ -1003,4 +1032,3 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
     </>
   )
 }
-

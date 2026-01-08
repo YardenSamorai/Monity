@@ -18,6 +18,15 @@ export default async function DashboardPage() {
     redirect('/sign-in')
   }
   
+  // Check if user needs onboarding
+  const accountCount = await prisma.account.count({
+    where: { userId: user.id }
+  })
+  
+  if (!user.hasCompletedOnboarding && accountCount === 0) {
+    redirect('/onboarding')
+  }
+  
   // Get current month data
   const now = new Date()
   const currentMonth = now.getMonth() + 1
