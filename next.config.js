@@ -16,7 +16,15 @@ const nextConfig = {
   // Optimize packages
   transpilePackages: ['lucide-react'],
   
-  // Webpack optimizations
+  // Performance optimizations
+  experimental: {
+    optimizePackageImports: ['lucide-react'],
+  },
+  
+  // Turbopack configuration (for Next.js 16+)
+  turbopack: {},
+  
+  // Webpack optimizations (fallback for non-turbopack builds)
   webpack: (config, { isServer }) => {
     // Optimize chunks
     if (!isServer) {

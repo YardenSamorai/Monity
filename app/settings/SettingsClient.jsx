@@ -14,15 +14,18 @@ import { RecurringTransactionModal } from '@/components/forms/RecurringTransacti
 import { DeleteRecurringIncomeDialog } from '@/components/forms/DeleteRecurringIncomeDialog'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { LanguageSelector } from '@/components/ui/LanguageSelector'
+import { CurrencySelector } from '@/components/ui/CurrencySelector'
 import { Tabs, TabPanel } from '@/components/ui/Tabs'
 import { formatCurrency } from '@/lib/utils'
-import { Wallet, Tag, Key, Repeat, ArrowDownCircle, ArrowUpCircle, Globe, Settings as SettingsIcon, Edit, Trash2 } from 'lucide-react'
+import { Wallet, Tag, Key, Repeat, ArrowDownCircle, ArrowUpCircle, Globe, Settings as SettingsIcon, Edit, Trash2, Eye, EyeOff, Copy } from 'lucide-react'
 import { useToast } from '@/lib/toast-context'
+import { useLoading } from '@/lib/loading-context'
 import { useI18n } from '@/lib/i18n-context'
 import { translations } from '@/lib/translations'
 
 export function SettingsClient({ initialAccounts, initialCategories, initialTokens, initialRecurringIncomes, initialRecurringTransactions }) {
   const { toast } = useToast()
+  const { showLoading, hideLoading } = useLoading()
   const { t, currencySymbol, localeString, locale } = useI18n()
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -44,6 +47,10 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
   const [generatingToken, setGeneratingToken] = useState(false)
   const [recalculatingBalances, setRecalculatingBalances] = useState(false)
   const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'general')
+  const [visibleTokens, setVisibleTokens] = useState({}) // Track which tokens are visible: {tokenId: true/false}
+  const [newTokenData, setNewTokenData] = useState(null) // Store newly generated token: {id, token, webhookUrl}
+  const [tokenToDelete, setTokenToDelete] = useState(null)
+  const [isDeleteTokenDialogOpen, setIsDeleteTokenDialogOpen] = useState(false)
   const [categoryToDelete, setCategoryToDelete] = useState(null)
   const [isDeleteCategoryDialogOpen, setIsDeleteCategoryDialogOpen] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
@@ -85,6 +92,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
   const handleDeleteCategoryConfirm = async () => {
     if (!categoryToDelete) return
 
+    showLoading(t('settings.deleting'))
     try {
       const response = await fetch(`/api/categories/${categoryToDelete.id}`, {
         method: 'DELETE',
@@ -117,6 +125,8 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
       toast.error(t('settings.deleteFailed'), error.message)
       setIsDeleteCategoryDialogOpen(false)
       setCategoryToDelete(null)
+    } finally {
+      hideLoading()
     }
   }
 
@@ -128,6 +138,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
   const handleDeleteAccountConfirm = async () => {
     if (!accountToDelete) return
 
+    showLoading(t('settings.deleting'))
     try {
       const response = await fetch(`/api/accounts/${accountToDelete.id}`, {
         method: 'DELETE',
@@ -147,10 +158,13 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
       toast.success(t('settings.accountDeleted'))
       await handleAccountSuccess()
       setAccountToDelete(null)
+      setIsDeleteAccountDialogOpen(false)
     } catch (error) {
       toast.error(t('settings.deleteFailed'), error.message)
-    } finally {
       setIsDeleteAccountDialogOpen(false)
+      setAccountToDelete(null)
+    } finally {
+      hideLoading()
     }
   }
 
@@ -351,16 +365,102 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
       if (!response.ok) throw new Error('Failed to generate token')
 
       const data = await response.json()
-      await navigator.clipboard.writeText(data.token.token)
-      toast.success('Token generated', 'Token copied to clipboard. Save it securely!')
+      const appUrl = window.location.origin
+      const webhookUrl = `${appUrl}/api/webhook/shortcut`
       
+      // Store the full token (only available once on creation)
+      setNewTokenData({
+        id: data.token.id,
+        token: data.token.token,
+        webhookUrl,
+      })
+      
+      // Show the token immediately
+      setVisibleTokens(prev => ({ ...prev, [data.token.id]: true }))
+      
+      // Refresh tokens list
       const tokensResponse = await fetch('/api/api-tokens')
       const tokensData = await tokensResponse.json()
       setApiTokens(tokensData.tokens)
+      
+      toast.success(t('settings.tokenGenerated'), t('settings.tokenGeneratedDesc'))
     } catch (error) {
       toast.error('Failed to generate token', error.message)
     } finally {
       setGeneratingToken(false)
+    }
+  }
+  
+  const handleToggleTokenVisibility = (tokenId) => {
+    setVisibleTokens(prev => ({ ...prev, [tokenId]: !prev[tokenId] }))
+  }
+  
+  const handleCopyToken = async (tokenId) => {
+    // Get the full token from newTokenData if available
+    const fullToken = newTokenData?.id === tokenId ? newTokenData.token : null
+    
+    if (!fullToken) {
+      toast.info(t('settings.tokenNotAvailable'), t('settings.generateNewToken'))
+      return
+    }
+    
+    try {
+      await navigator.clipboard.writeText(fullToken)
+      toast.success(t('settings.copied'), t('settings.tokenCopied'))
+    } catch (error) {
+      toast.error(t('common.error'), 'Failed to copy token')
+    }
+  }
+  
+  const getTokenDisplay = (token) => {
+    // If it's a newly generated token and visible, show full token
+    if (newTokenData?.id === token.id && visibleTokens[token.id]) {
+      return newTokenData.token
+    }
+    // Otherwise show masked token
+    return token.token.substring(0, 16) + '...'
+  }
+  
+  const handleDeleteToken = (token) => {
+    setTokenToDelete(token)
+    setIsDeleteTokenDialogOpen(true)
+  }
+  
+  const handleDeleteTokenConfirm = async () => {
+    if (!tokenToDelete) return
+
+    showLoading(t('settings.deleting'))
+    try {
+      const response = await fetch(`/api/api-tokens/${tokenToDelete.id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) throw new Error('Failed to delete token')
+
+      // Remove from newTokenData if it's the deleted token
+      if (newTokenData?.id === tokenToDelete.id) {
+        setNewTokenData(null)
+      }
+      
+      // Remove from visibleTokens
+      setVisibleTokens(prev => {
+        const updated = { ...prev }
+        delete updated[tokenToDelete.id]
+        return updated
+      })
+
+      // Refresh tokens list
+      const tokensResponse = await fetch('/api/api-tokens')
+      const tokensData = await tokensResponse.json()
+      setApiTokens(tokensData.tokens)
+      
+      toast.success(t('settings.tokenDeleted'))
+    } catch (error) {
+      toast.error(t('settings.deleteFailed'), error.message)
+    } finally {
+      setIsDeleteTokenDialogOpen(false)
+      setTokenToDelete(null)
+      hideLoading()
     }
   }
 
@@ -395,33 +495,35 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
   ]
 
   return (
-    <>
-      {/* Header - Mobile Optimized */}
-      <div className="mb-6 lg:mb-8">
-        <h1 className="text-2xl lg:text-3xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-1 lg:mb-2">
-          {t('settings.title')}
-        </h1>
-        <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-          {t('settings.subtitle')}
-        </p>
-      </div>
-
-      <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
+    <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
+      <div className="px-4 py-4 lg:px-6 lg:py-6">
+        {/* Header */}
+        <header className="mb-6">
+          <h1 className="text-2xl font-semibold text-[rgb(var(--text-primary))]">
+            {t('settings.title')}
+          </h1>
+          <p className="text-sm text-[rgb(var(--text-tertiary))] mt-1">
+            {t('settings.subtitle')}
+          </p>
+        </header>
+        
+        <div className="">
+        <Tabs tabs={tabs} activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* General Tab */}
       <TabPanel active={activeTab === 'general'} id="general">
-        <div className="space-y-4 lg:space-y-6">
+        <div className="space-y-4">
           {/* Language Section */}
-          <Card className="p-4 lg:p-6">
-            <div className="flex items-start gap-3 mb-4 lg:mb-6">
-              <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center flex-shrink-0">
-                <Globe className="w-5 h-5 text-light-accent dark:text-dark-accent" />
+          <Card className="p-4 lg:p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-[rgb(var(--bg-tertiary))] flex items-center justify-center flex-shrink-0">
+                <Globe className="w-4 h-4 text-[rgb(var(--text-secondary))]" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-0.5">
+                <h2 className="font-medium text-[rgb(var(--text-primary))]">
                   {t('settings.language')}
                 </h2>
-                <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                <p className="text-sm text-[rgb(var(--text-tertiary))]">
                   {t('settings.languageDescription')}
                 </p>
               </div>
@@ -429,17 +531,35 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
             <LanguageSelector />
           </Card>
 
-          {/* Theme Section */}
-          <Card className="p-4 lg:p-6">
-            <div className="flex items-start gap-3 mb-4 lg:mb-6">
-              <div className="w-10 h-10 rounded-xl bg-light-accent-light dark:bg-dark-accent-light flex items-center justify-center flex-shrink-0">
-                <SettingsIcon className="w-5 h-5 text-light-accent dark:text-dark-accent" />
+          {/* Currency Section */}
+          <Card className="p-4 lg:p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-[rgb(var(--bg-tertiary))] flex items-center justify-center flex-shrink-0">
+                <Globe className="w-4 h-4 text-[rgb(var(--text-secondary))]" />
               </div>
               <div className="flex-1 min-w-0">
-                <h2 className="text-lg lg:text-xl font-semibold text-light-text-primary dark:text-dark-text-primary mb-0.5">
+                <h2 className="font-medium text-[rgb(var(--text-primary))]">
+                  {t('settings.currency')}
+                </h2>
+                <p className="text-sm text-[rgb(var(--text-tertiary))]">
+                  {t('settings.currencyDescription')}
+                </p>
+              </div>
+            </div>
+            <CurrencySelector />
+          </Card>
+
+          {/* Theme Section */}
+          <Card className="p-4 lg:p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-[rgb(var(--bg-tertiary))] flex items-center justify-center flex-shrink-0">
+                <SettingsIcon className="w-4 h-4 text-[rgb(var(--text-secondary))]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-medium text-[rgb(var(--text-primary))]">
                   {t('settings.theme')}
                 </h2>
-                <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                <p className="text-sm text-[rgb(var(--text-tertiary))]">
                   {t('settings.themeDescription')}
                 </p>
               </div>
@@ -875,10 +995,10 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
               <Button 
                 size="sm" 
                 onClick={handleGenerateToken} 
-                disabled={generatingToken}
+                loading={generatingToken}
                 className="w-full sm:w-auto"
               >
-                {generatingToken ? t('common.loading') : t('settings.generateToken')}
+                {t('settings.generateToken')}
               </Button>
             </div>
             
@@ -892,30 +1012,87 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
               />
             ) : (
               <div className="space-y-3">
-                {apiTokens.map((token) => (
-                  <div
-                    key={token.id}
-                    className="flex flex-col sm:flex-row sm:items-center gap-2 p-3 border border-light-border-light dark:border-dark-border-light rounded-xl"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                          {token.name}
-                        </span>
-                        <Badge variant={token.isActive ? 'success' : 'default'} className="text-xs">
-                          {token.isActive ? t('settings.active') : t('settings.paused')}
-                        </Badge>
-                      </div>
-                      <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary font-mono mt-1">
-                        {token.token.substring(0, 16)}...
-                      </div>
-                      <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
-                        {new Date(token.createdAt).toLocaleDateString(localeString)}
-                        {token.lastUsedAt && ` • ${t('settings.lastUsed')} ${new Date(token.lastUsedAt).toLocaleDateString(localeString)}`}
+                {apiTokens.map((token) => {
+                  const isVisible = visibleTokens[token.id] || false
+                  const hasFullToken = newTokenData?.id === token.id
+                  const displayToken = getTokenDisplay(token)
+                  
+                  return (
+                    <div
+                      key={token.id}
+                      className="p-4 border border-light-border-light dark:border-dark-border-light rounded-xl bg-light-surface dark:bg-dark-surface"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-2">
+                            <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                              {token.name}
+                            </span>
+                            <Badge variant={token.isActive ? 'success' : 'default'} className="text-xs">
+                              {token.isActive ? t('settings.active') : t('settings.paused')}
+                            </Badge>
+                          </div>
+                          
+                          {/* Token Display */}
+                          <div className="mb-2">
+                            <div className="flex items-center gap-2 p-3 rounded-lg bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border">
+                              <code className="flex-1 text-sm font-mono text-light-text-primary dark:text-dark-text-primary break-all">
+                                {displayToken}
+                              </code>
+                              {hasFullToken && (
+                                <button
+                                  onClick={() => handleToggleTokenVisibility(token.id)}
+                                  className="p-1.5 rounded-lg hover:bg-light-surface dark:hover:bg-dark-surface transition-colors flex-shrink-0"
+                                  aria-label={isVisible ? 'Hide token' : 'Show token'}
+                                >
+                                  {isVisible ? (
+                                    <EyeOff className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
+                                  ) : (
+                                    <Eye className="w-4 h-4 text-light-text-secondary dark:text-dark-text-secondary" />
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                            {hasFullToken && (
+                              <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1.5">
+                                {t('settings.tokenGeneratedDesc')}
+                              </p>
+                            )}
+                          </div>
+                          
+                          <div className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                            {new Date(token.createdAt).toLocaleDateString(localeString)}
+                            {token.lastUsedAt && ` • ${t('settings.lastUsed')} ${new Date(token.lastUsedAt).toLocaleDateString(localeString)}`}
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex gap-2 flex-shrink-0">
+                          {hasFullToken && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleCopyToken(token.id)}
+                              className="flex items-center gap-2"
+                            >
+                              <Copy className="w-4 h-4" />
+                              {t('settings.copyToken')}
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleDeleteToken(token)}
+                            className="flex items-center gap-2 text-light-danger dark:text-dark-danger hover:text-light-danger dark:hover:text-dark-danger"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            {t('common.delete')}
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </Card>
@@ -1029,6 +1206,23 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
         onConfirm={handleDeleteAccountConfirm}
         variant="danger"
       />
-    </>
+
+      {/* Delete Token Dialog */}
+      <ConfirmDialog
+        isOpen={isDeleteTokenDialogOpen}
+        onClose={() => {
+          setIsDeleteTokenDialogOpen(false)
+          setTokenToDelete(null)
+        }}
+        title={t('settings.deleteToken')}
+        message={t('settings.deleteTokenMessage', { name: tokenToDelete?.name || '' })}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleDeleteTokenConfirm}
+        variant="danger"
+      />
+      </div>
+      </div>
+    </div>
   )
 }

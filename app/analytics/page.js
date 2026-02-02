@@ -5,7 +5,8 @@ import AppShell from '@/components/AppShell'
 import { AnalyticsClient } from './AnalyticsClient'
 import { serializePrismaData } from '@/lib/utils'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function AnalyticsPage() {
   const user = await getOrCreateUser()

@@ -24,6 +24,8 @@ export function CreateGoalModal({ isOpen, onClose, onCreate }) {
     priority: 'medium',
     contributionMode: 'flexible',
     fixedMonthlyAmount: '',
+    isRecurring: false,
+    recurringPeriod: 'monthly',
   })
 
   const validate = () => {
@@ -86,6 +88,8 @@ export function CreateGoalModal({ isOpen, onClose, onCreate }) {
         priority: formData.priority,
         contributionMode: formData.contributionMode,
         fixedMonthlyAmount: formData.contributionMode === 'fixed' ? parseFloat(formData.fixedMonthlyAmount) : null,
+        isRecurring: formData.isRecurring,
+        recurringPeriod: formData.isRecurring ? formData.recurringPeriod : null,
       })
 
       toast.success(t('goals.created'), t('goals.createdSuccess'))
@@ -223,6 +227,31 @@ export function CreateGoalModal({ isOpen, onClose, onCreate }) {
             helperText={t('goals.fixedMonthlyAmountHelper')}
             required
           />
+        )}
+
+        {/* Recurring Goal */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="isRecurring"
+            checked={formData.isRecurring}
+            onChange={(e) => setFormData({ ...formData, isRecurring: e.target.checked })}
+            className="w-4 h-4 rounded border-light-border dark:border-dark-border"
+          />
+          <label htmlFor="isRecurring" className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+            {t('goals.recurringGoal')}
+          </label>
+        </div>
+
+        {formData.isRecurring && (
+          <Select
+            label={t('goals.recurringPeriod')}
+            value={formData.recurringPeriod}
+            onChange={(e) => setFormData({ ...formData, recurringPeriod: e.target.value })}
+          >
+            <option value="monthly">{t('goals.recurringPeriodOptions.monthly')}</option>
+            <option value="yearly">{t('goals.recurringPeriodOptions.yearly')}</option>
+          </Select>
         )}
 
         <div className="flex gap-3 pt-4">

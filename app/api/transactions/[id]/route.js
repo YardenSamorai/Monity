@@ -77,6 +77,20 @@ export async function PATCH(request, { params }) {
     const newType = validated.type !== undefined ? validated.type : existing.type
     const newBalanceChange = newType === 'income' ? newAmount : -newAmount
     
+    // Verify household if shared
+    let householdId = null
+    if (validated.isShared && validated.householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: {
+          userId: user.id,
+          householdId: validated.householdId,
+        },
+      })
+      if (member) {
+        householdId = validated.householdId
+      }
+    }
+
     const updateData = {}
     if (validated.accountId !== undefined) updateData.accountId = validated.accountId
     if (validated.categoryId !== undefined) updateData.categoryId = validated.categoryId
@@ -85,6 +99,10 @@ export async function PATCH(request, { params }) {
     if (validated.description !== undefined) updateData.description = validated.description
     if (validated.date !== undefined) updateData.date = new Date(validated.date)
     if (validated.notes !== undefined) updateData.notes = validated.notes
+    if (validated.isShared !== undefined) {
+      updateData.isShared = validated.isShared && householdId ? true : false
+      updateData.householdId = validated.isShared && householdId ? householdId : null
+    }
     
     const transaction = await prisma.transaction.update({
       where: { id },

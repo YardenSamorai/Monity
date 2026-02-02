@@ -6,16 +6,17 @@ import { Input, Select } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { useToast } from '@/lib/toast-context'
 import { useI18n } from '@/lib/i18n-context'
+import { CURRENCIES, getCurrencySymbol, getCurrencyName } from '@/lib/currency'
 
 export function AccountModal({ isOpen, onClose, onSuccess, editingAccount = null }) {
   const { toast } = useToast()
-  const { t } = useI18n()
+  const { t, currency: globalCurrency, locale } = useI18n()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     type: 'bank',
     balance: '0',
-    currency: 'USD',
+    currency: globalCurrency || 'USD',
     isActive: true,
   })
 
@@ -25,7 +26,7 @@ export function AccountModal({ isOpen, onClose, onSuccess, editingAccount = null
         name: editingAccount.name,
         type: editingAccount.type,
         balance: String(editingAccount.balance),
-        currency: editingAccount.currency,
+        currency: editingAccount.currency || globalCurrency || 'USD',
         isActive: editingAccount.isActive,
       })
     } else {
@@ -33,7 +34,7 @@ export function AccountModal({ isOpen, onClose, onSuccess, editingAccount = null
         name: '',
         type: 'bank',
         balance: '0',
-        currency: 'USD',
+        currency: globalCurrency || 'USD',
         isActive: true,
       })
     }
@@ -76,7 +77,7 @@ export function AccountModal({ isOpen, onClose, onSuccess, editingAccount = null
           name: '',
           type: 'bank',
           balance: '0',
-          currency: 'USD',
+          currency: globalCurrency || 'USD',
           isActive: true,
         })
       }
@@ -136,12 +137,11 @@ export function AccountModal({ isOpen, onClose, onSuccess, editingAccount = null
           value={formData.currency}
           onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
         >
-          <option value="USD">USD - US Dollar</option>
-          <option value="EUR">EUR - Euro</option>
-          <option value="GBP">GBP - British Pound</option>
-          <option value="JPY">JPY - Japanese Yen</option>
-          <option value="CAD">CAD - Canadian Dollar</option>
-          <option value="ILS">ILS - Israeli Shekel</option>
+          {Object.keys(CURRENCIES).map((currencyCode) => (
+            <option key={currencyCode} value={currencyCode}>
+              {getCurrencySymbol(currencyCode)} {getCurrencyName(currencyCode, locale)}
+            </option>
+          ))}
         </Select>
 
         {editingAccount && (

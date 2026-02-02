@@ -3,8 +3,41 @@ import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { GoalsClient } from './GoalsClient'
+import { unstable_cache } from 'next/cache'
 
 export const revalidate = 30
+
+const getGoalsData = unstable_cache(
+  async (userId) => {
+    const goals = await prisma.savingsGoal.findMany({
+      where: { userId },
+      select: {
+        id: true,
+        name: true,
+        icon: true,
+        targetAmount: true,
+        currentAmount: true,
+        targetDate: true,
+        priority: true,
+        contributionMode: true,
+        fixedMonthlyAmount: true,
+        isPaused: true,
+        createdAt: true,
+        contributions: {
+          orderBy: { date: 'desc' },
+          select: { amount: true, date: true, note: true },
+        },
+      },
+      orderBy: [
+        { priority: 'desc' },
+        { createdAt: 'desc' },
+      ],
+    })
+    return goals
+  },
+  ['goals-data'],
+  { revalidate: 30, tags: ['goals'] }
+)
 
 export default async function GoalsPage() {
   const user = await getOrCreateUser()
@@ -12,31 +45,15 @@ export default async function GoalsPage() {
     redirect('/sign-in')
   }
 
-  // Fetch goals from database with optimized select
-  const goals = await prisma.savingsGoal.findMany({
-    where: { userId: user.id },
-    select: {
-      id: true,
-      name: true,
-      icon: true,
-      targetAmount: true,
-      currentAmount: true,
-      targetDate: true,
-      priority: true,
-      contributionMode: true,
-      fixedMonthlyAmount: true,
-      isPaused: true,
-      createdAt: true,
-      contributions: {
-        orderBy: { date: 'desc' },
-        select: { amount: true, date: true, note: true },
-      },
-    },
-    orderBy: [
-      { priority: 'desc' },
-      { createdAt: 'desc' },
-    ],
-  })
+  const goals = await getGoalsData(user.id)
+
+  // Helper to safely convert date to string
+  const formatDate = (date) => {
+    if (!date) return null
+    if (typeof date === 'string') return date.split('T')[0]
+    if (date instanceof Date) return date.toISOString().split('T')[0]
+    return null
+  }
 
   // Transform to match component expectations
   const transformedGoals = goals.map(goal => ({
@@ -45,15 +62,15 @@ export default async function GoalsPage() {
     icon: goal.icon,
     targetAmount: Number(goal.targetAmount),
     savedAmount: Number(goal.currentAmount),
-    targetDate: goal.targetDate ? goal.targetDate.toISOString().split('T')[0] : null,
+    targetDate: formatDate(goal.targetDate),
     priority: goal.priority,
     contributionMode: goal.contributionMode,
     fixedMonthlyAmount: goal.fixedMonthlyAmount ? Number(goal.fixedMonthlyAmount) : null,
     isPaused: goal.isPaused,
-    createdAt: goal.createdAt.toISOString().split('T')[0],
+    createdAt: formatDate(goal.createdAt),
     contributions: goal.contributions.map(c => ({
       amount: Number(c.amount),
-      date: c.date.toISOString().split('T')[0],
+      date: formatDate(c.date),
       note: c.note || '',
     })),
   }))

@@ -2,6 +2,7 @@ import { ClerkProvider } from '@clerk/nextjs'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/lib/theme-context'
 import { ToastProvider } from '@/lib/toast-context'
+import { LoadingProvider } from '@/lib/loading-context'
 import { I18nProvider } from '@/lib/i18n-context'
 import './globals.css'
 
@@ -14,6 +15,29 @@ const inter = Inter({
 export const metadata = {
   title: 'Monity - Personal Finance Management',
   description: 'Premium personal finance tracking with Apple-inspired design',
+  manifest: '/manifest.json',
+  themeColor: '#3B82F6',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Monity',
+  },
+  icons: {
+    icon: [
+      { url: '/MonityLogo.svg', type: 'image/svg+xml' },
+    ],
+    shortcut: '/MonityLogo.svg',
+    apple: [
+      { url: '/MonityLogo.svg', type: 'image/svg+xml' },
+    ],
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+    viewportFit: 'cover',
+  },
 }
 
 export default function RootLayout({ children }) {
@@ -50,9 +74,11 @@ export default function RootLayout({ children }) {
         <body className="font-sans antialiased">
           <ThemeProvider>
             <I18nProvider>
-              <ToastProvider>
-                {children}
-              </ToastProvider>
+              <LoadingProvider>
+                <ToastProvider>
+                  {children}
+                </ToastProvider>
+              </LoadingProvider>
             </I18nProvider>
           </ThemeProvider>
         </body>

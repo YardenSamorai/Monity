@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import { 
@@ -11,118 +12,107 @@ import {
   TrendingUp, 
   PiggyBank, 
   Settings,
-  Menu,
-  X,
   ChevronDown,
-  Wallet,
-  Repeat,
-  Key,
-  Palette
+  Users,
+  Sparkles,
+  Menu,
+  X
 } from 'lucide-react'
 import { ThemeToggle } from './ui/ThemeToggle'
-import { IconButton } from './ui/Button'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
 
-// Separate component for settings sub-items that uses searchParams
 function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t }) {
   const searchParams = useSearchParams()
   const currentTab = searchParams.get('tab')
 
   const settingsSubItems = [
-    { id: 'general', name: t('settings.tabs.general'), icon: Palette, href: '/settings?tab=general' },
-    { id: 'accounts', name: t('settings.tabs.accounts'), icon: Wallet, href: '/settings?tab=accounts' },
-    { id: 'recurring', name: t('settings.tabs.recurring'), icon: Repeat, href: '/settings?tab=recurring' },
-    { id: 'api', name: t('settings.tabs.api'), icon: Key, href: '/settings?tab=api' },
+    { id: 'general', name: t('settings.tabs.general'), href: '/settings?tab=general' },
+    { id: 'accounts', name: t('settings.tabs.accounts'), href: '/settings?tab=accounts' },
+    { id: 'recurring', name: t('settings.tabs.recurring'), href: '/settings?tab=recurring' },
+    { id: 'api', name: t('settings.tabs.api'), href: '/settings?tab=api' },
   ]
 
+  if (!settingsExpanded) return null
+
   return (
-    <div className={cn(
-      "overflow-hidden transition-all duration-300",
-      settingsExpanded ? "max-h-64 opacity-100 mt-1" : "max-h-0 opacity-0"
-    )}>
-      <div className={cn(
-        "space-y-1",
-        isRTL ? "pr-4" : "pl-4"
-      )}>
-        {settingsSubItems.map((subItem) => {
-          const SubIcon = subItem.icon
-          const isSubActive = isSettingsActive && currentTab === subItem.id
-          const isDefaultActive = isSettingsActive && !currentTab && subItem.id === 'general'
-          const active = isSubActive || isDefaultActive
-          
-          return (
-            <Link
-              key={subItem.id}
-              href={subItem.href}
-              className={cn(
-                'flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
-                active
-                  ? 'bg-light-accent/10 dark:bg-dark-accent/20 text-light-accent dark:text-dark-accent'
-                  : 'text-light-text-tertiary dark:text-dark-text-tertiary hover:bg-light-surface dark:hover:bg-dark-elevated hover:text-light-text-secondary dark:hover:text-dark-text-secondary'
-              )}
-            >
-              <SubIcon className="w-4 h-4 flex-shrink-0" />
-              {subItem.name}
-            </Link>
-          )
-        })}
-      </div>
+    <div className={cn("mt-1 space-y-0.5", isRTL ? "pr-8" : "pl-8")}>
+      {settingsSubItems.map((subItem) => {
+        const isSubActive = isSettingsActive && currentTab === subItem.id
+        const isDefaultActive = isSettingsActive && !currentTab && subItem.id === 'general'
+        const active = isSubActive || isDefaultActive
+        
+        return (
+          <Link
+            key={subItem.id}
+            href={subItem.href}
+            prefetch={true}
+            className={cn(
+              'block px-3 py-2 rounded-md text-sm transition-colors',
+              active
+                ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5 font-medium'
+                : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
+            )}
+          >
+            {subItem.name}
+          </Link>
+        )
+      })}
     </div>
   )
 }
 
 export default function AppShell({ children }) {
   const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(pathname.startsWith('/settings'))
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t, isRTL } = useI18n()
 
   const navigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
     { name: t('nav.budget'), href: '/budget', icon: Target },
-    { name: t('nav.analytics'), href: '/analytics', icon: TrendingUp },
     { name: t('nav.goals'), href: '/goals', icon: PiggyBank },
+    { name: t('nav.family'), href: '/family', icon: Users },
+    { name: t('nav.analytics'), href: '/analytics', icon: TrendingUp },
+    { name: t('nav.insights'), href: '/insights', icon: Sparkles },
   ]
 
   const mobileNav = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
     { name: t('nav.budget'), href: '/budget', icon: Target },
-    { name: t('nav.analytics'), href: '/analytics', icon: TrendingUp },
+    { name: t('nav.goals'), href: '/goals', icon: PiggyBank },
+    { name: t('nav.settings'), href: '/settings', icon: Settings },
   ]
 
   const isSettingsActive = pathname === '/settings'
 
   return (
-    <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors">
+    <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
       {/* Desktop Sidebar */}
       <aside className={cn(
-        "hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72 lg:flex-col",
-        isRTL ? "lg:right-0" : "lg:left-0"
+        "hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col",
+        isRTL ? "lg:right-0 lg:border-l" : "lg:left-0 lg:border-r",
+        "border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-secondary))]"
       )}>
-        <div className={cn(
-          "flex flex-col flex-1 bg-light-surface/50 dark:bg-dark-surface/50 backdrop-blur-xl",
-          isRTL ? "border-l border-light-border dark:border-dark-border" : "border-r border-light-border dark:border-dark-border"
-        )}>
+        <div className="flex flex-col flex-1 overflow-y-auto">
           {/* Logo */}
-          <div className="flex items-center h-16 px-6 border-b border-light-border dark:border-dark-border">
-            <Link href="/dashboard" className={cn(
-              "flex items-center group",
-              isRTL ? "space-x-reverse space-x-3" : "space-x-3"
-            )}>
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-light-accent to-blue-600 dark:from-dark-accent dark:to-blue-500 flex items-center justify-center shadow-soft">
-                <span className="text-xl font-bold text-white">M</span>
-              </div>
-              <span className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
-                Monity
-              </span>
+          <div className="flex items-center h-16 px-4 border-b border-[rgb(var(--border-primary))]">
+            <Link href="/dashboard" className="flex items-center gap-3">
+              <Image 
+                src="/MonityLogo.svg" 
+                alt="Monity" 
+                width={40} 
+                height={40} 
+                className="rounded-lg"
+              />
+              <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
             </Link>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+          <nav className="flex-1 px-3 py-4 space-y-1">
             {navigation.map((item) => {
               const Icon = item.icon
               const isActive = pathname === item.href
@@ -132,40 +122,38 @@ export default function AppShell({ children }) {
                   href={item.href}
                   prefetch={true}
                   className={cn(
-                    'flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                    'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-light-accent dark:bg-dark-accent text-white shadow-soft'
-                      : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-surface dark:hover:bg-dark-elevated hover:text-light-text-primary dark:hover:text-dark-text-primary'
+                      ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5'
+                      : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
                   )}
                 >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
+                  <Icon className="w-4 h-4 flex-shrink-0" />
                   {item.name}
                 </Link>
               )
             })}
 
-            {/* Settings Section with Sub-items */}
-            <div className="pt-2">
+            {/* Settings with submenu */}
+            <div className="pt-4 mt-4 border-t border-[rgb(var(--border-secondary))]">
               <button
                 onClick={() => setSettingsExpanded(!settingsExpanded)}
                 className={cn(
-                  'flex items-center justify-between w-full gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
-                  isSettingsActive && !settingsExpanded
-                    ? 'bg-light-accent dark:bg-dark-accent text-white shadow-soft'
-                    : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-surface dark:hover:bg-dark-elevated hover:text-light-text-primary dark:hover:text-dark-text-primary'
+                  'w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
+                  isSettingsActive
+                    ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5'
+                    : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <Settings className="w-5 h-5 flex-shrink-0" />
+                  <Settings className="w-4 h-4 flex-shrink-0" />
                   {t('nav.settings')}
                 </div>
                 <ChevronDown className={cn(
-                  "w-4 h-4 transition-transform duration-200",
+                  "w-4 h-4 transition-transform",
                   settingsExpanded && "rotate-180"
                 )} />
               </button>
-
-              {/* Sub-items - wrapped in Suspense to prevent blocking */}
               <Suspense fallback={null}>
                 <SettingsSubNav 
                   isSettingsActive={isSettingsActive} 
@@ -177,8 +165,8 @@ export default function AppShell({ children }) {
             </div>
           </nav>
 
-          {/* User Section */}
-          <div className="border-t border-light-border dark:border-dark-border p-4">
+          {/* User section */}
+          <div className="p-3 border-t border-[rgb(var(--border-primary))]">
             <div className="flex items-center justify-between">
               <UserButton afterSignOutUrl="/sign-in" />
               <ThemeToggle />
@@ -188,18 +176,17 @@ export default function AppShell({ children }) {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-light-surface/80 dark:bg-dark-surface/80 backdrop-blur-xl border-b border-light-border dark:border-dark-border">
-        <div className="flex items-center justify-between h-16 px-4">
-          <Link href="/dashboard" className={cn(
-            "flex items-center",
-            isRTL ? "space-x-reverse space-x-2" : "space-x-2"
-          )}>
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-light-accent to-blue-600 dark:from-dark-accent dark:to-blue-500 flex items-center justify-center">
-              <span className="text-base font-bold text-white">M</span>
-            </div>
-            <span className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
-              Monity
-            </span>
+      <header className="lg:hidden sticky top-0 z-40 bg-[rgb(var(--bg-secondary))] border-b border-[rgb(var(--border-primary))] safe-area-top">
+        <div className="flex items-center justify-between h-14 px-4">
+          <Link href="/dashboard" className="flex items-center gap-2.5">
+            <Image 
+              src="/MonityLogo.svg" 
+              alt="Monity" 
+              width={36} 
+              height={36} 
+              className="rounded-lg"
+            />
+            <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
           </Link>
 
           <div className="flex items-center gap-2">
@@ -207,56 +194,42 @@ export default function AppShell({ children }) {
             <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
       <main className={cn(
         "min-h-screen pb-20 lg:pb-0",
-        isRTL ? "lg:pr-72" : "lg:pl-72"
+        isRTL ? "lg:mr-56" : "lg:ml-56"
       )}>
-        <div className="pt-16 lg:pt-0">
-          {children}
-        </div>
+        {children}
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-light-surface/80 dark:bg-dark-surface/80 backdrop-blur-xl border-t border-light-border dark:border-dark-border safe-area-bottom">
-        <nav className="flex items-center justify-around h-16 px-2">
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[rgb(var(--bg-secondary))] border-t border-[rgb(var(--border-primary))] safe-area-bottom">
+        <div className="flex items-stretch h-16">
           {mobileNav.map((item) => {
             const Icon = item.icon
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || (item.href === '/settings' && pathname.startsWith('/settings'))
+            
             return (
               <Link
                 key={item.name}
                 href={item.href}
+                prefetch={true}
                 className={cn(
-                  'flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors',
+                  'flex-1 flex flex-col items-center justify-center gap-1 touch-target',
                   isActive
-                    ? 'text-light-accent dark:text-dark-accent'
-                    : 'text-light-text-tertiary dark:text-dark-text-tertiary'
+                    ? 'text-[rgb(var(--accent))]'
+                    : 'text-[rgb(var(--text-tertiary))]'
                 )}
               >
-                <Icon className="w-6 h-6" />
-                <span className="text-xs font-medium">{item.name}</span>
+                <Icon className="w-5 h-5" />
+                <span className="text-[10px] font-medium">{item.name}</span>
               </Link>
             )
           })}
-          {/* Settings in mobile nav */}
-          <Link
-            href="/settings"
-            className={cn(
-              'flex flex-col items-center justify-center flex-1 h-full space-y-1 transition-colors',
-              isSettingsActive
-                ? 'text-light-accent dark:text-dark-accent'
-                : 'text-light-text-tertiary dark:text-dark-text-tertiary'
-            )}
-          >
-            <Settings className="w-6 h-6" />
-            <span className="text-xs font-medium">{t('nav.settings')}</span>
-          </Link>
-        </nav>
-      </div>
-
+        </div>
+      </nav>
     </div>
   )
 }

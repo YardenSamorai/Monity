@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { User, Globe, DollarSign, Calendar, ArrowRight, ArrowLeft, Check } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
+import { cn } from '@/lib/utils'
 
 export function ProfileStep({ onNext, onBack, initialData }) {
   const { t, isRTL, locale, changeLocale } = useI18n()
@@ -15,7 +15,6 @@ export function ProfileStep({ onNext, onBack, initialData }) {
     monthStartDay: initialData?.monthStartDay || 1,
   })
 
-  // Update currency when language changes
   useEffect(() => {
     if (formData.language === 'he' && formData.currency === 'USD') {
       setFormData(prev => ({ ...prev, currency: 'ILS' }))
@@ -26,7 +25,7 @@ export function ProfileStep({ onNext, onBack, initialData }) {
 
   const handleLanguageChange = (lang) => {
     setFormData(prev => ({ ...prev, language: lang }))
-    changeLocale(lang) // Update app language immediately
+    changeLocale(lang)
   }
 
   const handleSubmit = (e) => {
@@ -34,22 +33,9 @@ export function ProfileStep({ onNext, onBack, initialData }) {
     onNext(formData)
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-  }
-
   const languages = [
-    { id: 'en', label: 'English', flag: '🇺🇸' },
-    { id: 'he', label: 'עברית', flag: '🇮🇱' },
+    { id: 'en', label: 'English' },
+    { id: 'he', label: 'עברית' },
   ]
 
   const currencies = [
@@ -58,28 +44,24 @@ export function ProfileStep({ onNext, onBack, initialData }) {
   ]
 
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div>
       {/* Header */}
-      <motion.div variants={itemVariants} className="text-center mb-6 sm:mb-8 mt-6 lg:mt-0">
-        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 flex items-center justify-center mx-auto mb-4">
-          <User className="w-7 h-7 sm:w-8 sm:h-8 text-violet-500" />
+      <div className="text-center mb-8">
+        <div className="w-12 h-12 rounded-xl bg-[rgb(var(--accent))]/10 flex items-center justify-center mx-auto mb-4">
+          <User className="w-6 h-6 text-[rgb(var(--accent))]" />
         </div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
+        <h2 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">
           {t('onboarding.profile.title')}
         </h2>
-        <p className="text-sm sm:text-base text-light-text-secondary dark:text-dark-text-secondary">
+        <p className="text-sm text-[rgb(var(--text-secondary))]">
           {t('onboarding.profile.subtitle')}
         </p>
-      </motion.div>
+      </div>
 
       <form onSubmit={handleSubmit}>
         {/* Name */}
-        <motion.div variants={itemVariants} className="mb-5">
-          <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+        <div className="mb-5">
+          <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
             {t('onboarding.profile.nameLabel')}
           </label>
           <input
@@ -87,15 +69,15 @@ export function ProfileStep({ onNext, onBack, initialData }) {
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder={t('onboarding.profile.namePlaceholder')}
-            className="w-full px-4 py-3.5 rounded-xl bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] placeholder:text-[rgb(var(--text-tertiary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:border-transparent transition-all"
             autoFocus
           />
-        </motion.div>
+        </div>
 
         {/* Language Selection */}
-        <motion.div variants={itemVariants} className="mb-5">
-          <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
-            <Globe className="w-4 h-4 inline-block mr-1.5 mb-0.5" />
+        <div className="mb-5">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+            <Globe className="w-4 h-4" />
             {t('onboarding.profile.languageLabel')}
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -104,32 +86,33 @@ export function ProfileStep({ onNext, onBack, initialData }) {
                 key={lang.id}
                 type="button"
                 onClick={() => handleLanguageChange(lang.id)}
-                className={`p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-3 ${
+                className={cn(
+                  "p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2",
                   formData.language === lang.id
-                    ? 'border-violet-500 bg-violet-500/10'
-                    : 'border-light-border dark:border-dark-border bg-light-elevated dark:bg-dark-elevated hover:border-light-text-tertiary dark:hover:border-dark-text-tertiary'
-                }`}
+                    ? "border-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5"
+                    : "border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-secondary))] hover:border-[rgb(var(--border-secondary))]"
+                )}
               >
-                <span className="text-2xl">{lang.flag}</span>
-                <span className={`font-medium ${
+                <span className={cn(
+                  "font-medium text-sm",
                   formData.language === lang.id
-                    ? 'text-violet-600 dark:text-violet-400'
-                    : 'text-light-text-primary dark:text-dark-text-primary'
-                }`}>
+                    ? "text-[rgb(var(--accent))]"
+                    : "text-[rgb(var(--text-primary))]"
+                )}>
                   {lang.label}
                 </span>
                 {formData.language === lang.id && (
-                  <Check className="w-5 h-5 text-violet-500" />
+                  <Check className="w-4 h-4 text-[rgb(var(--accent))]" />
                 )}
               </button>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Currency Selection */}
-        <motion.div variants={itemVariants} className="mb-5">
-          <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
-            <DollarSign className="w-4 h-4 inline-block mr-1.5 mb-0.5" />
+        <div className="mb-5">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+            <DollarSign className="w-4 h-4" />
             {t('onboarding.profile.currencyLabel')}
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -138,44 +121,47 @@ export function ProfileStep({ onNext, onBack, initialData }) {
                 key={curr.id}
                 type="button"
                 onClick={() => setFormData(prev => ({ ...prev, currency: curr.id }))}
-                className={`p-4 rounded-xl border-2 transition-all duration-200 flex items-center justify-center gap-2 ${
+                className={cn(
+                  "p-3 rounded-xl border-2 transition-all flex items-center justify-center gap-2",
                   formData.currency === curr.id
-                    ? 'border-violet-500 bg-violet-500/10'
-                    : 'border-light-border dark:border-dark-border bg-light-elevated dark:bg-dark-elevated hover:border-light-text-tertiary dark:hover:border-dark-text-tertiary'
-                }`}
+                    ? "border-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5"
+                    : "border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-secondary))] hover:border-[rgb(var(--border-secondary))]"
+                )}
               >
-                <span className={`text-xl font-bold ${
+                <span className={cn(
+                  "text-lg font-bold",
                   formData.currency === curr.id
-                    ? 'text-violet-600 dark:text-violet-400'
-                    : 'text-light-text-tertiary dark:text-dark-text-tertiary'
-                }`}>
+                    ? "text-[rgb(var(--accent))]"
+                    : "text-[rgb(var(--text-tertiary))]"
+                )}>
                   {curr.symbol}
                 </span>
-                <span className={`font-medium ${
+                <span className={cn(
+                  "font-medium text-sm",
                   formData.currency === curr.id
-                    ? 'text-violet-600 dark:text-violet-400'
-                    : 'text-light-text-primary dark:text-dark-text-primary'
-                }`}>
+                    ? "text-[rgb(var(--accent))]"
+                    : "text-[rgb(var(--text-primary))]"
+                )}>
                   {curr.label}
                 </span>
                 {formData.currency === curr.id && (
-                  <Check className="w-5 h-5 text-violet-500" />
+                  <Check className="w-4 h-4 text-[rgb(var(--accent))]" />
                 )}
               </button>
             ))}
           </div>
-        </motion.div>
+        </div>
 
         {/* Month Start Day */}
-        <motion.div variants={itemVariants} className="mb-8">
-          <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
-            <Calendar className="w-4 h-4 inline-block mr-1.5 mb-0.5" />
+        <div className="mb-8">
+          <label className="flex items-center gap-1.5 text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+            <Calendar className="w-4 h-4" />
             {t('onboarding.profile.monthStartLabel')}
           </label>
           <select
             value={formData.monthStartDay}
             onChange={(e) => setFormData(prev => ({ ...prev, monthStartDay: Number(e.target.value) }))}
-            className="w-full px-4 py-3.5 rounded-xl bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent transition-all"
+            className="w-full px-4 py-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:border-transparent transition-all"
           >
             {[...Array(28)].map((_, i) => (
               <option key={i + 1} value={i + 1}>
@@ -186,31 +172,30 @@ export function ProfileStep({ onNext, onBack, initialData }) {
               </option>
             ))}
           </select>
-          <p className="mt-2 text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+          <p className="mt-2 text-xs text-[rgb(var(--text-tertiary))]">
             {t('onboarding.profile.monthStartHelp')}
           </p>
-        </motion.div>
+        </div>
 
         {/* Actions */}
-        <motion.div variants={itemVariants} className="flex gap-3">
+        <div className="flex gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="flex-1 py-3.5 px-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-secondary dark:text-dark-text-secondary font-medium flex items-center justify-center gap-2 hover:bg-light-elevated dark:hover:bg-dark-elevated transition-colors"
+            className="flex-1 py-3 px-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-secondary))] font-medium flex items-center justify-center gap-2 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
           >
-            <ArrowLeft className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+            <ArrowLeft className={cn("w-4 h-4", isRTL && "rtl-flip")} />
             {t('common.back')}
           </button>
           <button
             type="submit"
-            className="flex-[2] py-3.5 px-6 rounded-xl bg-gradient-to-r from-violet-500 to-purple-600 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-violet-500/20"
+            className="flex-[2] py-3 px-4 rounded-xl bg-[rgb(var(--accent))] text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
           >
             {t('common.continue')}
-            <ArrowRight className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+            <ArrowRight className={cn("w-4 h-4", isRTL && "rtl-flip")} />
           </button>
-        </motion.div>
+        </div>
       </form>
-    </motion.div>
+    </div>
   )
 }
-

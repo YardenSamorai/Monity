@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
@@ -10,8 +11,11 @@ const createGoalSchema = z.object({
   targetDate: z.string().nullable().optional(),
   initialSavedAmount: z.number().min(0).default(0),
   priority: z.enum(['low', 'medium', 'high']).default('medium'),
-  contributionMode: z.enum(['flexible', 'fixed']).default('flexible'),
+  contributionMode: z.enum(['flexible', 'fixed', 'recurring']).default('flexible'),
   fixedMonthlyAmount: z.number().positive().nullable().optional(),
+  isRecurring: z.boolean().default(false),
+  recurringPeriod: z.enum(['monthly', 'yearly']).nullable().optional(),
+  currency: z.string().default('USD'),
 })
 
 export async function POST(request) {
@@ -36,6 +40,9 @@ export async function POST(request) {
         priority: validated.priority,
         contributionMode: validated.contributionMode,
         fixedMonthlyAmount: validated.fixedMonthlyAmount,
+        isRecurring: validated.isRecurring || false,
+        recurringPeriod: validated.recurringPeriod || null,
+        currency: validated.currency || 'USD',
         isPaused: false,
         isCompleted: false,
       },
@@ -53,6 +60,7 @@ export async function POST(request) {
       })
     }
 
+    revalidateTag('goals')
     return NextResponse.json({ goal })
   } catch (error) {
     if (error.name === 'ZodError') {

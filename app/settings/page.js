@@ -5,8 +5,8 @@ import AppShell from '@/components/AppShell'
 import { SettingsClient } from './SettingsClient'
 import { serializePrismaData } from '@/lib/utils'
 
-// Enable caching for this route
-export const revalidate = 60 // Revalidate every 60 seconds
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export default async function SettingsPage() {
   const user = await getOrCreateUser()

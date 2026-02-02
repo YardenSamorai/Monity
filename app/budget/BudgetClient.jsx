@@ -1,19 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, StatCard } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Progress } from '@/components/ui/Progress'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BudgetModal } from '@/components/forms/BudgetModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { formatCurrency } from '@/lib/utils'
-import { Target, Plus, TrendingDown, TrendingUp, Edit, Trash2 } from 'lucide-react'
+import { formatCurrency, cn } from '@/lib/utils'
+import { Target, Plus, Edit, Trash2, TrendingDown, Wallet, PiggyBank } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 
 export function BudgetClient({ initialBudgets, categories, totalBudget, totalActual, month, year, currentDate }) {
-  const { t, currencySymbol, localeString } = useI18n()
+  const { t, currencySymbol, localeString, isRTL } = useI18n()
   const { toast } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [budgets, setBudgets] = useState(initialBudgets)
@@ -22,7 +20,6 @@ export function BudgetClient({ initialBudgets, categories, totalBudget, totalAct
   const [budgetToDelete, setBudgetToDelete] = useState(null)
 
   const handleSuccess = async () => {
-    // Refresh budgets
     window.location.reload()
   }
 
@@ -50,13 +47,8 @@ export function BudgetClient({ initialBudgets, categories, totalBudget, totalAct
       }
 
       toast.success(t('budget.deleted'), t('budget.deletedSuccess'))
-      
-      // Remove from local state
       setBudgets(budgets.filter(b => b.id !== budgetToDelete.id))
-      
-      // Reload to update totals
       window.location.reload()
-      
       setBudgetToDelete(null)
       setIsDeleteDialogOpen(false)
     } catch (error) {
@@ -68,185 +60,200 @@ export function BudgetClient({ initialBudgets, categories, totalBudget, totalAct
   const remaining = totalBudget - totalActual
   const percentageSpent = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0
 
+  const getStatusColor = (percentage) => {
+    if (percentage > 100) return { text: 'text-negative', bg: 'bg-[rgb(var(--negative))]' }
+    if (percentage > 80) return { text: 'text-warning', bg: 'bg-[rgb(var(--warning))]' }
+    return { text: 'text-positive', bg: 'bg-[rgb(var(--positive))]' }
+  }
+
   return (
-    <div className="min-h-screen p-4 lg:p-8 space-y-6">
-      {/* Page Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl lg:text-4xl font-bold text-light-text-primary dark:text-dark-text-primary">
-          {t('budget.title')}
-        </h1>
-        <p className="text-light-text-secondary dark:text-dark-text-secondary">
-          {new Date(currentDate).toLocaleDateString(localeString, { month: 'long', year: 'numeric' })}
-        </p>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          title={t('budget.total')}
-          value={formatCurrency(totalBudget, { locale: localeString, symbol: currencySymbol })}
-          icon={<Target className="w-5 h-5" />}
-        />
+    <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
+      <div className="px-4 py-4 pb-24">
         
-        <StatCard
-          title={t('budget.spent')}
-          value={formatCurrency(totalActual, { locale: localeString, symbol: currencySymbol })}
-          subtitle={t('budget.percentageOfBudget', { percentage: percentageSpent.toFixed(0) })}
-          icon={<TrendingDown className="w-5 h-5" />}
-        />
-        
-        <StatCard
-          title={t('budget.remaining')}
-          value={formatCurrency(Math.abs(remaining), { locale: localeString, symbol: currencySymbol })}
-          subtitle={remaining < 0 ? t('budget.over') : t('budget.leftToSpend')}
-          icon={remaining >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-        />
-      </div>
+        {/* Header */}
+        <div className="text-center mb-5">
+          <h1 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+            {t('budget.title')}
+          </h1>
+          <p className="text-sm text-[rgb(var(--text-tertiary))]">
+            {new Date(currentDate).toLocaleDateString(localeString, { month: 'long', year: 'numeric' })}
+          </p>
+        </div>
 
-      {/* Overall Progress */}
-      {totalBudget > 0 && (
-        <Card>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('budget.overallProgress')}
-              </h3>
-              <span className={`font-semibold ${
-                percentageSpent > 100 ? 'text-light-danger dark:text-dark-danger' :
-                percentageSpent > 80 ? 'text-light-warning dark:text-dark-warning' :
-                'text-light-success dark:text-dark-success'
-              }`}>
+        {/* Summary Grid - 3 columns on mobile */}
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {/* Total Budget */}
+          <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-lg p-3 text-center">
+            <p className="text-[10px] text-[rgb(var(--text-tertiary))] mb-1">{t('budget.total')}</p>
+            <p className="text-base font-bold tabular-nums text-[rgb(var(--text-primary))]" dir="ltr">
+              {currencySymbol}{totalBudget.toLocaleString()}
+            </p>
+          </div>
+          
+          {/* Spent */}
+          <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-lg p-3 text-center">
+            <p className="text-[10px] text-[rgb(var(--text-tertiary))] mb-1">{t('budget.spent')}</p>
+            <p className="text-base font-bold tabular-nums text-negative" dir="ltr">
+              {currencySymbol}{totalActual.toLocaleString()}
+            </p>
+            {totalBudget > 0 && (
+              <p className="text-[9px] text-[rgb(var(--text-tertiary))]">
+                {percentageSpent.toFixed(0)}% {t('budget.ofBudget')}
+              </p>
+            )}
+          </div>
+          
+          {/* Remaining */}
+          <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-lg p-3 text-center">
+            <p className="text-[10px] text-[rgb(var(--text-tertiary))] mb-1">{t('budget.remaining')}</p>
+            <p className={cn(
+              "text-base font-bold tabular-nums",
+              remaining >= 0 ? "text-positive" : "text-negative"
+            )} dir="ltr">
+              {currencySymbol}{Math.abs(remaining).toLocaleString()}
+            </p>
+            <p className="text-[9px] text-[rgb(var(--text-tertiary))]">
+              {remaining >= 0 ? t('budget.leftToSpend') : t('budget.over')}
+            </p>
+          </div>
+        </div>
+
+        {/* Overall Progress - only show if there are budgets */}
+        {totalBudget > 0 && (
+          <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-lg p-3 mb-5">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-[rgb(var(--text-secondary))]">{t('budget.overallProgress')}</span>
+              <span className={cn('text-xs font-bold', getStatusColor(percentageSpent).text)}>
                 {percentageSpent.toFixed(0)}%
               </span>
             </div>
-            <Progress value={totalActual} max={totalBudget} />
+            <div className="h-2 bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden">
+              <div 
+                className={cn('h-full rounded-full transition-all duration-300', getStatusColor(percentageSpent).bg)}
+                style={{ width: `${Math.min(percentageSpent, 100)}%` }}
+              />
+            </div>
           </div>
-        </Card>
-      )}
+        )}
 
-      {/* Budget List */}
-      <Card>
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-light-text-primary dark:text-dark-text-primary">
+        {/* Section Header */}
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-[rgb(var(--text-secondary))]">
             {t('budget.byCategory')}
           </h2>
-          <Button size="sm" onClick={() => {
-            setEditingBudget(null)
-            setIsModalOpen(true)
-          }}>
-            <Plus className="w-4 h-4 mr-2" />
-            {t('budget.createBudget')}
+          <Button size="sm" onClick={() => { setEditingBudget(null); setIsModalOpen(true) }}>
+            <Plus className="w-4 h-4" />
+            <span>{t('budget.createBudget')}</span>
           </Button>
         </div>
-        
+
+        {/* Budgets List or Empty State */}
         {budgets.length === 0 ? (
-          <EmptyState
-            icon={<Target className="w-8 h-8" />}
-            title={t('budget.noBudgets')}
-            description={t('budget.startPlanning')}
-            action={() => {
-              setEditingBudget(null)
-              setIsModalOpen(true)
-            }}
-            actionLabel={t('budget.createBudget')}
-          />
+          <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-lg p-6">
+            <div className="text-center">
+              <div className="w-12 h-12 mx-auto mb-3 rounded-full bg-[rgb(var(--bg-tertiary))] flex items-center justify-center">
+                <Target className="w-6 h-6 text-[rgb(var(--text-tertiary))]" />
+              </div>
+              <h3 className="text-sm font-semibold text-[rgb(var(--text-primary))] mb-1">
+                {t('budget.noBudgets')}
+              </h3>
+              <p className="text-xs text-[rgb(var(--text-tertiary))] mb-4 max-w-[200px] mx-auto">
+                {t('budget.startPlanning')}
+              </p>
+              <Button size="sm" onClick={() => { setEditingBudget(null); setIsModalOpen(true) }}>
+                <Plus className="w-4 h-4" />
+                <span>{t('budget.createBudget')}</span>
+              </Button>
+            </div>
+          </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-2">
             {budgets.map((budget) => {
               const budgetAmount = Number(budget.amount)
               const actualAmount = budget.actual
-              const remaining = budgetAmount - actualAmount
+              const budgetRemaining = budgetAmount - actualAmount
               const percentage = budgetAmount > 0 ? (actualAmount / budgetAmount) * 100 : 0
+              const colors = getStatusColor(percentage)
               
               return (
-                <div key={budget.id} className="group relative space-y-3 pb-6 border-b border-light-border-light dark:border-dark-border-light last:border-0 last:pb-0">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-light-text-primary dark:text-dark-text-primary mb-1">
+                <div 
+                  key={budget.id} 
+                  className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-lg p-3"
+                >
+                  {/* Top Row: Category + Actions */}
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      {budget.category?.icon && (
+                        <span className="text-base">{budget.category.icon}</span>
+                      )}
+                      <span className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
                         {budget.category?.name || t('transactions.uncategorized')}
-                      </div>
-                      <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                        {t('budget.spentOf', { 
-                          spent: formatCurrency(actualAmount, { locale: localeString, symbol: currencySymbol }),
-                          budget: formatCurrency(budgetAmount, { locale: localeString, symbol: currencySymbol })
-                        })}
-                      </div>
+                      </span>
                     </div>
-                    <div className="flex items-center gap-3 flex-shrink-0 ml-4">
-                      <div className="text-right">
-                        <div className={`text-lg font-bold ${
-                          remaining >= 0 
-                            ? 'text-light-success dark:text-dark-success' 
-                            : 'text-light-danger dark:text-dark-danger'
-                        }`}>
-                          {formatCurrency(Math.abs(remaining), { locale: localeString, symbol: currencySymbol })}
-                        </div>
-                        <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                          {remaining >= 0 ? t('budget.remaining') : t('budget.over')}
-                        </div>
-                      </div>
-                      
-                      {/* Action buttons */}
-                      <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleEdit(budget)
-                          }}
-                          className="h-9 w-9 p-0"
-                          aria-label={t('common.edit')}
-                        >
-                          <Edit className="w-5 h-5" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleDelete(budget)
-                          }}
-                          className="h-9 w-9 p-0 text-light-danger dark:text-dark-danger hover:text-light-danger-dark dark:hover:text-dark-danger-dark"
-                          aria-label={t('common.delete')}
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </Button>
-                      </div>
+                    
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => handleEdit(budget)}
+                        className="p-1.5 rounded text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] active:bg-[rgb(var(--bg-tertiary))]"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(budget)}
+                        className="p-1.5 rounded text-[rgb(var(--text-tertiary))] hover:text-negative active:text-negative"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                   
-                  <Progress value={actualAmount} max={budgetAmount} />
+                  {/* Progress Bar */}
+                  <div className="h-1.5 bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden mb-2">
+                    <div 
+                      className={cn('h-full rounded-full transition-all duration-300', colors.bg)}
+                      style={{ width: `${Math.min(percentage, 100)}%` }}
+                    />
+                  </div>
                   
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-light-text-tertiary dark:text-dark-text-tertiary">
-                      {t('budget.percentageUsed', { percentage: percentage.toFixed(0) })}
+                  {/* Bottom Row: Stats */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[rgb(var(--text-tertiary))]">
+                      <span dir="ltr">{currencySymbol}{actualAmount.toLocaleString()}</span>
+                      {' / '}
+                      <span dir="ltr">{currencySymbol}{budgetAmount.toLocaleString()}</span>
                     </span>
-                    {percentage >= 100 && (
-                      <span className="text-light-danger dark:text-dark-danger font-medium">
-                        {t('budget.exceeded')}
-                      </span>
-                    )}
-                    {percentage >= 80 && percentage < 100 && (
-                      <span className="text-light-warning dark:text-dark-warning font-medium">
-                        {t('budget.approaching')}
-                      </span>
-                    )}
+                    <span className={cn('font-medium', colors.text)}>
+                      {budgetRemaining >= 0 
+                        ? `${t('budget.remaining')}: ${currencySymbol}${budgetRemaining.toLocaleString()}`
+                        : `${t('budget.over')}: ${currencySymbol}${Math.abs(budgetRemaining).toLocaleString()}`
+                      }
+                    </span>
                   </div>
                 </div>
               )
             })}
           </div>
         )}
-      </Card>
+      </div>
 
-      {/* Budget Modal */}
+      {/* FAB */}
+      <button
+        onClick={() => { setEditingBudget(null); setIsModalOpen(true) }}
+        className={cn(
+          "fixed bottom-20 z-40 w-12 h-12 rounded-full",
+          "bg-[rgb(var(--accent))] text-white shadow-lg",
+          "flex items-center justify-center",
+          "hover:opacity-90 active:scale-95 transition-all",
+          isRTL ? "left-4" : "right-4"
+        )}
+      >
+        <Plus className="w-5 h-5" />
+      </button>
+
+      {/* Modals */}
       <BudgetModal
         isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setEditingBudget(null)
-        }}
+        onClose={() => { setIsModalOpen(false); setEditingBudget(null) }}
         categories={categories}
         month={month}
         year={year}
@@ -254,7 +261,6 @@ export function BudgetClient({ initialBudgets, categories, totalBudget, totalAct
         editingBudget={editingBudget}
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}

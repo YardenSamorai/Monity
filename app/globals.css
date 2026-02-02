@@ -2,68 +2,198 @@
 @tailwind components;
 @tailwind utilities;
 
-/* RTL Support */
-[dir='rtl'] {
-  direction: rtl;
-}
+/* ========================================
+   DESIGN SYSTEM: Calm Finance / Professional
+   Focus: Trust, Control, Data-First
+   ======================================== */
 
-/* RTL-specific utilities */
-.rtl-flip {
-  transform: scaleX(-1);
-}
-
-/* Ensure proper text alignment in RTL */
-[dir='rtl'] .text-left {
-  text-align: right;
-}
-
-[dir='rtl'] .text-right {
-  text-align: left;
-}
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --chart-1: 221 83% 53%;
-    --chart-2: 142 71% 45%;
-    --chart-3: 47 96% 53%;
-    --chart-4: 262 83% 58%;
-    --chart-5: 340 75% 55%;
-    --chart-6: 199 89% 48%;
-  }
-
-  .dark {
-    --background: 224 71% 4%;
-    --chart-1: 217 91% 60%;
-    --chart-2: 142 76% 36%;
-    --chart-3: 48 96% 53%;
-    --chart-4: 263 70% 50%;
-    --chart-5: 340 75% 55%;
-    --chart-6: 199 89% 48%;
-  }
-
-  * {
-    @apply border-light-border dark:border-dark-border;
-  }
+:root {
+  /* Neutral surfaces - calm, professional */
+  --bg-primary: 250 250 250;       /* Very light gray - main bg */
+  --bg-secondary: 255 255 255;     /* White - cards */
+  --bg-tertiary: 245 245 245;      /* Slightly darker - hover states */
   
+  /* Borders - subtle */
+  --border-primary: 229 231 235;   /* gray-200 */
+  --border-secondary: 243 244 246; /* gray-100 */
+  
+  /* Text - strong hierarchy */
+  --text-primary: 17 24 39;        /* gray-900 - headlines, numbers */
+  --text-secondary: 75 85 99;      /* gray-600 - labels */
+  --text-tertiary: 156 163 175;    /* gray-400 - hints */
+  
+  /* Semantic colors - ONLY for meaning */
+  --positive: 22 163 74;           /* green-600 - income, good */
+  --negative: 220 38 38;           /* red-600 - expenses, bad */
+  --warning: 217 119 6;            /* amber-600 - alerts */
+  --info: 59 130 246;              /* blue-500 - neutral info */
+  
+  /* Accent - minimal use */
+  --accent: 99 102 241;            /* indigo-500 */
+  
+  /* Shadows - soft, professional */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03);
+  --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.03);
+  
+  /* Radius - subtle */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* Dark mode - professional dark */
+.dark {
+  --bg-primary: 17 17 17;          /* Near black */
+  --bg-secondary: 24 24 24;        /* Card bg */
+  --bg-tertiary: 32 32 32;         /* Hover */
+  
+  --border-primary: 38 38 38;
+  --border-secondary: 32 32 32;
+  
+  --text-primary: 250 250 250;
+  --text-secondary: 163 163 163;
+  --text-tertiary: 115 115 115;
+  
+  --positive: 74 222 128;          /* green-400 */
+  --negative: 248 113 113;         /* red-400 */
+  --warning: 251 191 36;           /* amber-400 */
+  --info: 96 165 250;              /* blue-400 */
+  
+  --accent: 129 140 248;           /* indigo-400 */
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+  --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.4);
+  --shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+}
+
+/* ========================================
+   BASE STYLES
+   ======================================== */
+@layer base {
   html {
-    @apply antialiased;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
   
   body {
-    @apply bg-light-bg dark:bg-dark-bg text-light-text-primary dark:text-dark-text-primary;
+    background: rgb(var(--bg-primary));
+    color: rgb(var(--text-primary));
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+  
+  /* Numbers should always be tabular for alignment */
+  .font-mono, [data-numeric] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
   }
 }
 
-@layer utilities {
+/* ========================================
+   TYPOGRAPHY - Numbers as Hero
+   ======================================== */
+@layer components {
+  /* Large financial numbers */
   .text-balance {
-    text-wrap: balance;
+    font-size: 2rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--text-primary));
+  }
+  
+  @screen sm {
+    .text-balance {
+      font-size: 2.25rem;
+    }
+  }
+  
+  @screen lg {
+    .text-balance {
+      font-size: 2.5rem;
+    }
+  }
+  
+  /* Section headers */
+  .text-section {
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: rgb(var(--text-tertiary));
+  }
+  
+  /* Labels */
+  .text-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: rgb(var(--text-secondary));
+  }
+}
+
+/* ========================================
+   CARD SYSTEM - Minimal, Professional
+   ======================================== */
+@layer components {
+  .card {
+    background: rgb(var(--bg-secondary));
+    border: 1px solid rgb(var(--border-primary));
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .card-hover {
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  
+  .card-hover:hover {
+    box-shadow: var(--shadow-md);
+    border-color: rgb(var(--border-primary));
+  }
+}
+
+/* ========================================
+   SEMANTIC COLORS - Only for Meaning
+   ======================================== */
+@layer utilities {
+  .text-positive { color: rgb(var(--positive)); }
+  .text-negative { color: rgb(var(--negative)); }
+  .text-warning { color: rgb(var(--warning)); }
+  .text-info { color: rgb(var(--info)); }
+  
+  .bg-positive-subtle { background: rgb(var(--positive) / 0.1); }
+  .bg-negative-subtle { background: rgb(var(--negative) / 0.1); }
+  .bg-warning-subtle { background: rgb(var(--warning) / 0.1); }
+  .bg-info-subtle { background: rgb(var(--info) / 0.1); }
+}
+
+/* ========================================
+   RTL SUPPORT
+   ======================================== */
+[dir="rtl"] {
+  direction: rtl;
+}
+
+[dir="rtl"] .rtl-flip {
+  transform: scaleX(-1);
+}
+
+/* ========================================
+   MOBILE UTILITIES
+   ======================================== */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
   }
   
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
   }
   
   .scrollbar-hide {
@@ -76,10 +206,43 @@
   }
 }
 
-/* Focus visible for accessibility */
+/* ========================================
+   ANIMATIONS - Subtle only
+   ======================================== */
 @layer utilities {
-  .focus-ring {
-    @apply focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent focus:ring-offset-2 focus:ring-offset-light-bg dark:focus:ring-offset-dark-bg;
+  .animate-fade-in {
+    animation: fadeIn 0.15s ease-out;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.2s ease-out;
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========================================
+   PROGRESS BARS
+   ======================================== */
+@layer components {
+  .progress-track {
+    height: 6px;
+    background: rgb(var(--bg-tertiary));
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.3s ease;
+  }
+}

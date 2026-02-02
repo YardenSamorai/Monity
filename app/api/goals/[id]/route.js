@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
@@ -59,6 +60,7 @@ export async function PUT(request, { params }) {
       data: updateData,
     })
 
+    revalidateTag('goals')
     return NextResponse.json({ goal: updated })
   } catch (error) {
     if (error.name === 'ZodError') {
@@ -91,6 +93,8 @@ export async function DELETE(request, { params }) {
     })
 
     if (!goal) {
+      // Revalidate cache even if goal not found to clear stale data
+      revalidateTag('goals')
       return NextResponse.json(
         { error: 'Goal not found' },
         { status: 404 }
@@ -102,6 +106,7 @@ export async function DELETE(request, { params }) {
       where: { id },
     })
 
+    revalidateTag('goals')
     return NextResponse.json({ success: true, message: 'Goal deleted successfully' })
   } catch (error) {
     console.error('Error deleting goal:', error)

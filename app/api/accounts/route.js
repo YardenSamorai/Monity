@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createAccountSchema } from '@/lib/validations'
@@ -34,6 +35,17 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
     
+    // Verify user exists in database before creating account
+    const userExists = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { id: true }
+    })
+    
+    if (!userExists) {
+      console.error('User not found in database despite getOrCreateUser returning:', user.id)
+      return NextResponse.json({ error: 'User not found' }, { status: 404 })
+    }
+    
     const body = await request.json()
     const validated = createAccountSchema.parse(body)
     
@@ -46,6 +58,10 @@ export async function POST(request) {
         currency: validated.currency,
       },
     })
+    
+    // Revalidate cache
+    revalidateTag('dashboard')
+    revalidateTag('transactions')
     
     return NextResponse.json({ account }, { status: 201 })
   } catch (error) {

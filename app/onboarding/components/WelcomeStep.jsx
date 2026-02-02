@@ -1,8 +1,9 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { Sparkles, TrendingUp, Target, PiggyBank, ArrowRight } from 'lucide-react'
+import Image from 'next/image'
+import { TrendingUp, Target, PiggyBank, ArrowRight } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
+import { cn } from '@/lib/utils'
 
 export function WelcomeStep({ onNext }) {
   const { t, isRTL } = useI18n()
@@ -11,144 +12,64 @@ export function WelcomeStep({ onNext }) {
     {
       icon: TrendingUp,
       text: t('onboarding.welcome.feature1'),
-      color: 'from-emerald-400 to-green-500',
     },
     {
       icon: Target,
       text: t('onboarding.welcome.feature2'),
-      color: 'from-blue-400 to-indigo-500',
     },
     {
       icon: PiggyBank,
       text: t('onboarding.welcome.feature3'),
-      color: 'from-purple-400 to-pink-500',
     },
   ]
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.15,
-        delayChildren: 0.2,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        type: 'spring',
-        stiffness: 300,
-        damping: 24,
-      },
-    },
-  }
-
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      className="text-center"
-    >
-      {/* Logo Animation */}
-      <motion.div
-        variants={itemVariants}
-        className="mb-8"
-      >
-        <motion.div
-          initial={{ scale: 0, rotate: -180 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{
-            type: 'spring',
-            stiffness: 260,
-            damping: 20,
-            delay: 0.1,
-          }}
-          className="relative inline-flex"
-        >
-          <div className="w-24 h-24 lg:w-28 lg:h-28 rounded-3xl bg-gradient-to-br from-light-accent to-blue-600 dark:from-dark-accent dark:to-blue-500 flex items-center justify-center shadow-2xl shadow-light-accent/30 dark:shadow-dark-accent/30">
-            <span className="text-5xl lg:text-6xl font-bold text-white">M</span>
-          </div>
-          {/* Sparkle effects */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, duration: 0.3 }}
-            className="absolute -top-2 -right-2"
-          >
-            <Sparkles className="w-6 h-6 text-yellow-400" />
-          </motion.div>
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.7, duration: 0.3 }}
-            className="absolute -bottom-1 -left-2"
-          >
-            <Sparkles className="w-4 h-4 text-purple-400" />
-          </motion.div>
-        </motion.div>
-      </motion.div>
+    <div className="text-center">
+      {/* Logo */}
+      <div className="-mb-2 flex justify-center">
+        <Image 
+          src="/MonityLogo.svg" 
+          alt="Monity" 
+          width={300} 
+          height={300}
+          className="w-48 h-48 lg:w-56 lg:h-56"
+        />
+      </div>
 
       {/* Welcome Text */}
-      <motion.div variants={itemVariants} className="mb-2">
-        <span className="text-lg font-medium text-light-accent dark:text-dark-accent">
-          {t('onboarding.welcome.greeting')}
-        </span>
-      </motion.div>
-
-      <motion.h1
-        variants={itemVariants}
-        className="text-4xl lg:text-5xl font-bold text-light-text-primary dark:text-dark-text-primary mb-4"
-      >
+      <h1 className="text-3xl font-bold text-[rgb(var(--text-primary))] mb-2">
         Monity
-      </motion.h1>
+      </h1>
 
-      <motion.p
-        variants={itemVariants}
-        className="text-lg text-light-text-secondary dark:text-dark-text-secondary mb-10 max-w-sm mx-auto leading-relaxed"
-      >
+      <p className="text-[rgb(var(--text-secondary))] mb-10 max-w-sm mx-auto leading-relaxed">
         {t('onboarding.welcome.subtitle')}
-      </motion.p>
+      </p>
 
-      {/* Features */}
-      <motion.div
-        variants={containerVariants}
-        className="space-y-4 mb-10"
-      >
+      {/* Features - Clean list style */}
+      <div className="space-y-3 mb-10 max-w-sm mx-auto">
         {features.map((feature, index) => (
-          <motion.div
+          <div
             key={index}
-            variants={itemVariants}
-            className="flex items-center gap-4 p-4 rounded-2xl bg-light-elevated/80 dark:bg-dark-elevated/80 backdrop-blur-sm border border-light-border/50 dark:border-dark-border/50"
+            className="flex items-center gap-4 p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]"
           >
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${feature.color} flex items-center justify-center shadow-lg flex-shrink-0`}>
-              <feature.icon className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 rounded-lg bg-[rgb(var(--accent))]/10 flex items-center justify-center flex-shrink-0">
+              <feature.icon className="w-5 h-5 text-[rgb(var(--accent))]" />
             </div>
-            <span className="text-light-text-primary dark:text-dark-text-primary font-medium text-start">
+            <span className="text-sm text-[rgb(var(--text-primary))] font-medium text-start">
               {feature.text}
             </span>
-          </motion.div>
+          </div>
         ))}
-      </motion.div>
+      </div>
 
       {/* CTA Button */}
-      <motion.button
-        variants={itemVariants}
+      <button
         onClick={onNext}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-light-accent to-blue-600 dark:from-dark-accent dark:to-blue-500 text-white font-semibold text-lg shadow-xl shadow-light-accent/30 dark:shadow-dark-accent/30 flex items-center justify-center gap-2 group"
+        className="w-full py-3.5 px-6 rounded-xl bg-[rgb(var(--accent))] text-white font-medium shadow-sm hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
       >
         {t('onboarding.welcome.cta')}
-        <ArrowRight className={`w-5 h-5 transition-transform group-hover:translate-x-1 ${isRTL ? 'rotate-180 group-hover:-translate-x-1' : ''}`} />
-      </motion.button>
-    </motion.div>
+        <ArrowRight className={cn("w-5 h-5", isRTL && "rtl-flip")} />
+      </button>
+    </div>
   )
 }
-

@@ -1,14 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Zap, DollarSign, CreditCard, ArrowRight, ArrowLeft, Plus, Check, X } from 'lucide-react'
+import { Zap, DollarSign, CreditCard, ArrowRight, ArrowLeft, Plus, Check } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
-import { translations } from '@/lib/translations'
+import { cn } from '@/lib/utils'
 
 export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, currency, currencySymbol }) {
-  const { t, isRTL, locale } = useI18n()
+  const { t, isRTL } = useI18n()
   const { toast } = useToast()
   const [isLoading, setIsLoading] = useState(false)
   const [showIncomeForm, setShowIncomeForm] = useState(false)
@@ -30,7 +29,6 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
     categoryId: '',
   })
 
-  // Filter expense categories
   const expenseCategories = categories.filter(c => c.type === 'expense' || c.type === 'both')
 
   const handleAddIncome = async () => {
@@ -113,311 +111,242 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
     onNext({ recurringIncome, recurringExpenses })
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.1 },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { type: 'spring', stiffness: 300, damping: 24 } },
-  }
-
-  // Get translated category name
-  const getCategoryName = (category) => {
-    if (category.isDefault) {
-      const categoryTranslations = translations[locale]?.settings?.categoryNames
-      if (categoryTranslations && categoryTranslations[category.name]) {
-        return categoryTranslations[category.name]
-      }
-    }
-    return category.name
-  }
-
   return (
-    <motion.div
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-    >
+    <div>
       {/* Header */}
-      <motion.div variants={itemVariants} className="text-center mb-8 mt-8 lg:mt-0">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center mx-auto mb-4">
-          <Zap className="w-8 h-8 text-purple-500" />
+      <div className="text-center mb-6">
+        <div className="w-12 h-12 rounded-xl bg-[rgb(var(--positive))]/10 flex items-center justify-center mx-auto mb-4">
+          <Zap className="w-6 h-6 text-[rgb(var(--positive))]" />
         </div>
-        <h2 className="text-2xl lg:text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
+        <h2 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">
           {t('onboarding.quickSetup.title')}
         </h2>
-        <p className="text-light-text-secondary dark:text-dark-text-secondary max-w-sm mx-auto">
+        <p className="text-sm text-[rgb(var(--text-secondary))]">
           {t('onboarding.quickSetup.subtitle')}
         </p>
-      </motion.div>
+      </div>
 
-      {/* Recurring Income Card */}
-      <motion.div variants={itemVariants} className="mb-4">
-        <div className="p-4 rounded-2xl bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-400 to-green-500 flex items-center justify-center">
-              <DollarSign className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('onboarding.quickSetup.recurringIncome')}
-              </h3>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('onboarding.quickSetup.incomeDescription')}
-              </p>
-            </div>
+      {/* Recurring Income Section */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <DollarSign className="w-5 h-5 text-[rgb(var(--positive))]" />
+            <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+              {t('onboarding.quickSetup.recurringIncome')}
+            </h3>
           </div>
-
-          <AnimatePresence mode="wait">
-            {recurringIncome ? (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
-              >
-                <div className="flex items-center gap-2">
-                  <Check className="w-5 h-5 text-emerald-500" />
-                  <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                    {recurringIncome.description}
-                  </span>
-                </div>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400" dir="ltr">
-                  {currencySymbol}{Number(recurringIncome.amount).toLocaleString()}
-                </span>
-              </motion.div>
-            ) : showIncomeForm ? (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-3"
-              >
-                <input
-                  type="text"
-                  value={incomeForm.description}
-                  onChange={(e) => setIncomeForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder={t('onboarding.quickSetup.incomeNamePlaceholder')}
-                  className="w-full px-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  autoFocus
-                />
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-tertiary text-sm">
-                      {currencySymbol}
-                    </span>
-                    <input
-                      type="number"
-                      value={incomeForm.amount}
-                      onChange={(e) => setIncomeForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="0"
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                      dir="ltr"
-                    />
-                  </div>
-                  <select
-                    value={incomeForm.dayOfMonth}
-                    onChange={(e) => setIncomeForm(prev => ({ ...prev, dayOfMonth: e.target.value }))}
-                    className="px-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    {[...Array(28)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {t('onboarding.quickSetup.dayOfMonth', { day: i + 1 })}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowIncomeForm(false)}
-                    className="flex-1 py-2 px-4 rounded-xl bg-light-surface dark:bg-dark-surface text-light-text-secondary dark:text-dark-text-secondary text-sm font-medium"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddIncome}
-                    disabled={isLoading}
-                    className="flex-1 py-2 px-4 rounded-xl bg-emerald-500 text-white text-sm font-medium disabled:opacity-50"
-                  >
-                    {isLoading ? '...' : t('common.add')}
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={() => setShowIncomeForm(true)}
-                className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-medium flex items-center justify-center gap-2 hover:bg-emerald-500/5 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                {t('onboarding.quickSetup.addIncome')}
-              </motion.button>
-            )}
-          </AnimatePresence>
         </div>
-      </motion.div>
 
-      {/* Recurring Expenses Card */}
-      <motion.div variants={itemVariants} className="mb-8">
-        <div className="p-4 rounded-2xl bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-400 to-red-500 flex items-center justify-center">
-              <CreditCard className="w-5 h-5 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-light-text-primary dark:text-dark-text-primary">
-                {t('onboarding.quickSetup.recurringExpenses')}
-              </h3>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                {t('onboarding.quickSetup.expensesDescription')}
-              </p>
+        {recurringIncome ? (
+          <div className="p-4 rounded-xl bg-[rgb(var(--positive))]/5 border border-[rgb(var(--positive))]/20">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-[rgb(var(--positive))] flex items-center justify-center">
+                  <Check className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <p className="font-medium text-[rgb(var(--text-primary))]">{recurringIncome.description}</p>
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                    {t('onboarding.quickSetup.dayOfMonth', { day: recurringIncome.dayOfMonth || incomeForm.dayOfMonth })}
+                  </p>
+                </div>
+              </div>
+              <span className="font-bold text-[rgb(var(--positive))]" dir="ltr">
+                +{currencySymbol}{recurringIncome.amount.toLocaleString()}
+              </span>
             </div>
           </div>
-
-          {/* Added expenses list */}
-          {recurringExpenses.length > 0 && (
-            <div className="space-y-2 mb-3">
-              {recurringExpenses.map((expense, index) => (
-                <div
-                  key={index}
-                  className="flex items-center justify-between p-3 rounded-xl bg-rose-500/10 border border-rose-500/20"
-                >
-                  <div className="flex items-center gap-2">
-                    <Check className="w-5 h-5 text-rose-500" />
-                    <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                      {expense.description}
-                    </span>
-                  </div>
-                  <span className="font-semibold text-rose-600 dark:text-rose-400" dir="ltr">
-                    {currencySymbol}{Number(expense.amount).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <AnimatePresence mode="wait">
-            {showExpenseForm ? (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="space-y-3"
-              >
+        ) : showIncomeForm ? (
+          <div className="p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] space-y-3">
+            <input
+              type="text"
+              value={incomeForm.description}
+              onChange={(e) => setIncomeForm(prev => ({ ...prev, description: e.target.value }))}
+              placeholder={t('onboarding.quickSetup.incomeDescription')}
+              className="w-full px-3 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+            />
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] text-sm">
+                  {currencySymbol}
+                </span>
                 <input
-                  type="text"
-                  value={expenseForm.description}
-                  onChange={(e) => setExpenseForm(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder={t('onboarding.quickSetup.expenseNamePlaceholder')}
-                  className="w-full px-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  autoFocus
+                  type="number"
+                  value={incomeForm.amount}
+                  onChange={(e) => setIncomeForm(prev => ({ ...prev, amount: e.target.value }))}
+                  placeholder="0"
+                  className="w-full px-3 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+                  style={{ paddingInlineStart: '2rem' }}
+                  dir="ltr"
                 />
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-light-text-tertiary text-sm">
-                      {currencySymbol}
-                    </span>
-                    <input
-                      type="number"
-                      value={expenseForm.amount}
-                      onChange={(e) => setExpenseForm(prev => ({ ...prev, amount: e.target.value }))}
-                      placeholder="0"
-                      className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                      dir="ltr"
-                    />
+              </div>
+              <select
+                value={incomeForm.dayOfMonth}
+                onChange={(e) => setIncomeForm(prev => ({ ...prev, dayOfMonth: e.target.value }))}
+                className="w-20 px-2 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+              >
+                {[...Array(28)].map((_, i) => (
+                  <option key={i + 1} value={i + 1}>{i + 1}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowIncomeForm(false)}
+                className="flex-1 py-2 rounded-lg border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-secondary))]"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleAddIncome}
+                disabled={isLoading}
+                className="flex-1 py-2 rounded-lg bg-[rgb(var(--accent))] text-white text-sm font-medium disabled:opacity-50"
+              >
+                {t('common.add')}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowIncomeForm(true)}
+            className="w-full p-4 rounded-xl border-2 border-dashed border-[rgb(var(--border-primary))] text-[rgb(var(--text-tertiary))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors flex items-center justify-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            {t('onboarding.quickSetup.addIncome')}
+          </button>
+        )}
+      </div>
+
+      {/* Recurring Expenses Section */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-[rgb(var(--negative))]" />
+            <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+              {t('onboarding.quickSetup.recurringExpenses')}
+            </h3>
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          {recurringExpenses.map((expense, index) => (
+            <div key={index} className="p-3 rounded-xl bg-[rgb(var(--negative))]/5 border border-[rgb(var(--negative))]/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-[rgb(var(--negative))] flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5 text-white" />
                   </div>
-                  <select
-                    value={expenseForm.dayOfMonth}
-                    onChange={(e) => setExpenseForm(prev => ({ ...prev, dayOfMonth: e.target.value }))}
-                    className="px-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
-                  >
-                    {[...Array(28)].map((_, i) => (
-                      <option key={i + 1} value={i + 1}>
-                        {t('onboarding.quickSetup.dayOfMonth', { day: i + 1 })}
-                      </option>
-                    ))}
-                  </select>
+                  <span className="font-medium text-sm text-[rgb(var(--text-primary))]">{expense.description}</span>
                 </div>
+                <span className="font-bold text-sm text-[rgb(var(--negative))]" dir="ltr">
+                  -{currencySymbol}{expense.amount.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          ))}
+
+          {showExpenseForm ? (
+            <div className="p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] space-y-3">
+              <input
+                type="text"
+                value={expenseForm.description}
+                onChange={(e) => setExpenseForm(prev => ({ ...prev, description: e.target.value }))}
+                placeholder={t('onboarding.quickSetup.expenseDescription')}
+                className="w-full px-3 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+              />
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[rgb(var(--text-tertiary))] text-sm">
+                    {currencySymbol}
+                  </span>
+                  <input
+                    type="number"
+                    value={expenseForm.amount}
+                    onChange={(e) => setExpenseForm(prev => ({ ...prev, amount: e.target.value }))}
+                    placeholder="0"
+                    className="w-full px-3 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+                    style={{ paddingInlineStart: '2rem' }}
+                    dir="ltr"
+                  />
+                </div>
+                <select
+                  value={expenseForm.dayOfMonth}
+                  onChange={(e) => setExpenseForm(prev => ({ ...prev, dayOfMonth: e.target.value }))}
+                  className="w-20 px-2 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+                >
+                  {[...Array(28)].map((_, i) => (
+                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                  ))}
+                </select>
+              </div>
+              {expenseCategories.length > 0 && (
                 <select
                   value={expenseForm.categoryId}
                   onChange={(e) => setExpenseForm(prev => ({ ...prev, categoryId: e.target.value }))}
-                  className="w-full px-3 py-2.5 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-primary dark:text-dark-text-primary text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  className="w-full px-3 py-2.5 rounded-lg bg-[rgb(var(--bg-primary))] border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
                 >
                   <option value="">{t('onboarding.quickSetup.selectCategory')}</option>
                   {expenseCategories.map(cat => (
-                    <option key={cat.id} value={cat.id}>{getCategoryName(cat)}</option>
+                    <option key={cat.id} value={cat.id}>{cat.icon} {cat.name}</option>
                   ))}
                 </select>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowExpenseForm(false)}
-                    className="flex-1 py-2 px-4 rounded-xl bg-light-surface dark:bg-dark-surface text-light-text-secondary dark:text-dark-text-secondary text-sm font-medium"
-                  >
-                    {t('common.cancel')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleAddExpense}
-                    disabled={isLoading}
-                    className="flex-1 py-2 px-4 rounded-xl bg-rose-500 text-white text-sm font-medium disabled:opacity-50"
-                  >
-                    {isLoading ? '...' : t('common.add')}
-                  </button>
-                </div>
-              </motion.div>
-            ) : (
-              <motion.button
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                onClick={() => setShowExpenseForm(true)}
-                className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-rose-500/30 text-rose-600 dark:text-rose-400 font-medium flex items-center justify-center gap-2 hover:bg-rose-500/5 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                {t('onboarding.quickSetup.addExpense')}
-              </motion.button>
-            )}
-          </AnimatePresence>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowExpenseForm(false)}
+                  className="flex-1 py-2 rounded-lg border border-[rgb(var(--border-primary))] text-sm text-[rgb(var(--text-secondary))]"
+                >
+                  {t('common.cancel')}
+                </button>
+                <button
+                  onClick={handleAddExpense}
+                  disabled={isLoading}
+                  className="flex-1 py-2 rounded-lg bg-[rgb(var(--accent))] text-white text-sm font-medium disabled:opacity-50"
+                >
+                  {t('common.add')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setShowExpenseForm(true)}
+              className="w-full p-4 rounded-xl border-2 border-dashed border-[rgb(var(--border-primary))] text-[rgb(var(--text-tertiary))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              {t('onboarding.quickSetup.addExpense')}
+            </button>
+          )}
         </div>
-      </motion.div>
+      </div>
 
       {/* Actions */}
-      <motion.div variants={itemVariants} className="space-y-3">
+      <div className="space-y-3">
         <div className="flex gap-3">
           <button
             type="button"
             onClick={onBack}
-            className="flex-1 py-3.5 px-6 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border text-light-text-secondary dark:text-dark-text-secondary font-medium flex items-center justify-center gap-2"
+            className="flex-1 py-3 px-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-secondary))] font-medium flex items-center justify-center gap-2 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
           >
-            <ArrowLeft className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+            <ArrowLeft className={cn("w-4 h-4", isRTL && "rtl-flip")} />
             {t('common.back')}
           </button>
           <button
             type="button"
             onClick={handleContinue}
-            className="flex-[2] py-3.5 px-6 rounded-xl bg-gradient-to-r from-light-accent to-blue-600 dark:from-dark-accent dark:to-blue-500 text-white font-semibold flex items-center justify-center gap-2 shadow-lg shadow-light-accent/20 dark:shadow-dark-accent/20"
+            className="flex-[2] py-3 px-4 rounded-xl bg-[rgb(var(--accent))] text-white font-medium flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
           >
             {t('common.continue')}
-            <ArrowRight className={`w-4 h-4 ${isRTL ? 'rotate-180' : ''}`} />
+            <ArrowRight className={cn("w-4 h-4", isRTL && "rtl-flip")} />
           </button>
         </div>
         <button
           type="button"
           onClick={onSkip}
-          className="w-full py-2 text-light-text-tertiary dark:text-dark-text-tertiary text-sm font-medium hover:text-light-text-secondary dark:hover:text-dark-text-secondary transition-colors"
+          className="w-full py-2 text-[rgb(var(--text-tertiary))] text-sm font-medium hover:text-[rgb(var(--text-secondary))] transition-colors"
         >
           {t('onboarding.quickSetup.skip')}
         </button>
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   )
 }
-

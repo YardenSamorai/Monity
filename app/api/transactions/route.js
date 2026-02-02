@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createTransactionSchema } from '@/lib/validations'
+import { suggestCategory } from '@/lib/ai-insights'
 
 // GET /api/transactions - List transactions
 export async function GET(request) {
@@ -21,16 +23,91 @@ export async function GET(request) {
     const categoryId = searchParams.get('categoryId')
     const startDate = searchParams.get('startDate')
     const endDate = searchParams.get('endDate')
+    const minAmount = searchParams.get('minAmount')
+    const maxAmount = searchParams.get('maxAmount')
+    const search = searchParams.get('search') // Full-text search
     
-    const where = { userId: user.id }
+    // Check if user wants to see shared transactions
+    const includeShared = searchParams.get('includeShared') === 'true'
+    const onlyShared = searchParams.get('onlyShared') === 'true'
     
-    if (type) where.type = type
-    if (accountId) where.accountId = accountId
-    if (categoryId) where.categoryId = categoryId
+    // Get user's household if exists
+    let householdId = null
+    if (includeShared || onlyShared) {
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id },
+        select: { householdId: true },
+      })
+      if (member) {
+        householdId = member.householdId
+      }
+    }
+
+    // Build base filters
+    const baseFilters = {}
+    if (type) baseFilters.type = type
+    if (accountId) baseFilters.accountId = accountId
+    if (categoryId) baseFilters.categoryId = categoryId
     if (startDate || endDate) {
-      where.date = {}
-      if (startDate) where.date.gte = new Date(startDate)
-      if (endDate) where.date.lte = new Date(endDate)
+      baseFilters.date = {}
+      if (startDate) baseFilters.date.gte = new Date(startDate)
+      if (endDate) baseFilters.date.lte = new Date(endDate)
+    }
+    if (minAmount || maxAmount) {
+      baseFilters.amount = {}
+      if (minAmount) baseFilters.amount.gte = Number(minAmount)
+      if (maxAmount) baseFilters.amount.lte = Number(maxAmount)
+    }
+    // Full-text search in description and notes
+    const searchFilter = search ? {
+      OR: [
+        { description: { contains: search, mode: 'insensitive' } },
+        { notes: { contains: search, mode: 'insensitive' } },
+      ],
+    } : null
+
+    // Build where clause
+    let where = {}
+    
+    if (onlyShared && householdId) {
+      where = {
+        householdId,
+        isShared: true,
+        ...baseFilters,
+      }
+      if (searchFilter) {
+        where = {
+          ...where,
+          ...searchFilter,
+        }
+      }
+    } else if (includeShared && householdId) {
+      // Use OR for user's transactions OR shared household transactions
+      where = {
+        OR: [
+          { userId: user.id, ...baseFilters },
+          { householdId, isShared: true, ...baseFilters },
+        ],
+      }
+      if (searchFilter) {
+        where = {
+          AND: [
+            { OR: where.OR },
+            searchFilter,
+          ],
+        }
+      }
+    } else {
+      where = {
+        userId: user.id,
+        ...baseFilters,
+      }
+      if (searchFilter) {
+        where = {
+          ...where,
+          ...searchFilter,
+        }
+      }
     }
     
     const [transactions, total] = await Promise.all([
@@ -113,6 +190,20 @@ export async function POST(request) {
         )
       }
       
+      // Verify household if shared
+      let householdId = null
+      if (validated.isShared && validated.householdId) {
+        const member = await prisma.householdMember.findFirst({
+          where: {
+            userId: user.id,
+            householdId: validated.householdId,
+          },
+        })
+        if (member) {
+          householdId = validated.householdId
+        }
+      }
+
       // Create the transaction
       const transaction = await prisma.transaction.create({
         data: {
@@ -126,6 +217,8 @@ export async function POST(request) {
           notes: validated.notes,
           idempotencyKey: validated.idempotencyKey,
           externalId: validated.externalId,
+          isShared: validated.isShared && householdId ? true : false,
+          householdId: householdId,
         },
         include: {
           account: true,
@@ -167,12 +260,29 @@ export async function POST(request) {
       return NextResponse.json({ transaction }, { status: 201 })
     }
     
-    // Create regular transaction
+    // Smart category suggestion if no category provided (non-blocking)
+    let categoryId = validated.categoryId
+    
+    // Verify household if shared
+    let householdId = null
+    if (validated.isShared && validated.householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: {
+          userId: user.id,
+          householdId: validated.householdId,
+        },
+      })
+      if (member) {
+        householdId = validated.householdId
+      }
+    }
+
+    // Create transaction first (don't block on suggestion)
     const transaction = await prisma.transaction.create({
       data: {
         userId: user.id,
         accountId: validated.accountId,
-        categoryId: validated.categoryId,
+        categoryId: categoryId || validated.categoryId,
         type: validated.type,
         amount: validated.amount,
         description: validated.description,
@@ -180,6 +290,8 @@ export async function POST(request) {
         notes: validated.notes,
         idempotencyKey: validated.idempotencyKey,
         externalId: validated.externalId,
+        isShared: validated.isShared && householdId ? true : false,
+        householdId: householdId,
       },
       include: {
         account: true,
@@ -197,8 +309,8 @@ export async function POST(request) {
       data: { balance: { increment: balanceChange } },
     })
     
-    // Create audit log
-    await prisma.auditLog.create({
+    // Create audit log (non-blocking)
+    prisma.auditLog.create({
       data: {
         userId: user.id,
         action: 'transaction.created',
@@ -206,7 +318,31 @@ export async function POST(request) {
         entityId: transaction.id,
         metadata: JSON.stringify({ type: validated.type, amount: validated.amount }),
       },
-    })
+    }).catch(() => {}) // Silent fail - audit log is not critical
+    
+    // Smart category suggestion in background (non-blocking)
+    if (!categoryId && validated.description && validated.description.length > 3) {
+      // Run suggestion in background - don't wait for it
+      suggestCategory(
+        prisma,
+        user.id,
+        validated.description,
+        validated.amount,
+        validated.type
+      ).then(suggestions => {
+        if (suggestions.length > 0 && suggestions[0].confidence > 0.7) {
+          // Auto-assign in background if high confidence
+          prisma.transaction.update({
+            where: { id: transaction.id },
+            data: { categoryId: suggestions[0].categoryId },
+          }).catch(() => {}) // Silent fail - not critical
+        }
+      }).catch(() => {}) // Silent fail - suggestion is optional
+    }
+    
+    // Revalidate cache
+    revalidateTag('dashboard')
+    revalidateTag('transactions')
     
     return NextResponse.json({ transaction }, { status: 201 })
   } catch (error) {

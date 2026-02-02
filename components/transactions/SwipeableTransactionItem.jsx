@@ -3,16 +3,17 @@
 import { useState, useRef, useEffect } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Edit, Trash2 } from 'lucide-react'
+import { Edit, Trash2, Target, ArrowUpCircle, ArrowDownCircle, TrendingUp } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 
-const SWIPE_THRESHOLD = 80 // Minimum distance to trigger action
-const ACTION_WIDTH = 80 // Width of action buttons
+const SWIPE_THRESHOLD = 80
+const ACTION_WIDTH = 80
 
 export function SwipeableTransactionItem({ 
   transaction, 
   onEdit, 
   onDelete,
+  onLinkGoal,
   currencySymbol,
   localeString 
 }) {
@@ -20,10 +21,8 @@ export function SwipeableTransactionItem({
   const [translateX, setTranslateX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
-  const [currentX, setCurrentX] = useState(0)
   const itemRef = useRef(null)
 
-  // Reset position when transaction changes
   useEffect(() => {
     setTranslateX(0)
   }, [transaction.id])
@@ -31,47 +30,33 @@ export function SwipeableTransactionItem({
   const handleStart = (clientX) => {
     setIsDragging(true)
     setStartX(clientX)
-    setCurrentX(clientX)
   }
 
   const handleMove = (clientX) => {
     if (!isDragging) return
     
     const deltaX = clientX - startX
-    
-    // Limit swipe distance - same direction in both LTR and RTL
     const maxSwipe = ACTION_WIDTH * 2
     const minSwipe = -ACTION_WIDTH * 2
-    
     const newTranslateX = Math.max(minSwipe, Math.min(maxSwipe, deltaX))
     setTranslateX(newTranslateX)
-    setCurrentX(clientX)
   }
 
   const handleEnd = () => {
     if (!isDragging) return
     setIsDragging(false)
     
-    // Determine which action to trigger based on swipe direction
-    // Swipe right (positive translateX) → Delete
-    // Swipe left (negative translateX) → Edit
-    // Same behavior in both LTR and RTL
-    
     if (translateX > SWIPE_THRESHOLD) {
-      // Swiped in delete direction
       onDelete(transaction)
       setTranslateX(0)
     } else if (translateX < -SWIPE_THRESHOLD) {
-      // Swiped in edit direction
       onEdit(transaction)
       setTranslateX(0)
     } else {
-      // Snap back
       setTranslateX(0)
     }
   }
 
-  // Touch events
   const handleTouchStart = (e) => {
     e.preventDefault()
     handleStart(e.touches[0].clientX)
@@ -88,21 +73,9 @@ export function SwipeableTransactionItem({
     handleEnd()
   }
 
-  // Mouse events (for desktop testing)
   const handleMouseDown = (e) => {
     e.preventDefault()
     handleStart(e.clientX)
-  }
-
-  const handleMouseMove = (e) => {
-    if (!isDragging) return
-    e.preventDefault()
-    handleMove(e.clientX)
-  }
-
-  const handleMouseUp = (e) => {
-    e.preventDefault()
-    handleEnd()
   }
 
   useEffect(() => {
@@ -141,50 +114,35 @@ export function SwipeableTransactionItem({
     }
   }, [isDragging, startX, translateX, transaction, onDelete, onEdit, isRTL])
 
-  // Determine which action icons to show
-  // translateX > 0 means swiped right (element moved right) → Delete (left side revealed)
-  // translateX < 0 means swiped left (element moved left) → Edit (right side revealed)
-  // Physical swipe direction is the same in both LTR and RTL - no need to swap icons
   const showDeleteAction = translateX > 0
   const showEditAction = translateX < 0
-
-  // Calculate action button opacity based on swipe distance
   const deleteOpacity = showDeleteAction ? Math.min(1, Math.abs(translateX) / ACTION_WIDTH) : 0
   const editOpacity = showEditAction ? Math.min(1, Math.abs(translateX) / ACTION_WIDTH) : 0
 
   return (
-    <div className="relative overflow-hidden rounded-xl" style={{ minHeight: '80px', direction: 'ltr' }}>
-      {/* Action Buttons Background - Behind the item, always LTR for consistent swipe behavior */}
+    <div className="relative overflow-hidden" style={{ minHeight: '80px', direction: 'ltr' }}>
+      {/* Action Buttons Background */}
       <div className="absolute inset-0 flex z-0">
-        {/* Delete Action - Always on left, revealed when swiping right (translateX > 0) */}
         <div 
           className="flex items-center justify-center transition-opacity duration-200"
           style={{ 
             width: ACTION_WIDTH,
             minWidth: ACTION_WIDTH,
             opacity: deleteOpacity,
-            backgroundColor: 'rgb(239, 68, 68)', // red-500
-            padding: '0 1rem',
-            justifyContent: 'center',
+            backgroundColor: '#ef4444',
             pointerEvents: deleteOpacity > 0 ? 'auto' : 'none',
           }}
         >
           <Trash2 className="w-6 h-6 text-white" />
         </div>
-
-        {/* Spacer in middle */}
         <div className="flex-1" />
-
-        {/* Edit Action - Always on right, revealed when swiping left (translateX < 0) */}
         <div 
           className="flex items-center justify-center transition-opacity duration-200"
           style={{ 
             width: ACTION_WIDTH,
             minWidth: ACTION_WIDTH,
             opacity: editOpacity,
-            backgroundColor: 'rgb(59, 130, 246)', // blue-500
-            padding: '0 1rem',
-            justifyContent: 'center',
+            backgroundColor: '#3b82f6',
             pointerEvents: editOpacity > 0 ? 'auto' : 'none',
           }}
         >
@@ -192,11 +150,11 @@ export function SwipeableTransactionItem({
         </div>
       </div>
 
-      {/* Transaction Item - On top, moves to reveal icons */}
+      {/* Transaction Item */}
       <div
         ref={itemRef}
         className={cn(
-          "relative bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-xl transition-transform duration-200 ease-out cursor-grab active:cursor-grabbing z-10",
+          "relative bg-white dark:bg-slate-900 transition-transform duration-200 ease-out cursor-grab active:cursor-grabbing z-10",
           isDragging && "transition-none"
         )}
         style={{
@@ -211,30 +169,56 @@ export function SwipeableTransactionItem({
         onTouchCancel={handleTouchEnd}
         onMouseDown={handleMouseDown}
       >
-        <div className="flex items-center justify-between py-4 px-4" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
-          <div className="flex-1 min-w-0" style={{ paddingInlineEnd: '1rem' }}>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
+        <div className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+          {/* Transaction Type Icon */}
+          <div className={cn(
+            'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',
+            transaction.type === 'income'
+              ? 'bg-gradient-to-br from-emerald-400 to-emerald-600'
+              : transaction.type === 'transfer'
+              ? 'bg-gradient-to-br from-blue-400 to-blue-600'
+              : 'bg-gradient-to-br from-rose-400 to-rose-600'
+          )}>
+            {transaction.type === 'income' ? (
+              <ArrowUpCircle className="w-5 h-5 text-white" />
+            ) : transaction.type === 'transfer' ? (
+              <TrendingUp className="w-5 h-5 text-white" />
+            ) : (
+              <ArrowDownCircle className="w-5 h-5 text-white" />
+            )}
+          </div>
+          
+          {/* Transaction Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="font-semibold text-slate-900 dark:text-white truncate">
                 {transaction.description}
               </span>
               {transaction.category && (
-                <Badge variant="default" className="flex-shrink-0">
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex-shrink-0">
                   {transaction.category.name}
-                </Badge>
+                </span>
+              )}
+              {transaction.savingsGoal && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 flex-shrink-0 flex items-center gap-1">
+                  <Target className="w-3 h-3" />
+                  {transaction.savingsGoal.name}
+                </span>
               )}
             </div>
-            <div className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+            <div className="text-sm text-slate-500 dark:text-slate-400">
               {new Date(transaction.date).toLocaleDateString(localeString, { day: 'numeric', month: 'short' })} • {transaction.account.name}
             </div>
           </div>
           
+          {/* Amount */}
           <div className="flex-shrink-0">
             <div
               className={cn(
-                "font-semibold whitespace-nowrap",
+                "font-bold text-lg tabular-nums whitespace-nowrap",
                 transaction.type === 'income'
-                  ? 'text-light-success dark:text-dark-success'
-                  : 'text-light-danger dark:text-dark-danger'
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-rose-600 dark:text-rose-400'
               )}
               dir="ltr"
             >
@@ -247,4 +231,3 @@ export function SwipeableTransactionItem({
     </div>
   )
 }
-

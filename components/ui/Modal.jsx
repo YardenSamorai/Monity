@@ -2,7 +2,6 @@
 
 import { useEffect } from 'react'
 import { X } from 'lucide-react'
-import { IconButton } from './Button'
 import { cn } from '@/lib/utils'
 
 export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
@@ -30,35 +29,37 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       {/* Backdrop */}
       <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/40"
         onClick={onClose}
       />
 
       {/* Modal */}
       <div
         className={cn(
-          'relative w-full bg-light-elevated dark:bg-dark-elevated rounded-3xl shadow-glass animate-scale-in',
-          'border border-light-border dark:border-dark-border',
-          'max-h-[90vh] overflow-hidden flex flex-col',
+          'relative w-full bg-[rgb(var(--bg-secondary))] rounded-lg shadow-lg animate-slide-up',
+          'border border-[rgb(var(--border-primary))]',
+          'max-h-[85vh] overflow-hidden flex flex-col',
           sizes[size]
         )}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-light-border dark:border-dark-border">
-          <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[rgb(var(--border-primary))]">
+          <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
             {title}
           </h2>
-          <IconButton onClick={onClose} variant="ghost">
+          <button 
+            onClick={onClose} 
+            className="p-1.5 rounded-md text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+          >
             <X className="w-5 h-5" />
-          </IconButton>
+          </button>
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto px-5 py-4">
           {children}
         </div>
       </div>
     </div>
   )
 }
-
