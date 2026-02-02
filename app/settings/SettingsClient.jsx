@@ -84,6 +84,31 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
     setCategories(data.categories)
   }
 
+  const handleCleanupCategories = async () => {
+    try {
+      showLoading()
+      const response = await fetch('/api/categories/cleanup', { method: 'POST' })
+      const data = await response.json()
+      
+      if (response.ok) {
+        if (data.removed > 0) {
+          toast.success(locale === 'he' ? `נמחקו ${data.removed} קטגוריות כפולות` : `Removed ${data.removed} duplicate categories`)
+          // Refresh categories
+          await handleCategorySuccess()
+        } else {
+          toast.info(locale === 'he' ? 'לא נמצאו קטגוריות כפולות' : 'No duplicate categories found')
+        }
+      } else {
+        toast.error(data.error || 'Failed to cleanup categories')
+      }
+    } catch (error) {
+      console.error('Cleanup error:', error)
+      toast.error('Failed to cleanup categories')
+    } finally {
+      hideLoading()
+    }
+  }
+
   const handleDeleteCategory = (category) => {
     setCategoryToDelete(category)
     setIsDeleteCategoryDialogOpen(true)
@@ -565,6 +590,30 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
               </div>
             </div>
             <ThemeToggle showLabel />
+          </Card>
+
+          {/* Maintenance Section */}
+          <Card className="p-4 lg:p-5">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-9 h-9 rounded-lg bg-[rgb(var(--bg-tertiary))] flex items-center justify-center flex-shrink-0">
+                <Tag className="w-4 h-4 text-[rgb(var(--text-secondary))]" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="font-medium text-[rgb(var(--text-primary))]">
+                  {locale === 'he' ? 'תחזוקה' : 'Maintenance'}
+                </h2>
+                <p className="text-sm text-[rgb(var(--text-tertiary))]">
+                  {locale === 'he' ? 'ניקוי קטגוריות כפולות מהמערכת' : 'Clean up duplicate categories from the system'}
+                </p>
+              </div>
+            </div>
+            <Button 
+              variant="secondary" 
+              size="sm"
+              onClick={handleCleanupCategories}
+            >
+              {locale === 'he' ? 'נקה קטגוריות כפולות' : 'Clean Duplicate Categories'}
+            </Button>
           </Card>
         </div>
       </TabPanel>

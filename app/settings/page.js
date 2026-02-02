@@ -35,12 +35,7 @@ export default async function SettingsPage() {
     
     // Categories - only select needed fields
     prisma.category.findMany({
-      where: {
-        OR: [
-          { userId: user.id },
-          { isDefault: true },
-        ],
-      },
+      where: { userId: user.id },
       orderBy: [{ isDefault: 'desc' }, { name: 'asc' }],
       select: {
         id: true,

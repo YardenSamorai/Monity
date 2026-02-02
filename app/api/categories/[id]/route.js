@@ -15,14 +15,11 @@ export async function PUT(request, { params }) {
     const body = await request.json()
     const validated = createCategorySchema.parse(body)
 
-    // For default categories, userId is null, so we need to check differently
+    // Check that category belongs to the user
     const category = await prisma.category.findFirst({
       where: { 
         id,
-        OR: [
-          { userId: user.id },
-          { isDefault: true },
-        ],
+        userId: user.id,
       },
     })
 
@@ -71,14 +68,11 @@ export async function DELETE(request, { params }) {
 
     const { id } = await params
 
-    // For default categories, userId is null, so we need to check differently
+    // Check that category belongs to the user
     const category = await prisma.category.findFirst({
       where: { 
         id,
-        OR: [
-          { userId: user.id },
-          { isDefault: true },
-        ],
+        userId: user.id,
       },
     })
 

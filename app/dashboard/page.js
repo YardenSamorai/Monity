@@ -111,12 +111,7 @@ const getDashboardData = unstable_cache(
         },
       }),
       prisma.category.findMany({
-        where: {
-          OR: [
-            { userId },
-            { isDefault: true },
-          ],
-        },
+        where: { userId },
         orderBy: { name: 'asc' },
         select: {
           id: true,

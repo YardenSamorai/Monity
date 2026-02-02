@@ -97,12 +97,7 @@ export default async function AnalyticsPage() {
     
     // Fetch categories
     prisma.category.findMany({
-      where: {
-        OR: [
-          { userId: user.id },
-          { isDefault: true },
-        ],
-      },
+      where: { userId: user.id },
       select: { id: true, name: true, type: true, color: true, icon: true },
     }),
   ])

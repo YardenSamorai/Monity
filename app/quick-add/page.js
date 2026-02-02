@@ -25,7 +25,7 @@ export default async function QuickAddPage() {
     }),
     prisma.category.findMany({
       where: {
-        OR: [{ userId: user.id }, { isDefault: true }],
+        userId: user.id,
         type: { in: ['expense', 'both'] },
       },
       select: { id: true, name: true, icon: true, color: true },

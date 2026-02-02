@@ -27,12 +27,7 @@ export default async function OnboardingPage() {
 
   // Get user's categories for the forms
   const categories = await prisma.category.findMany({
-    where: {
-      OR: [
-        { userId: user.id },
-        { isDefault: true }
-      ]
-    },
+    where: { userId: user.id },
     orderBy: { name: 'asc' }
   })
 

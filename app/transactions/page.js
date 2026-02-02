@@ -34,12 +34,7 @@ const getTransactionsData = unstable_cache(
         select: { id: true, name: true, type: true, balance: true, currency: true },
       }),
       prisma.category.findMany({
-        where: {
-          OR: [
-            { userId },
-            { isDefault: true },
-          ],
-        },
+        where: { userId },
         orderBy: { name: 'asc' },
         select: { id: true, name: true, type: true, color: true, icon: true },
       }),

@@ -22,12 +22,8 @@ const getBudgetData = unstable_cache(
       }),
       prisma.category.findMany({
         where: {
-          OR: [
-            { userId, type: 'expense' },
-            { userId, type: 'both' },
-            { isDefault: true, type: 'expense' },
-            { isDefault: true, type: 'both' },
-          ],
+          userId,
+          type: { in: ['expense', 'both'] },
         },
         orderBy: { name: 'asc' },
         select: { id: true, name: true, type: true, color: true, icon: true },

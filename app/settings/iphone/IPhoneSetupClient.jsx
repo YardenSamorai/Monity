@@ -13,42 +13,30 @@ import {
   Zap,
   WifiOff,
   Bell,
-  Copy,
   CheckCheck,
-  ArrowLeft,
+  Download,
   Settings,
-  Link as LinkIcon
+  Hand,
+  Lightbulb,
+  Play
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { cn } from '@/lib/utils'
-import { isStandalonePWA, isIOS, isIOSSafari } from '@/lib/pwa'
+import { isStandalonePWA, isIOS } from '@/lib/pwa'
+
+const SHORTCUT_ICLOUD_URL = 'https://www.icloud.com/shortcuts/fe5918a67bab4914b386197c1aeebc67'
 
 export default function IPhoneSetupClient() {
   const { t, isRTL } = useI18n()
   const { toast } = useToast()
   const [isStandalone, setIsStandalone] = useState(false)
   const [isIOSDevice, setIsIOSDevice] = useState(false)
-  const [copied, setCopied] = useState(false)
-  const [quickAddUrl, setQuickAddUrl] = useState('')
 
   useEffect(() => {
     setIsStandalone(isStandalonePWA())
     setIsIOSDevice(isIOS())
-    setQuickAddUrl(`${window.location.origin}/quick-add`)
   }, [])
-
-  const handleCopyUrl = async () => {
-    try {
-      await navigator.clipboard.writeText(quickAddUrl)
-      setCopied(true)
-      toast.success(t('common.copiedSuccess'))
-      setTimeout(() => setCopied(false), 2000)
-    } catch (error) {
-      console.error('Failed to copy:', error)
-      toast.error('Failed to copy URL')
-    }
-  }
 
   const pwaSteps = [
     {
@@ -71,36 +59,24 @@ export default function IPhoneSetupClient() {
     },
   ]
 
-  const shortcutSteps = [
-    {
-      number: 1,
-      icon: Settings,
-      title: t('iphoneSetup.shortcut.step1Title'),
-      description: t('iphoneSetup.shortcut.step1Desc'),
-    },
-    {
-      number: 2,
-      icon: Plus,
-      title: t('iphoneSetup.shortcut.step2Title'),
-      description: t('iphoneSetup.shortcut.step2Desc'),
-    },
-    {
-      number: 3,
-      icon: LinkIcon,
-      title: t('iphoneSetup.shortcut.step3Title'),
-      description: t('iphoneSetup.shortcut.step3Desc'),
-    },
-    {
-      number: 4,
-      icon: Smartphone,
-      title: t('iphoneSetup.shortcut.step4Title'),
-      description: t('iphoneSetup.shortcut.step4Desc'),
-    },
+  const installShortcutSteps = [
+    t('iphoneSetup.installSection.step1'),
+    t('iphoneSetup.installSection.step2'),
+    t('iphoneSetup.installSection.step3'),
+    t('iphoneSetup.installSection.step4'),
+  ]
+
+  const backTapSteps = [
+    t('iphoneSetup.backTapSection.step1'),
+    t('iphoneSetup.backTapSection.step2'),
+    t('iphoneSetup.backTapSection.step3'),
+    t('iphoneSetup.backTapSection.step4'),
+    t('iphoneSetup.backTapSection.step5'),
+    t('iphoneSetup.backTapSection.step6'),
   ]
 
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
-      {/* Page Content */}
       <div className="p-4 lg:p-6 pb-24 max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -135,9 +111,6 @@ export default function IPhoneSetupClient() {
                 <p className="font-medium text-[rgb(var(--text-primary))]">
                   {t('iphoneSetup.pwaInstalled')}
                 </p>
-                <p className="text-sm text-[rgb(var(--text-secondary))]">
-                  Monity is running as an app
-                </p>
               </div>
             </>
           ) : (
@@ -148,9 +121,6 @@ export default function IPhoneSetupClient() {
               <div className="flex-1">
                 <p className="font-medium text-[rgb(var(--text-primary))]">
                   {t('iphoneSetup.pwaNotInstalled')}
-                </p>
-                <p className="text-sm text-[rgb(var(--text-secondary))]">
-                  Install for the best experience
                 </p>
               </div>
               <Link
@@ -201,7 +171,7 @@ export default function IPhoneSetupClient() {
           </section>
         )}
 
-        {/* Section 2: iOS Shortcut */}
+        {/* Section 2: Quick Add Shortcut - NEW DESIGN */}
         <section className="mb-8">
           <div className="flex items-center gap-3 mb-4">
             <span className="w-8 h-8 rounded-full bg-[rgb(var(--accent))] text-white text-sm font-bold flex items-center justify-center">
@@ -212,73 +182,120 @@ export default function IPhoneSetupClient() {
             </h2>
           </div>
 
-          <p className="text-sm text-[rgb(var(--text-secondary))] mb-4">
+          <p className="text-[rgb(var(--text-secondary))] mb-6">
             {t('iphoneSetup.shortcutDesc')}
           </p>
 
-          {/* Quick Add URL Copy Box */}
-          <div className="p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] mb-4">
-            <label className="text-xs font-medium text-[rgb(var(--text-tertiary))] uppercase tracking-wide mb-2 block">
-              {t('iphoneSetup.quickAddUrl')}
-            </label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={quickAddUrl}
-                readOnly
-                className="flex-1 px-3 py-2.5 rounded-lg bg-[rgb(var(--bg-tertiary))] text-[rgb(var(--text-primary))] text-sm font-mono border border-[rgb(var(--border-secondary))]"
-                dir="ltr"
-              />
-              <button
-                onClick={handleCopyUrl}
-                className={cn(
-                  "px-4 py-2.5 rounded-lg text-white text-sm font-medium flex items-center gap-2 transition-colors min-w-[100px] justify-center",
-                  copied 
-                    ? "bg-[rgb(var(--positive))]" 
-                    : "bg-[rgb(var(--accent))] hover:bg-[rgb(var(--accent))]/90"
-                )}
+          {/* Install Shortcut Card */}
+          <div className="rounded-2xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] overflow-hidden mb-6">
+            {/* Card Header */}
+            <div className="p-4 border-b border-[rgb(var(--border-primary))]">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[rgb(var(--accent))]/10 flex items-center justify-center">
+                  <Download className="w-5 h-5 text-[rgb(var(--accent))]" />
+                </div>
+                <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+                  {t('iphoneSetup.installSection.title')}
+                </h3>
+              </div>
+            </div>
+
+            {/* Install Steps */}
+            <div className="p-4 space-y-3">
+              {installShortcutSteps.map((step, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center gap-3"
+                >
+                  <span className="w-7 h-7 rounded-full bg-[rgb(var(--bg-tertiary))] text-[rgb(var(--text-secondary))] text-sm font-medium flex items-center justify-center flex-shrink-0">
+                    {index + 1}
+                  </span>
+                  <span className="text-[rgb(var(--text-primary))]">
+                    {step}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Install Button */}
+            <div className="p-4 pt-2">
+              <a
+                href={SHORTCUT_ICLOUD_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 w-full py-3.5 rounded-xl bg-[rgb(var(--accent))] text-white font-semibold text-base touch-target active:scale-[0.98] transition-transform"
               >
-                {copied ? (
-                  <>
-                    <CheckCheck className="w-4 h-4" />
-                    {t('common.copied')}
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    {t('common.copy')}
-                  </>
-                )}
-              </button>
+                <Download className="w-5 h-5" />
+                {t('iphoneSetup.installShortcut')}
+              </a>
             </div>
           </div>
 
-          {/* Shortcut Steps */}
-          <div className="space-y-3">
-            {shortcutSteps.map((step) => {
-              const Icon = step.icon
-              return (
-                <div
-                  key={step.number}
-                  className="flex items-start gap-4 p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-[rgb(var(--accent))]/10 flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold text-[rgb(var(--accent))]">
-                      {step.number}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 className="font-medium text-[rgb(var(--text-primary))] mb-0.5">
-                      {step.title}
-                    </h3>
-                    <p className="text-sm text-[rgb(var(--text-secondary))]">
-                      {step.description}
-                    </p>
-                  </div>
+          {/* Back Tap Card */}
+          <div className="rounded-2xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] overflow-hidden mb-6">
+            {/* Card Header */}
+            <div className="p-4 border-b border-[rgb(var(--border-primary))]">
+              <div className="flex items-center gap-3 mb-1">
+                <div className="w-10 h-10 rounded-xl bg-[rgb(var(--info))]/10 flex items-center justify-center">
+                  <Hand className="w-5 h-5 text-[rgb(var(--info))]" />
                 </div>
-              )
-            })}
+                <div>
+                  <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+                    {t('iphoneSetup.backTapSection.title')}
+                  </h3>
+                  <p className="text-sm text-[rgb(var(--text-secondary))]">
+                    {t('iphoneSetup.backTapSection.subtitle')}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Back Tap Steps */}
+            <div className="p-4 space-y-3">
+              {backTapSteps.map((step, index) => (
+                <div 
+                  key={index}
+                  className="flex items-center gap-3"
+                >
+                  <span className="w-7 h-7 rounded-full bg-[rgb(var(--bg-tertiary))] text-[rgb(var(--text-secondary))] text-sm font-medium flex items-center justify-center flex-shrink-0">
+                    {index + 1}
+                  </span>
+                  <span className="text-[rgb(var(--text-primary))]">
+                    {step}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* Tip Callout */}
+            <div className="mx-4 mb-4 p-3 rounded-xl bg-[rgb(var(--warning))]/5 border border-[rgb(var(--warning))]/20">
+              <div className="flex items-start gap-2">
+                <Lightbulb className="w-4 h-4 text-[rgb(var(--warning))] mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-[rgb(var(--text-secondary))]">
+                  {t('iphoneSetup.tipTripleTap')}
+                </p>
+              </div>
+            </div>
+
+            {/* Test Callout */}
+            <div className="mx-4 mb-4 p-3 rounded-xl bg-[rgb(var(--positive))]/5 border border-[rgb(var(--positive))]/20">
+              <div className="flex items-start gap-2">
+                <Play className="w-4 h-4 text-[rgb(var(--positive))] mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-[rgb(var(--text-primary))] font-medium">
+                  {t('iphoneSetup.testTripleTap')}
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Secondary CTA - Open Quick Add */}
+          <Link
+            href="/quick-add"
+            className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-[rgb(var(--bg-tertiary))] text-[rgb(var(--text-primary))] font-medium border border-[rgb(var(--border-primary))] touch-target active:bg-[rgb(var(--bg-secondary))] transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            {t('iphoneSetup.openQuickAdd')}
+          </Link>
         </section>
 
         {/* Section 3: Pro Tips */}

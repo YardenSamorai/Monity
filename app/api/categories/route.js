@@ -14,12 +14,7 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type')
     
-    const where = {
-      OR: [
-        { userId: user.id },
-        { isDefault: true },
-      ],
-    }
+    const where = { userId: user.id }
     
     if (type) {
       where.type = type
