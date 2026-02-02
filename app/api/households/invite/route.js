@@ -25,26 +25,30 @@ export async function POST(request) {
     })
 
     if (!member) {
+      console.log('[Invite] User does not belong to a household:', user.id)
       return NextResponse.json(
-        { error: 'User does not belong to a household' },
+        { error: 'User does not belong to a household', code: 'NO_HOUSEHOLD' },
         { status: 400 }
       )
     }
 
     // Check if household is full (max 6 members)
     if (member.household.members.length >= 6) {
+      console.log('[Invite] Household full:', member.household.id)
       return NextResponse.json(
-        { error: 'Household is full (maximum 6 members)' },
+        { error: 'Household is full (maximum 6 members)', code: 'HOUSEHOLD_FULL' },
         { status: 400 }
       )
     }
 
     const body = await request.json()
     const { email, inviteLink, locale } = body
+    console.log('[Invite] Request body:', { email: email ? '***' : undefined, inviteLink, locale })
 
     if (!email && !inviteLink) {
+      console.log('[Invite] Missing email or inviteLink')
       return NextResponse.json(
-        { error: 'Email or inviteLink is required' },
+        { error: 'Email or inviteLink is required', code: 'MISSING_DATA' },
         { status: 400 }
       )
     }
