@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams, useRouter } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
 import { 
   LayoutDashboard, 
@@ -26,6 +26,7 @@ import { ThemeToggle } from './ui/ThemeToggle'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
 import InstallBanner from './pwa/InstallBanner'
+import { TransactionModal } from './forms/TransactionModal'
 
 function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t, onNavigate }) {
   const searchParams = useSearchParams()
@@ -70,9 +71,24 @@ function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t, onNaviga
 
 export default function AppShell({ children }) {
   const pathname = usePathname()
+  const router = useRouter()
   const [settingsExpanded, setSettingsExpanded] = useState(pathname.startsWith('/settings'))
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+  const [accounts, setAccounts] = useState([])
+  const [categories, setCategories] = useState([])
   const { t, isRTL } = useI18n()
+
+  // Fetch accounts and categories for the transaction modal
+  useEffect(() => {
+    Promise.all([
+      fetch('/api/accounts').then(res => res.json()),
+      fetch('/api/categories').then(res => res.json())
+    ]).then(([accountsData, categoriesData]) => {
+      setAccounts(accountsData.accounts || [])
+      setCategories(categoriesData.categories || [])
+    }).catch(console.error)
+  }, [])
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -110,7 +126,7 @@ export default function AppShell({ children }) {
   const mobileNav = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
-    { name: 'fab', href: '/quick-add', icon: Plus, isFab: true }, // FAB for add transaction
+    { name: 'fab', icon: Plus, isFab: true }, // FAB for add transaction (opens modal)
     { name: t('nav.goals'), href: '/goals', icon: PiggyBank },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
   ]
@@ -397,16 +413,15 @@ export default function AppShell({ children }) {
             // FAB (Floating Action Button) for Add Transaction
             if (item.isFab) {
               return (
-                <Link
+                <button
                   key={item.name}
-                  href={item.href}
-                  prefetch={true}
+                  onClick={() => setIsTransactionModalOpen(true)}
                   className="flex-1 flex items-center justify-center"
                 >
                   <div className="absolute -top-6 w-14 h-14 rounded-full bg-[rgb(var(--accent))] shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                     <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
                   </div>
-                </Link>
+                </button>
               )
             }
             
@@ -432,6 +447,21 @@ export default function AppShell({ children }) {
 
       {/* PWA Install Banner (iOS Safari only) */}
       <InstallBanner />
+
+      {/* Transaction Modal (opened by FAB) */}
+      <TransactionModal
+        isOpen={isTransactionModalOpen}
+        onClose={() => setIsTransactionModalOpen(false)}
+        accounts={accounts}
+        categories={categories}
+        onSuccess={() => {
+          setIsTransactionModalOpen(false)
+          // Refresh page if on transactions or dashboard
+          if (pathname === '/transactions' || pathname === '/dashboard') {
+            router.refresh()
+          }
+        }}
+      />
     </div>
   )
 }
