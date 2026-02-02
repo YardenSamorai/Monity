@@ -163,13 +163,10 @@ export async function POST(request) {
       )
     }
 
-    // If invitation has email, verify it matches user's email
+    // Log email check but don't block - allow any logged-in user to accept
     if (invitation.email && invitation.email !== user.email) {
-      console.log('[Accept] ERROR: Email mismatch. Invitation:', invitation.email, 'User:', user.email)
-      return NextResponse.json(
-        { error: 'Invitation email does not match your account email', code: 'EMAIL_MISMATCH' },
-        { status: 400 }
-      )
+      console.log('[Accept] WARNING: Email mismatch. Invitation:', invitation.email, 'User:', user.email, '- allowing anyway')
+      // Don't block - user might have multiple email addresses or forwarded the invite
     }
     
     console.log('[Accept] All checks passed, adding user to household')

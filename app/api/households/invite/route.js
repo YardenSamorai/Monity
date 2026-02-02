@@ -117,7 +117,11 @@ export async function POST(request) {
         },
       })
 
-      const inviteLinkUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/family/accept?token=${token}`
+      // Use NEXT_PUBLIC_APP_URL or VERCEL_URL or fallback
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:4000')
+      const inviteLinkUrl = `${baseUrl}/family/accept?token=${token}`
+      console.log('[Invite] Generated invite link:', inviteLinkUrl)
 
       // Send email if configured
       let emailSent = false
@@ -151,8 +155,10 @@ export async function POST(request) {
       })
     } else {
       // Return shareable link using household inviteToken
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:4000')
       return NextResponse.json({
-        inviteLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/family/accept?token=${member.household.inviteToken}`,
+        inviteLink: `${baseUrl}/family/accept?token=${member.household.inviteToken}`,
       })
     }
   } catch (error) {
