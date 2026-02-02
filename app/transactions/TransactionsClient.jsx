@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { TransactionModal } from '@/components/forms/TransactionModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
+import { SwipeableTransactionItem } from '@/components/transactions/SwipeableTransactionItem'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Receipt, Plus, Search, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
@@ -172,47 +173,17 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
                 <div className="text-xs font-semibold uppercase tracking-wide text-[rgb(var(--text-tertiary))] mb-2 px-1">
                   {date}
                 </div>
-                <Card padding={false} className="divide-y divide-[rgb(var(--border-secondary))]">
+                <Card padding={false} className="divide-y divide-[rgb(var(--border-secondary))] overflow-hidden">
                   {dayTransactions.map((transaction) => (
-                    <div 
+                    <SwipeableTransactionItem
                       key={transaction.id}
-                      className="flex items-center justify-between p-4 hover:bg-[rgb(var(--bg-tertiary))] transition-colors cursor-pointer"
-                      onClick={() => handleEdit(transaction)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                        <div className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                          transaction.type === 'income' 
-                            ? "bg-positive-subtle text-positive" 
-                            : "bg-negative-subtle text-negative"
-                        )}>
-                          {transaction.type === 'income' 
-                            ? <ArrowUpRight className="w-4 h-4" />
-                            : <ArrowDownRight className="w-4 h-4" />
-                          }
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-medium text-[rgb(var(--text-primary))] truncate">
-                            {transaction.description}
-                          </div>
-                          <div className="text-xs text-[rgb(var(--text-tertiary))]">
-                            {transaction.account?.name}
-                            {transaction.category && ` · ${transaction.category.name}`}
-                          </div>
-                        </div>
-                      </div>
-                      <div 
-                        className={cn(
-                          "font-semibold tabular-nums flex-shrink-0",
-                          isRTL ? "mr-3" : "ml-3",
-                          transaction.type === 'income' ? "text-positive" : "text-negative"
-                        )}
-                        dir="ltr"
-                      >
-                        {transaction.type === 'income' ? '+' : '-'}
-                        {formatCurrency(Number(transaction.amount), { locale: localeString, symbol: currencySymbol })}
-                      </div>
-                    </div>
+                      transaction={transaction}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onLinkGoal={() => { setTransactionToLink(transaction); setIsLinkModalOpen(true); }}
+                      currencySymbol={currencySymbol}
+                      localeString={localeString}
+                    />
                   ))}
                 </Card>
               </div>
