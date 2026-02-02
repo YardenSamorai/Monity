@@ -416,11 +416,12 @@ export default function AppShell({ children }) {
                 <button
                   key={item.name}
                   onClick={() => setIsTransactionModalOpen(true)}
-                  className="flex-1 flex items-center justify-center"
+                  className="flex-1 flex flex-col items-center justify-center gap-1"
                 >
                   <div className="absolute -top-6 w-14 h-14 rounded-full bg-[rgb(var(--accent))] shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
                     <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
                   </div>
+                  <span className="text-[10px] font-medium text-[rgb(var(--text-tertiary))] mt-8">{t('transactions.addTransaction')}</span>
                 </button>
               )
             }
