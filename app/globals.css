@@ -246,3 +246,154 @@
     transition: width 0.3s ease;
   }
 }
+
+/* ========================================
+   PWA / iOS SPECIFIC STYLES
+   ======================================== */
+
+/* CSS Custom Properties for safe areas */
+:root {
+  --sat: env(safe-area-inset-top, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+}
+
+/* Safe area insets for notched devices */
+.safe-area-inset {
+  padding-top: var(--sat);
+  padding-bottom: var(--sab);
+  padding-left: var(--sal);
+  padding-right: var(--sar);
+}
+
+.safe-area-top {
+  padding-top: max(var(--sat), 12px);
+}
+
+.safe-area-bottom {
+  padding-bottom: max(var(--sab), 12px);
+}
+
+.safe-area-left {
+  padding-left: max(var(--sal), 0px);
+}
+
+.safe-area-right {
+  padding-right: max(var(--sar), 0px);
+}
+
+/* Standalone PWA mode adjustments */
+html.standalone {
+  /* Fixed positioning works better in standalone */
+  --header-height: calc(44px + var(--sat));
+  --bottom-nav-height: calc(64px + var(--sab));
+}
+
+html.standalone body {
+  /* Prevent overscroll bounce in iOS */
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  
+  /* Prevent pull-to-refresh */
+  overscroll-behavior-y: contain;
+}
+
+/* Header adjustments for standalone PWA */
+html.standalone .pwa-header {
+  padding-top: var(--sat);
+  min-height: var(--header-height);
+}
+
+/* Bottom navigation adjustments for standalone PWA */
+html.standalone .pwa-bottom-nav {
+  padding-bottom: var(--sab);
+  min-height: var(--bottom-nav-height);
+}
+
+/* iOS-specific adjustments */
+html.ios {
+  /* Better touch interactions */
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+html.ios.standalone {
+  /* Fullscreen experience */
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+}
+
+html.ios.standalone body {
+  min-height: -webkit-fill-available;
+  min-height: 100dvh;
+}
+
+/* Prevent text selection in PWA interactive elements */
+html.standalone .no-select,
+html.standalone button,
+html.standalone [role="button"] {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in inputs */
+html.standalone input,
+html.standalone textarea {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Smooth scrolling for iOS */
+.scroll-smooth {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+}
+
+/* iOS input zoom prevention - 16px minimum font size */
+@media screen and (-webkit-min-device-pixel-ratio: 0) {
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="search"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch targets - minimum 44px for iOS */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* PWA Install Banner styles */
+.pwa-install-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--sab));
+  background: rgb(var(--bg-secondary));
+  border-top: 1px solid rgb(var(--border-primary));
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+}
+
+html.standalone .pwa-install-banner {
+  display: none !important;
+}
+
+/* Splash screen animation */
+@keyframes pwa-splash {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+
+.pwa-splash {
+  animation: pwa-splash 0.3s ease-out 0.5s forwards;
+}

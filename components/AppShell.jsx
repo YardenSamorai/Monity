@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, Suspense } from 'react'
+import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams } from 'next/navigation'
@@ -16,13 +16,17 @@ import {
   Users,
   Sparkles,
   Menu,
-  X
+  X,
+  Zap,
+  Smartphone,
+  Bell
 } from 'lucide-react'
 import { ThemeToggle } from './ui/ThemeToggle'
 import { cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
+import InstallBanner from './pwa/InstallBanner'
 
-function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t }) {
+function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t, onNavigate }) {
   const searchParams = useSearchParams()
   const currentTab = searchParams.get('tab')
 
@@ -47,6 +51,7 @@ function SettingsSubNav({ isSettingsActive, settingsExpanded, isRTL, t }) {
             key={subItem.id}
             href={subItem.href}
             prefetch={true}
+            onClick={onNavigate}
             className={cn(
               'block px-3 py-2 rounded-md text-sm transition-colors',
               active
@@ -68,6 +73,23 @@ export default function AppShell({ children }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const { t, isRTL } = useI18n()
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  // Prevent body scroll when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [mobileMenuOpen])
+
   const navigation = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
@@ -78,6 +100,12 @@ export default function AppShell({ children }) {
     { name: t('nav.insights'), href: '/insights', icon: Sparkles },
   ]
 
+  const extraNavigation = [
+    { name: t('quickAdd.title'), href: '/quick-add', icon: Zap },
+    { name: t('iphoneSetup.title'), href: '/settings/iphone', icon: Smartphone },
+    { name: t('nav.notifications'), href: '/notifications', icon: Bell },
+  ]
+
   const mobileNav = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
@@ -86,7 +114,11 @@ export default function AppShell({ children }) {
     { name: t('nav.settings'), href: '/settings', icon: Settings },
   ]
 
-  const isSettingsActive = pathname === '/settings'
+  const isSettingsActive = pathname === '/settings' || pathname.startsWith('/settings')
+
+  const handleMobileNavClick = () => {
+    setMobileMenuOpen(false)
+  }
 
   return (
     <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
@@ -178,23 +210,173 @@ export default function AppShell({ children }) {
       {/* Mobile Header */}
       <header className="lg:hidden sticky top-0 z-40 bg-[rgb(var(--bg-secondary))] border-b border-[rgb(var(--border-primary))] safe-area-top">
         <div className="flex items-center justify-between h-14 px-4">
-          <Link href="/dashboard" className="flex items-center gap-2.5">
+          {/* Hamburger Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[rgb(var(--bg-tertiary))] transition-colors touch-target"
+            aria-label={t('common.menu')}
+          >
+            <Menu className="w-6 h-6 text-[rgb(var(--text-primary))]" />
+          </button>
+
+          <Link href="/dashboard" className="flex items-center gap-2">
             <Image 
               src="/MonityLogo.svg" 
               alt="Monity" 
-              width={36} 
-              height={36} 
+              width={32} 
+              height={32} 
               className="rounded-lg"
             />
             <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex items-center">
             <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </div>
       </header>
+
+      {/* Mobile Drawer Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Drawer */}
+      <aside className={cn(
+        "lg:hidden fixed inset-y-0 z-50 w-72 bg-[rgb(var(--bg-secondary))] shadow-xl transition-transform duration-300 ease-out",
+        isRTL ? "right-0" : "left-0",
+        mobileMenuOpen 
+          ? "translate-x-0" 
+          : isRTL ? "translate-x-full" : "-translate-x-full"
+      )}>
+        <div className="flex flex-col h-full">
+          {/* Drawer Header */}
+          <div className="flex items-center justify-between h-14 px-4 border-b border-[rgb(var(--border-primary))]">
+            <Link href="/dashboard" onClick={handleMobileNavClick} className="flex items-center gap-2">
+              <Image 
+                src="/MonityLogo.svg" 
+                alt="Monity" 
+                width={32} 
+                height={32} 
+                className="rounded-lg"
+              />
+              <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
+            </Link>
+            <button
+              onClick={() => setMobileMenuOpen(false)}
+              className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+              aria-label={t('common.close')}
+            >
+              <X className="w-5 h-5 text-[rgb(var(--text-secondary))]" />
+            </button>
+          </div>
+
+          {/* Drawer Navigation */}
+          <nav className="flex-1 overflow-y-auto px-3 py-4">
+            {/* Main Navigation */}
+            <div className="space-y-1">
+              {navigation.map((item) => {
+                const Icon = item.icon
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    prefetch={true}
+                    onClick={handleMobileNavClick}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors touch-target',
+                      isActive
+                        ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10'
+                        : 'text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
+                    )}
+                  >
+                    <Icon className="w-5 h-5 flex-shrink-0" />
+                    {item.name}
+                  </Link>
+                )
+              })}
+            </div>
+
+            {/* Quick Actions */}
+            <div className="mt-6 pt-4 border-t border-[rgb(var(--border-secondary))]">
+              <p className="px-3 mb-2 text-xs font-medium text-[rgb(var(--text-tertiary))] uppercase tracking-wider">
+                {t('nav.quickActions')}
+              </p>
+              <div className="space-y-1">
+                {extraNavigation.map((item) => {
+                  const Icon = item.icon
+                  const isActive = pathname === item.href
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      prefetch={true}
+                      onClick={handleMobileNavClick}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-3 rounded-xl text-base font-medium transition-colors touch-target',
+                        isActive
+                          ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10'
+                          : 'text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
+                      )}
+                    >
+                      <Icon className="w-5 h-5 flex-shrink-0" />
+                      {item.name}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Settings */}
+            <div className="mt-6 pt-4 border-t border-[rgb(var(--border-secondary))]">
+              <button
+                onClick={() => setSettingsExpanded(!settingsExpanded)}
+                className={cn(
+                  'w-full flex items-center justify-between px-3 py-3 rounded-xl text-base font-medium transition-colors',
+                  isSettingsActive
+                    ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10'
+                    : 'text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className="w-5 h-5 flex-shrink-0" />
+                  {t('nav.settings')}
+                </div>
+                <ChevronDown className={cn(
+                  "w-5 h-5 transition-transform",
+                  settingsExpanded && "rotate-180"
+                )} />
+              </button>
+              <Suspense fallback={null}>
+                <SettingsSubNav 
+                  isSettingsActive={isSettingsActive} 
+                  settingsExpanded={settingsExpanded} 
+                  isRTL={isRTL} 
+                  t={t}
+                  onNavigate={handleMobileNavClick}
+                />
+              </Suspense>
+            </div>
+          </nav>
+
+          {/* Drawer Footer */}
+          <div className="p-4 border-t border-[rgb(var(--border-primary))]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <UserButton afterSignOutUrl="/sign-in" />
+                <span className="text-sm text-[rgb(var(--text-secondary))]">
+                  {t('nav.account')}
+                </span>
+              </div>
+              <ThemeToggle />
+            </div>
+          </div>
+        </div>
+      </aside>
 
       {/* Main Content */}
       <main className={cn(
@@ -230,6 +412,9 @@ export default function AppShell({ children }) {
           })}
         </div>
       </nav>
+
+      {/* PWA Install Banner (iOS Safari only) */}
+      <InstallBanner />
     </div>
   )
 }
