@@ -222,12 +222,12 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
 
         {/* Shared toggle - only show if user has household */}
         {household && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
+              <label className="block text-sm font-medium text-[rgb(var(--text-primary))]">
                 {t('transactions.shared')}
               </label>
-              <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+              <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1">
                 {t('transactions.sharedDescription')}
               </p>
             </div>
@@ -235,15 +235,15 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
               type="button"
               onClick={() => setFormData({ ...formData, isShared: !formData.isShared })}
               className={cn(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-light-accent dark:focus:ring-dark-accent focus:ring-offset-2 flex-shrink-0',
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:ring-offset-2 flex-shrink-0',
                 formData.isShared
-                  ? 'bg-light-accent dark:bg-dark-accent'
-                  : 'bg-light-border dark:bg-dark-border'
+                  ? 'bg-[rgb(var(--accent))]'
+                  : 'bg-[rgb(var(--border-primary))]'
               )}
             >
               <span
                 className={cn(
-                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  'inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform',
                   formData.isShared ? 'translate-x-6' : 'translate-x-1'
                 )}
               />
@@ -254,7 +254,7 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
         {/* Tags - only show when editing */}
         {isEditing && editingTransaction && (
           <div>
-            <label className="block text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary mb-2">
+            <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
               {t('tags.tags')}
             </label>
             <TagSelector
