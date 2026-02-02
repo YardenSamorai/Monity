@@ -1,22 +1,37 @@
 import { SignUp } from '@clerk/nextjs'
+import Image from 'next/image'
 
 export default function SignUpPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-light-bg dark:bg-dark-bg">
-      <div className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-[rgb(var(--bg-primary))] p-4">
+      <div className="w-full max-w-sm">
+        {/* Logo & Title */}
         <div className="text-center mb-8">
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-gradient-to-br from-light-accent to-blue-600 dark:from-dark-accent dark:to-blue-500 items-center justify-center shadow-soft mb-4">
-            <span className="text-2xl font-bold text-white">M</span>
+          <div className="flex justify-center mb-4">
+            <Image 
+              src="/MonityLogo.svg" 
+              alt="Monity" 
+              width={64} 
+              height={64}
+              className="w-16 h-16"
+            />
           </div>
-          <h1 className="text-3xl font-bold text-light-text-primary dark:text-dark-text-primary mb-2">
-            Create your account
+          <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))]">
+            Monity
           </h1>
-          <p className="text-light-text-secondary dark:text-dark-text-secondary">
-            Start managing your finances with Monity
-          </p>
         </div>
-        
-        <SignUp />
+
+        {/* Clerk Component */}
+        <SignUp 
+          appearance={{
+            elements: {
+              rootBox: "w-full",
+              card: "bg-[rgb(var(--bg-secondary))] shadow-sm border border-[rgb(var(--border-primary))] rounded-2xl",
+              formButtonPrimary: "bg-[rgb(var(--accent))] hover:bg-[rgb(var(--accent))]/90",
+              footerActionLink: "text-[rgb(var(--accent))]",
+            },
+          }}
+        />
       </div>
     </div>
   )
