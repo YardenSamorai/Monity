@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Plus, X } from 'lucide-react'
 import { useToast } from '@/lib/toast-context'
 import { useI18n } from '@/lib/i18n-context'
+import { cn } from '@/lib/utils'
 
 const TAG_COLORS = [
   '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6',
