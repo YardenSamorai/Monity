@@ -178,6 +178,29 @@ export function FamilyClient() {
     }
   }
 
+  const handleCancelInvitation = async (invitationId) => {
+    if (!confirm(t('family.confirmCancelInvitation'))) return
+
+    showLoading()
+    try {
+      const response = await fetch(`/api/households/invite/${invitationId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to cancel invitation')
+      }
+
+      toast.success(t('family.invitationCancelled'))
+      fetchHousehold() // Refresh to update the list
+    } catch (error) {
+      toast.error(t('family.cancelInvitationFailed'), error.message)
+    } finally {
+      hideLoading()
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -278,7 +301,12 @@ export function FamilyClient() {
           <FamilyGoals household={household} />
         )}
         {activeTab === 'settings' && (
-          <FamilySettings household={household} onLeave={handleLeaveHousehold} />
+          <FamilySettings 
+            household={household} 
+            onLeave={handleLeaveHousehold} 
+            onCancelInvitation={handleCancelInvitation}
+            locale={localeString}
+          />
         )}
       </div>
 
@@ -604,7 +632,7 @@ function FamilyGoals({ household }) {
   )
 }
 
-function FamilySettings({ household, onLeave }) {
+function FamilySettings({ household, onLeave, onCancelInvitation, locale }) {
   const { t } = useI18n()
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -648,19 +676,34 @@ function FamilySettings({ household, onLeave }) {
               {household.invitations.map((invitation) => (
                 <div
                   key={invitation.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 p-3 rounded-xl bg-light-surface dark:bg-dark-surface"
+                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 p-3 rounded-xl bg-light-surface dark:bg-dark-surface"
                 >
-                  <div>
-                    <p className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
                       {invitation.email || t('family.linkInvitation')}
                     </p>
                     <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
                       {t('family.invitedBy')} {invitation.invitedBy?.name || invitation.invitedBy?.email}
                     </p>
+                    {invitation.expiresAt && (
+                      <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
+                        {t('family.expiresAt')} {new Date(invitation.expiresAt).toLocaleDateString(locale)}
+                      </p>
+                    )}
                   </div>
-                  <span className="text-xs px-2 py-1 rounded-full bg-light-warning/10 dark:bg-dark-warning/10 text-light-warning dark:text-dark-warning whitespace-nowrap">
-                    {t('family.pending')}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-2 py-1 rounded-full bg-light-warning/10 dark:bg-dark-warning/10 text-light-warning dark:text-dark-warning whitespace-nowrap">
+                      {t('family.pending')}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCancelInvitation(invitation.id)}
+                      className="text-light-danger dark:text-dark-danger hover:bg-light-danger/10 dark:hover:bg-dark-danger/10"
+                    >
+                      <X className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
