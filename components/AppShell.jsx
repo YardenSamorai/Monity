@@ -19,7 +19,8 @@ import {
   X,
   Zap,
   Smartphone,
-  Bell
+  Bell,
+  Plus
 } from 'lucide-react'
 import { ThemeToggle } from './ui/ThemeToggle'
 import { cn } from '@/lib/utils'
@@ -109,7 +110,7 @@ export default function AppShell({ children }) {
   const mobileNav = [
     { name: t('nav.dashboard'), href: '/dashboard', icon: LayoutDashboard },
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
-    { name: t('nav.budget'), href: '/budget', icon: Target },
+    { name: 'fab', href: '/quick-add', icon: Plus, isFab: true }, // FAB for add transaction
     { name: t('nav.goals'), href: '/goals', icon: PiggyBank },
     { name: t('nav.settings'), href: '/settings', icon: Settings },
   ]
@@ -388,10 +389,26 @@ export default function AppShell({ children }) {
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-[rgb(var(--bg-secondary))] border-t border-[rgb(var(--border-primary))] safe-area-bottom">
-        <div className="flex items-stretch h-16">
+        <div className="flex items-stretch h-16 relative">
           {mobileNav.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href || (item.href === '/settings' && pathname.startsWith('/settings'))
+            
+            // FAB (Floating Action Button) for Add Transaction
+            if (item.isFab) {
+              return (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  prefetch={true}
+                  className="flex-1 flex items-center justify-center"
+                >
+                  <div className="absolute -top-6 w-14 h-14 rounded-full bg-[rgb(var(--accent))] shadow-lg flex items-center justify-center transition-transform hover:scale-105 active:scale-95">
+                    <Icon className="w-7 h-7 text-white" strokeWidth={2.5} />
+                  </div>
+                </Link>
+              )
+            }
             
             return (
               <Link
