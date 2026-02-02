@@ -111,7 +111,11 @@ export function FamilyClient() {
       const response = await fetch('/api/households/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: inviteEmail || undefined, inviteLink: !inviteEmail }),
+        body: JSON.stringify({ 
+          email: inviteEmail || undefined, 
+          inviteLink: !inviteEmail,
+          locale: localeString?.split('-')[0] || 'en', // Pass locale for email language
+        }),
       })
 
       if (!response.ok) {
@@ -123,7 +127,16 @@ export function FamilyClient() {
       if (data.inviteLink) {
         setInviteLink(data.inviteLink)
       }
-      toast.success(t('family.inviteSent'), t('family.inviteSentSuccess'))
+      
+      // Show appropriate message based on whether email was sent
+      if (data.emailSent) {
+        toast.success(t('family.inviteSent'), t('family.emailSentTo', { email: inviteEmail }))
+      } else if (data.emailError) {
+        toast.warning(t('family.inviteCreated'), t('family.emailFailed'))
+      } else {
+        toast.success(t('family.inviteSent'), t('family.inviteSentSuccess'))
+      }
+      
       setIsInviteModalOpen(false)
       setInviteEmail('')
       fetchHousehold() // Refresh to see pending invitations

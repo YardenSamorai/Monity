@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
+import { sendFamilyInvitationEmail, isEmailConfigured } from '@/lib/email'
 
 // POST /api/households/invite - Invite user to household
 export async function POST(request) {
@@ -39,7 +40,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { email, inviteLink } = body
+    const { email, inviteLink, locale } = body
 
     if (!email && !inviteLink) {
       return NextResponse.json(
@@ -112,13 +113,37 @@ export async function POST(request) {
         },
       })
 
-      // TODO: Send email notification
-      // For now, return the invitation with token for shareable link
+      const inviteLinkUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/family/accept?token=${token}`
+
+      // Send email if configured
+      let emailSent = false
+      let emailError = null
+      
+      if (isEmailConfigured()) {
+        try {
+          await sendFamilyInvitationEmail({
+            to: email,
+            inviterName: user.name || user.email || 'Someone',
+            householdName: member.household.name,
+            inviteLink: inviteLinkUrl,
+            locale: locale || 'en',
+          })
+          emailSent = true
+        } catch (err) {
+          console.error('Failed to send invitation email:', err)
+          emailError = err.message
+        }
+      } else {
+        console.log('Email not configured - skipping email send')
+      }
+
       return NextResponse.json({
         invitation: {
           ...invitation,
-          inviteLink: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:4000'}/family/accept?token=${token}`,
+          inviteLink: inviteLinkUrl,
         },
+        emailSent,
+        emailError,
       })
     } else {
       // Return shareable link using household inviteToken
