@@ -4,6 +4,35 @@ import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 
+// GET - Fetch all goals for the current user
+export async function GET(request) {
+  try {
+    const user = await getOrCreateUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const goals = await prisma.savingsGoal.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: 'desc' },
+      include: {
+        contributions: {
+          orderBy: { date: 'desc' },
+          take: 5,
+        },
+      },
+    })
+
+    return NextResponse.json({ goals })
+  } catch (error) {
+    console.error('Error fetching goals:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch goals' },
+      { status: 500 }
+    )
+  }
+}
+
 const createGoalSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   icon: z.string().default('🎯'),

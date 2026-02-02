@@ -9,7 +9,7 @@
  * - Navigation: Network first, cache fallback
  */
 
-const CACHE_VERSION = 'v2'
+const CACHE_VERSION = 'v3'
 const CACHE_NAME = `monity-${CACHE_VERSION}`
 const STATIC_CACHE = `monity-static-${CACHE_VERSION}`
 
@@ -47,6 +47,9 @@ function shouldCache(request) {
   
   // Never cache non-GET requests
   if (request.method !== 'GET') return false
+  
+  // Skip non-http(s) URLs (chrome-extension://, etc.)
+  if (!url.protocol.startsWith('http')) return false
   
   // Never cache auth-related URLs
   for (const pattern of NEVER_CACHE) {
