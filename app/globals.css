@@ -302,6 +302,10 @@
   padding-bottom: max(var(--sab), 12px);
 }
 
+.pb-safe {
+  padding-bottom: var(--sab);
+}
+
 .safe-area-left {
   padding-left: max(var(--sal), 0px);
 }
