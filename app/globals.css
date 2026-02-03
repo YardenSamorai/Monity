@@ -40,6 +40,14 @@
   --radius-sm: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
+  
+  /* Chart colors - vibrant for data visualization */
+  --chart-1: 220, 90%, 56%;    /* Blue */
+  --chart-2: 160, 84%, 45%;    /* Green */
+  --chart-3: 30, 95%, 55%;     /* Orange */
+  --chart-4: 280, 87%, 65%;    /* Purple */
+  --chart-5: 340, 82%, 52%;    /* Pink */
+  --chart-6: 200, 95%, 50%;    /* Cyan */
 }
 
 /* Dark mode - professional dark */
@@ -65,6 +73,14 @@
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
   --shadow-md: 0 1px 3px 0 rgb(0 0 0 / 0.4);
   --shadow-lg: 0 4px 6px -1px rgb(0 0 0 / 0.5);
+  
+  /* Chart colors - slightly brighter for dark mode */
+  --chart-1: 220, 90%, 65%;    /* Blue */
+  --chart-2: 160, 84%, 55%;    /* Green */
+  --chart-3: 30, 95%, 60%;     /* Orange */
+  --chart-4: 280, 87%, 72%;    /* Purple */
+  --chart-5: 340, 82%, 62%;    /* Pink */
+  --chart-6: 200, 95%, 60%;    /* Cyan */
 }
 
 /* ========================================
