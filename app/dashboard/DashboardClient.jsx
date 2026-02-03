@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   BarChart3,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Target
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import Link from 'next/link'
@@ -48,6 +49,8 @@ export function DashboardClient({
   topCategories = [],
   budgetAlerts = [],
   biggestExpense = null,
+  // Goals
+  goals = [],
 }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
   const [isRecurringIncomeModalOpen, setIsRecurringIncomeModalOpen] = useState(false)
@@ -571,6 +574,67 @@ export function DashboardClient({
               QUICK ACTIONS SIDEBAR - 4 cols on desktop
               ============================================ */}
           <aside className="col-span-12 lg:col-span-4 space-y-4">
+            {/* Goals Card */}
+            {goals.length > 0 && (
+              <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-xl overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-2.5 border-b border-[rgb(var(--border-secondary))]">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-[rgb(var(--accent))]" />
+                    <h3 className="text-sm font-semibold text-[rgb(var(--text-primary))]">
+                      {t('nav.goals')}
+                    </h3>
+                  </div>
+                  <Link 
+                    href="/goals" 
+                    className="text-xs text-[rgb(var(--accent))] hover:underline"
+                  >
+                    {t('dashboard.viewAll')}
+                  </Link>
+                </div>
+                <div className="divide-y divide-[rgb(var(--border-secondary))]">
+                  {goals.map((goal) => {
+                    const progress = goal.targetAmount > 0 
+                      ? (Number(goal.currentAmount) / Number(goal.targetAmount)) * 100 
+                      : 0
+                    const remaining = Number(goal.targetAmount) - Number(goal.currentAmount)
+                    
+                    return (
+                      <Link
+                        key={goal.id}
+                        href="/goals"
+                        className="flex items-center gap-3 px-4 py-3 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+                      >
+                        <span className="text-xl">{goal.icon || '🎯'}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
+                            {goal.name}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <div className="flex-1 h-1.5 bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-[rgb(var(--accent))] rounded-full transition-all"
+                                style={{ width: `${Math.min(progress, 100)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium text-[rgb(var(--text-tertiary))] tabular-nums">
+                              {progress.toFixed(0)}%
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+                <Link
+                  href="/goals"
+                  className="flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium text-[rgb(var(--accent))] hover:bg-[rgb(var(--bg-tertiary))] border-t border-[rgb(var(--border-secondary))] transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  {t('goals.addGoal') || 'Add Goal'}
+                </Link>
+              </div>
+            )}
+
             {/* Income CTA */}
             {!isNewUser && totalIncome === 0 && accounts.length > 0 && (
               <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-xl p-4">

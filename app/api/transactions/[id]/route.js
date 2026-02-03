@@ -67,14 +67,8 @@ export async function PATCH(request, { params }) {
     
     // Verify categoryId exists if provided
     if (validated.categoryId) {
-      const categoryExists = await prisma.category.findFirst({
-        where: { 
-          id: validated.categoryId,
-          OR: [
-            { userId: user.id },
-            { isDefault: true }
-          ]
-        }
+      const categoryExists = await prisma.category.findUnique({
+        where: { id: validated.categoryId }
       })
       if (!categoryExists) {
         console.error('[PATCH Transaction] Category not found:', validated.categoryId)
@@ -83,6 +77,7 @@ export async function PATCH(request, { params }) {
           { status: 400 }
         )
       }
+      console.log('[PATCH Transaction] Category found:', categoryExists.name, 'userId:', categoryExists.userId)
     }
     
     // Verify accountId exists if provided

@@ -212,6 +212,7 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
         onClose={() => setIsModalOpen(false)}
         accounts={accounts}
         categories={categories}
+        household={household}
         onSuccess={handleSuccess}
       />
 
@@ -221,6 +222,7 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
           onClose={() => { setIsEditModalOpen(false); setEditingTransaction(null) }}
           accounts={accounts}
           categories={categories}
+          household={household}
           onSuccess={() => { handleSuccess(); setIsEditModalOpen(false); setEditingTransaction(null) }}
           editingTransaction={editingTransaction}
         />

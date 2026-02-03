@@ -77,16 +77,21 @@ export default function AppShell({ children }) {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
+  const [household, setHousehold] = useState(null)
   const { t, isRTL } = useI18n()
 
-  // Fetch accounts and categories for the transaction modal
+  // Fetch accounts, categories, and household for the transaction modal
   useEffect(() => {
     Promise.all([
       fetch('/api/accounts').then(res => res.json()),
-      fetch('/api/categories').then(res => res.json())
-    ]).then(([accountsData, categoriesData]) => {
+      fetch('/api/categories').then(res => res.json()),
+      fetch('/api/households').then(res => res.json())
+    ]).then(([accountsData, categoriesData, householdData]) => {
       setAccounts(accountsData.accounts || [])
       setCategories(categoriesData.categories || [])
+      if (householdData.household) {
+        setHousehold(householdData.household)
+      }
     }).catch(console.error)
   }, [])
 
@@ -455,6 +460,7 @@ export default function AppShell({ children }) {
         onClose={() => setIsTransactionModalOpen(false)}
         accounts={accounts}
         categories={categories}
+        household={household}
         onSuccess={async () => {
           setIsTransactionModalOpen(false)
           // Force hard refresh to bypass cache

@@ -9,7 +9,11 @@ import { useToast } from '@/lib/toast-context'
 import { useI18n } from '@/lib/i18n-context'
 import { cn } from '@/lib/utils'
 
-export function TransactionModal({ isOpen, onClose, accounts, categories, onSuccess, editingTransaction = null }) {
+// Cache household data at module level to avoid refetching
+let cachedHousehold = null
+let householdFetched = false
+
+export function TransactionModal({ isOpen, onClose, accounts, categories, onSuccess, editingTransaction = null, household: propHousehold = null }) {
   const { toast } = useToast()
   const { t } = useI18n()
   const [loading, setLoading] = useState(false)
@@ -26,21 +30,37 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
     isShared: false,
   })
   const [transactionTags, setTransactionTags] = useState([])
-  const [household, setHousehold] = useState(null)
+  const [household, setHousehold] = useState(propHousehold || cachedHousehold)
 
-  // Load household when modal opens
+  // Load household once (use cache after first fetch)
   useEffect(() => {
-    if (isOpen) {
+    // If already have household from prop or cache, skip fetch
+    if (propHousehold) {
+      setHousehold(propHousehold)
+      cachedHousehold = propHousehold
+      householdFetched = true
+      return
+    }
+    
+    if (cachedHousehold) {
+      setHousehold(cachedHousehold)
+      return
+    }
+    
+    // Only fetch if we haven't fetched before
+    if (!householdFetched) {
+      householdFetched = true
       fetch('/api/households')
         .then(res => res.json())
         .then(data => {
           if (data.household) {
+            cachedHousehold = data.household
             setHousehold(data.household)
           }
         })
         .catch(() => {})
     }
-  }, [isOpen])
+  }, [propHousehold])
 
   // Load editing transaction data when modal opens
   useEffect(() => {
@@ -147,125 +167,135 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? t('transactions.editTransaction') : t('transactions.addTransaction')} size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Select
-          label={t('transactions.type')}
-          value={formData.type}
-          onChange={(e) => setFormData({ ...formData, type: e.target.value, categoryId: '' })}
-          required
-        >
-          <option value="expense">{t('transactions.expense')}</option>
-          <option value="income">{t('transactions.income')}</option>
-        </Select>
-
-        <Input
-          label={t('transactions.amount')}
-          type="number"
-          step="0.01"
-          min="0"
-          value={formData.amount}
-          onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-          placeholder="0.00"
-          required
-        />
-
-        <Input
-          label={t('transactions.description')}
-          type="text"
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-          placeholder={t('transactions.descriptionPlaceholder')}
-          required
-        />
-
-        <Select
-          label={t('transactions.account')}
-          value={formData.accountId}
-          onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-          required
-        >
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </Select>
-
-        <Select
-          label={t('transactions.category')}
-          value={formData.categoryId}
-          onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-        >
-          <option value="">{t('transactions.uncategorized')}</option>
-          {filteredCategories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </Select>
-
-        <Input
-          label={t('transactions.date')}
-          type="datetime-local"
-          value={formData.date}
-          onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-          required
-        />
-
-        <Input
-          label={t('transactions.notes')}
-          type="text"
-          value={formData.notes}
-          onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-          placeholder={t('transactions.notesPlaceholder')}
-        />
-
-        {/* Shared toggle - only show if user has household */}
-        {household && (
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-[rgb(var(--text-primary))]">
-                {t('transactions.shared')}
-              </label>
-              <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1">
-                {t('transactions.sharedDescription')}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setFormData({ ...formData, isShared: !formData.isShared })}
-              className={cn(
-                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:ring-offset-2 flex-shrink-0',
-                formData.isShared
-                  ? 'bg-[rgb(var(--accent))]'
-                  : 'bg-[rgb(var(--border-primary))]'
-              )}
+      <form onSubmit={handleSubmit} className="flex flex-col h-full">
+        {/* Scrollable form content */}
+        <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+          {/* Type and Amount - side by side on mobile */}
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label={t('transactions.type')}
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value, categoryId: '' })}
+              required
             >
-              <span
-                className={cn(
-                  'inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform',
-                  formData.isShared ? 'translate-x-6' : 'translate-x-1'
-                )}
-              />
-            </button>
-          </div>
-        )}
+              <option value="expense">{t('transactions.expense')}</option>
+              <option value="income">{t('transactions.income')}</option>
+            </Select>
 
-        {/* Tags - only show when editing */}
-        {isEditing && editingTransaction && (
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
-              {t('tags.tags')}
-            </label>
-            <TagSelector
-              transactionId={editingTransaction.id}
-              selectedTags={transactionTags}
-              onTagsChange={setTransactionTags}
+            <Input
+              label={t('transactions.amount')}
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              placeholder="0.00"
+              required
             />
           </div>
-        )}
 
-        <div className="flex gap-3 pt-4">
+          <Input
+            label={t('transactions.description')}
+            type="text"
+            value={formData.description}
+            onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+            placeholder={t('transactions.descriptionPlaceholder')}
+            required
+          />
+
+          {/* Account and Category - side by side on mobile */}
+          <div className="grid grid-cols-2 gap-3">
+            <Select
+              label={t('transactions.account')}
+              value={formData.accountId}
+              onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+              required
+            >
+              {accounts.map((account) => (
+                <option key={account.id} value={account.id}>
+                  {account.name}
+                </option>
+              ))}
+            </Select>
+
+            <Select
+              label={t('transactions.category')}
+              value={formData.categoryId}
+              onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+            >
+              <option value="">{t('transactions.uncategorized')}</option>
+              {filteredCategories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <Input
+            label={t('transactions.date')}
+            type="datetime-local"
+            value={formData.date}
+            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+            required
+          />
+
+          <Input
+            label={t('transactions.notes')}
+            type="text"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder={t('transactions.notesPlaceholder')}
+          />
+
+          {/* Shared toggle - only show if user has household */}
+          {household && (
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[rgb(var(--bg-tertiary))]">
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-[rgb(var(--text-primary))]">
+                  {t('transactions.shared')}
+                </label>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.isShared}
+                onClick={() => setFormData({ ...formData, isShared: !formData.isShared })}
+                className={cn(
+                  'relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:ring-offset-2 flex-shrink-0',
+                  formData.isShared
+                    ? 'bg-[rgb(var(--accent))]'
+                    : 'bg-[rgb(var(--text-tertiary))]/30'
+                )}
+                dir="ltr"
+              >
+                <span
+                  className={cn(
+                    'absolute h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200',
+                    formData.isShared ? 'left-6' : 'left-1'
+                  )}
+                />
+              </button>
+            </div>
+          )}
+
+          {/* Tags - only show when editing */}
+          {isEditing && editingTransaction && (
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                {t('tags.tags')}
+              </label>
+              <TagSelector
+                transactionId={editingTransaction.id}
+                selectedTags={transactionTags}
+                onTagsChange={setTransactionTags}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Sticky buttons at bottom */}
+        <div className="flex gap-3 pt-3 border-t border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-secondary))]">
           <Button
             type="button"
             variant="secondary"

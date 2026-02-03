@@ -15,23 +15,18 @@ const inter = Inter({
 export const metadata = {
   title: 'Monity',
   description: 'Personal finance management - Track expenses, budgets, and goals',
-  manifest: '/manifest.json',
   applicationName: 'Monity',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'default',
+    statusBarStyle: 'black-translucent',
     title: 'Monity',
   },
   icons: {
     icon: [
-      { url: '/icons/icon-32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
       { url: '/MonityLogo.svg', type: 'image/svg+xml' },
     ],
-    shortcut: '/icons/icon-192.png',
-    apple: [
-      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
+    shortcut: '/MonityLogo.svg',
+    apple: '/MonityLogo.svg',
   },
   formatDetection: {
     telephone: false,
@@ -110,7 +105,7 @@ export default function RootLayout({ children }) {
                     document.documentElement.lang = locale;
                     document.documentElement.dir = direction;
                     if (direction === 'rtl') {
-                      document.body.classList.add('rtl');
+                      document.documentElement.classList.add('rtl');
                     }
                     
                     // PWA Standalone mode detection

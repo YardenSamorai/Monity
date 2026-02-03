@@ -55,28 +55,33 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
       {/* Mobile: Bottom Sheet / Desktop: Centered Dialog */}
       <div className={cn(
         // Mobile: Bottom sheet positioning
-        "fixed inset-x-0 bottom-0",
+        "fixed left-0 right-0 bottom-0 top-auto",
         // Desktop: Full screen flex container for centering
-        "md:inset-0 md:flex md:items-center md:justify-center md:p-6"
+        "md:top-0 md:bottom-0 md:left-0 md:right-0 md:flex md:items-center md:justify-center md:p-6"
       )}>
         <div
           className={cn(
-            'relative w-full bg-[rgb(var(--bg-secondary))] shadow-xl',
+            'relative bg-[rgb(var(--bg-secondary))] shadow-xl',
             'border border-[rgb(var(--border-primary))]',
             // Mobile: Full width bottom sheet with top rounded corners
-            'rounded-t-2xl md:rounded-xl',
+            'w-full rounded-t-2xl',
+            // Desktop: Centered dialog with all rounded corners, proper width
+            'md:rounded-xl md:w-full',
+            sizes[size],
             // Height constraints
             'max-h-[90vh] md:max-h-[85vh]',
             'overflow-hidden flex flex-col',
-            // Desktop: Fixed width instead of max-width
-            'md:w-full',
-            sizes[size],
             // Animation
             'transition-all duration-300 ease-out',
-            // Mobile: Slide up / Desktop: Fade + scale
+            // Mobile: Slide up from bottom
             isAnimating 
-              ? 'translate-y-0 md:translate-y-0 md:opacity-100 md:scale-100' 
-              : 'translate-y-full md:translate-y-4 md:opacity-0 md:scale-95'
+              ? 'translate-y-0' 
+              : 'translate-y-full',
+            // Desktop: Fade + scale (override mobile translate)
+            'md:translate-y-0',
+            isAnimating 
+              ? 'md:opacity-100 md:scale-100' 
+              : 'md:opacity-0 md:scale-95'
           )}
         >
           {/* Drag Handle - Mobile Only */}
@@ -98,7 +103,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto px-5 py-4 pb-safe">
+          <div className="flex-1 overflow-y-auto px-4 py-3 md:px-5 md:py-4 pb-safe min-h-0">
             {children}
           </div>
         </div>

@@ -9,7 +9,7 @@
  * - Navigation: Network first, cache fallback
  */
 
-const CACHE_VERSION = 'v3'
+const CACHE_VERSION = 'v4'
 const CACHE_NAME = `monity-${CACHE_VERSION}`
 const STATIC_CACHE = `monity-static-${CACHE_VERSION}`
 
@@ -19,7 +19,6 @@ const APP_SHELL = [
   '/dashboard',
   '/quick-add',
   '/install',
-  '/manifest.json',
   '/MonityLogo.svg',
 ]
 

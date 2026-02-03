@@ -20,9 +20,6 @@ import {
   BarChart3,
   Calendar,
   Lightbulb,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  Target,
   Sparkles,
   AlertTriangle,
   Repeat,
@@ -286,90 +283,86 @@ export function AnalyticsClient({
       </div>
 
       {/* Executive Summary KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
         <KPICard
-          title={t('analytics.totalIncome')}
+          label={t('analytics.totalIncome')}
           value={<AnimatedNumber value={currentMonthIncome} currencySymbol={currencySymbol} localeString={localeString} />}
           subtitle={
             incomeChange !== 0 
               ? `${incomeChange > 0 ? '+' : ''}${incomeChange.toFixed(0)}% ${t('analytics.vsLastMonth')}`
-              : t('analytics.thisMonth')
+              : null
           }
-          icon={<ArrowUpCircle className="w-5 h-5" />}
-          variant="income"
+          valueClassName="text-positive"
         />
         
         <KPICard
-          title={t('analytics.totalExpenses')}
+          label={t('analytics.totalExpenses')}
           value={<AnimatedNumber value={currentMonthExpenses} currencySymbol={currencySymbol} localeString={localeString} />}
           subtitle={
             expenseChange !== 0 
               ? `${expenseChange > 0 ? '+' : ''}${expenseChange.toFixed(0)}% ${t('analytics.vsLastMonth')}`
-              : t('analytics.thisMonth')
+              : null
           }
-          icon={<ArrowDownCircle className="w-5 h-5" />}
-          variant="expense"
+          valueClassName="text-negative"
         />
         
         <KPICard
-          title={t('analytics.netBalance')}
+          label={t('analytics.netBalance')}
           value={<AnimatedNumber value={netBalance} currencySymbol={currencySymbol} localeString={localeString} />}
           subtitle={t('analytics.incomeMinusExpenses')}
-          icon={netBalance >= 0 ? <TrendingUp className="w-5 h-5" /> : <TrendingDown className="w-5 h-5" />}
-          variant={netBalance >= 0 ? 'net' : 'netNegative'}
+          valueClassName={netBalance >= 0 ? 'text-positive' : 'text-negative'}
         />
         
         <KPICard
-          title={t('analytics.budgetUsage')}
+          label={t('analytics.budgetUsage')}
           value={`${budgetUsagePercent.toFixed(0)}%`}
           subtitle={
             totalBudget > 0 
               ? `${formatCurrency(currentMonthExpenses, { locale: localeString, symbol: currencySymbol })} / ${formatCurrency(totalBudget, { locale: localeString, symbol: currencySymbol })}`
               : t('analytics.noBudgetSet')
           }
-          icon={<Target className="w-5 h-5" />}
-          variant={budgetUsagePercent > 100 ? 'expense' : budgetUsagePercent > 80 ? 'netNegative' : 'balance'}
+          valueClassName={budgetUsagePercent > 100 ? 'text-negative' : budgetUsagePercent > 80 ? 'text-warning' : ''}
         />
       </div>
 
       {/* Smart Insights */}
       {insights.length > 0 && (
         <Card className="overflow-hidden !p-0">
-          <div className="p-5 border-b border-light-border/50 dark:border-dark-border/50">
+          <div className="p-4 lg:p-5 border-b border-[rgb(var(--border-primary))]">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-100 to-yellow-200 dark:from-amber-900/50 dark:to-yellow-900/50 flex items-center justify-center">
-                <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                <Lightbulb className="w-4 h-4 lg:w-5 lg:h-5 text-amber-500" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+                <h2 className="text-base lg:text-lg font-semibold text-[rgb(var(--text-primary))]">
                   {t('analytics.smartInsights')}
                 </h2>
-                <p className="text-sm text-[rgb(var(--text-tertiary))]">
+                <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))]">
                   {t('analytics.smartInsightsDesc')}
                 </p>
               </div>
             </div>
           </div>
           
-          <div className="divide-y divide-light-border/50 dark:divide-dark-border/50">
+          <div className="space-y-0">
             {insights.map((insight, index) => (
               <div 
                 key={index}
-                className="flex items-start gap-4 p-5 hover:bg-light-surface/50 dark:hover:bg-dark-surface/50 transition-colors"
+                className="flex items-start gap-3 lg:gap-4 p-4 lg:p-5 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
               >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                  insight.type === 'success' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' :
-                  insight.type === 'warning' ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400' :
-                  insight.type === 'danger' ? 'bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400' :
-                  'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400'
+                <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  insight.type === 'success' ? 'bg-emerald-500/10 text-emerald-500' :
+                  insight.type === 'warning' ? 'bg-amber-500/10 text-amber-500' :
+                  insight.type === 'danger' ? 'bg-rose-500/10 text-rose-500' :
+                  'bg-blue-500/10 text-blue-500'
                 }`}>
                   {insight.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+                  <h3 className="font-semibold text-sm lg:text-base text-[rgb(var(--text-primary))]">
                     {insight.title}
                   </h3>
-                  <p className="text-sm text-[rgb(var(--text-secondary))] mt-0.5">
+                  <p className="text-xs lg:text-sm text-[rgb(var(--text-secondary))] mt-0.5">
                     {insight.description}
                   </p>
                 </div>
@@ -693,99 +686,89 @@ export function AnalyticsClient({
 
       {/* Fixed vs Variable Expenses */}
       <Card>
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+        <div className="mb-4 lg:mb-6">
+          <h2 className="text-base lg:text-lg font-semibold text-[rgb(var(--text-primary))]">
             {t('analytics.fixedVsVariable')}
           </h2>
-          <p className="text-sm text-[rgb(var(--text-tertiary))]">
+          <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))]">
             {t('analytics.fixedVsVariableDesc')}
           </p>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
           {/* Fixed Expenses */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="p-3 lg:p-4 rounded-xl bg-[rgb(var(--bg-tertiary))]">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center">
-                  <Repeat className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Repeat className="w-4 h-4 text-blue-500" />
                 </div>
-                <div>
-                  <span className="font-medium text-[rgb(var(--text-primary))]">
-                    {t('analytics.fixedExpenses')}
-                  </span>
-                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                    {t('analytics.fixedExpensesHint')}
-                  </p>
-                </div>
+                <span className="font-medium text-sm text-[rgb(var(--text-primary))]">
+                  {t('analytics.fixedExpenses')}
+                </span>
               </div>
-              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">
+              <span className="text-lg font-bold text-[rgb(var(--text-primary))]">
                 {formatCurrency(totalFixed, { locale: localeString, symbol: currencySymbol })}
               </span>
             </div>
             
             {fixedExpenses.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {fixedExpenses.map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between py-2 border-b border-light-border-light dark:border-dark-border-light last:border-0">
+                  <div key={expense.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[rgb(var(--bg-secondary))] transition-colors">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: expense.color }} />
-                      <span className="text-sm text-[rgb(var(--text-secondary))]">
+                      <span className="text-xs lg:text-sm text-[rgb(var(--text-secondary))]">
                         {expense.isUncategorized || !expense.name ? t('transactions.uncategorized') : expense.name}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
+                    <span className="text-xs lg:text-sm font-medium text-[rgb(var(--text-primary))] tabular-nums">
                       {formatCurrency(expense.amount, { locale: localeString, symbol: currencySymbol })}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[rgb(var(--text-tertiary))] py-4 text-center">
+              <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))] py-3 text-center">
                 {t('analytics.noFixedExpenses')}
               </p>
             )}
           </div>
           
           {/* Variable Expenses */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
+          <div className="p-3 lg:p-4 rounded-xl bg-[rgb(var(--bg-tertiary))]">
+            <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-purple-100 dark:bg-purple-900/40 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                  <Sparkles className="w-4 h-4 text-purple-500" />
                 </div>
-                <div>
-                  <span className="font-medium text-[rgb(var(--text-primary))]">
-                    {t('analytics.variableExpenses')}
-                  </span>
-                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                    {t('analytics.variableExpensesHint')}
-                  </p>
-                </div>
+                <span className="font-medium text-sm text-[rgb(var(--text-primary))]">
+                  {t('analytics.variableExpenses')}
+                </span>
               </div>
-              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">
+              <span className="text-lg font-bold text-[rgb(var(--text-primary))]">
                 {formatCurrency(totalVariable, { locale: localeString, symbol: currencySymbol })}
               </span>
             </div>
             
             {variableExpenses.length > 0 ? (
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {variableExpenses.slice(0, 5).map((expense) => (
-                  <div key={expense.id} className="flex items-center justify-between py-2 border-b border-light-border-light dark:border-dark-border-light last:border-0">
+                  <div key={expense.id} className="flex items-center justify-between py-1.5 px-2 rounded-lg hover:bg-[rgb(var(--bg-secondary))] transition-colors">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: expense.color }} />
-                      <span className="text-sm text-[rgb(var(--text-secondary))]">
+                      <span className="text-xs lg:text-sm text-[rgb(var(--text-secondary))]">
                         {expense.isUncategorized || !expense.name ? t('transactions.uncategorized') : expense.name}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
+                    <span className="text-xs lg:text-sm font-medium text-[rgb(var(--text-primary))] tabular-nums">
                       {formatCurrency(expense.amount, { locale: localeString, symbol: currencySymbol })}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-[rgb(var(--text-tertiary))] py-4 text-center">
+              <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))] py-3 text-center">
                 {t('analytics.noVariableExpenses')}
               </p>
             )}

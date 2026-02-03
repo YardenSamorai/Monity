@@ -31,6 +31,7 @@ const getDashboardData = unstable_cache(
       recentTransactions,
       categories,
       budgets,
+      goals,
     ] = await Promise.all([
       prisma.account.findMany({
         where: { userId, isActive: true },
@@ -135,6 +136,25 @@ const getDashboardData = unstable_cache(
           category: { select: { id: true, name: true, color: true, icon: true } },
         },
       }),
+      // Active savings goals
+      prisma.savingsGoal.findMany({
+        where: {
+          userId,
+          isCompleted: false,
+          isPaused: false,
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 3,
+        select: {
+          id: true,
+          name: true,
+          targetAmount: true,
+          currentAmount: true,
+          targetDate: true,
+          icon: true,
+          priority: true,
+        },
+      }),
     ])
     
     return {
@@ -146,6 +166,7 @@ const getDashboardData = unstable_cache(
       recentTransactions,
       categories,
       budgets,
+      goals,
       fetchedAt: now.toISOString(),
     }
   },
@@ -174,6 +195,7 @@ export default async function DashboardPage() {
     recentTransactions,
     categories,
     budgets,
+    goals,
   } = await getDashboardData(user.id)
   
   // Check if user needs onboarding
@@ -307,6 +329,8 @@ export default async function DashboardPage() {
         topCategories={topCategories}
         budgetAlerts={budgetAlerts}
         biggestExpense={biggestExpense ? serializePrismaData(biggestExpense) : null}
+        // Goals
+        goals={serializePrismaData(goals)}
       />
     </AppShell>
   )
