@@ -56,8 +56,8 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
       <div className={cn(
         // Mobile: Bottom sheet positioning
         "fixed inset-x-0 bottom-0",
-        // Desktop: Centered with proper positioning
-        "md:inset-0 md:flex md:items-center md:justify-center md:p-4"
+        // Desktop: Full screen flex container for centering
+        "md:inset-0 md:flex md:items-center md:justify-center md:p-6"
       )}>
         <div
           className={cn(
@@ -68,7 +68,8 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
             // Height constraints
             'max-h-[90vh] md:max-h-[85vh]',
             'overflow-hidden flex flex-col',
-            // Desktop sizes - add width
+            // Desktop: Fixed width instead of max-width
+            'md:w-full',
             sizes[size],
             // Animation
             'transition-all duration-300 ease-out',
