@@ -110,7 +110,7 @@ export function CreditCardVisual() {
           href="/credit-cards"
           className="text-xs text-[rgb(var(--accent))] hover:underline"
         >
-          {t('common.viewAll')}
+          {t('dashboard.viewAll')}
         </Link>
       </div>
 
@@ -168,10 +168,10 @@ export function CreditCardVisual() {
               </span>
             </div>
 
-            {/* Card Number - Last 4 digits on the RIGHT */}
-            <div className="text-xs font-mono text-white/90 tracking-[0.15em] relative z-10 text-center" dir="ltr">
-              •••• •••• •••• {currentCard.lastFourDigits}
-            </div>
+            {/* Card Number - Last 4 digits on the RIGHT (always LTR) */}
+            <p className="text-xs font-mono text-white/90 tracking-[0.15em] relative z-10 text-center" dir="ltr" style={{ unicodeBidi: 'bidi-override', direction: 'ltr' }}>
+              {'•••• •••• •••• ' + currentCard.lastFourDigits}
+            </p>
 
             {/* Bottom Row - Amount & Billing */}
             <div className="flex items-end justify-between relative z-10">
