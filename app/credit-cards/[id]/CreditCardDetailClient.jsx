@@ -24,6 +24,19 @@ import {
   TrendingDown
 } from 'lucide-react'
 
+// Card type names mapping
+const CARD_TYPE_NAMES = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  diners: 'Diners Club',
+  discover: 'Discover',
+  isracard: 'Isracard',
+  cal: 'Cal - כאל',
+  max: 'Max - לאומי קארד',
+  other: 'Other',
+}
+
 export function CreditCardDetailClient({ cardId }) {
   const { t, currencySymbol, localeString } = useI18n()
   const { toast } = useToast()
@@ -100,7 +113,7 @@ export function CreditCardDetailClient({ cardId }) {
           </div>
           <div>
             <h1 className="text-xl font-bold text-[rgb(var(--text-primary))]">
-              {card.name}
+              {CARD_TYPE_NAMES[card.name] || card.name}
             </h1>
             <p className="text-sm text-[rgb(var(--text-tertiary))]">
               •••• {card.lastFourDigits} • {card.linkedAccount?.name}

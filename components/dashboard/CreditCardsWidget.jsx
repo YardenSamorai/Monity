@@ -13,6 +13,19 @@ import {
   Plus
 } from 'lucide-react'
 
+// Card type names mapping
+const CARD_TYPE_NAMES = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  diners: 'Diners Club',
+  discover: 'Discover',
+  isracard: 'Isracard',
+  cal: 'Cal - כאל',
+  max: 'Max - לאומי קארד',
+  other: 'Other',
+}
+
 export function CreditCardsWidget() {
   const { t, currencySymbol, localeString } = useI18n()
   const [cards, setCards] = useState([])
@@ -118,7 +131,7 @@ export function CreditCardsWidget() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <p className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
-                    {card.name}
+                    {CARD_TYPE_NAMES[card.name] || card.name}
                   </p>
                   <span className="text-xs text-[rgb(var(--text-tertiary))]">
                     •••• {card.lastFourDigits}

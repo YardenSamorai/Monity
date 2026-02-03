@@ -221,6 +221,19 @@ export function CreditCardsClient() {
   )
 }
 
+// Card type names mapping
+const CARD_TYPE_NAMES = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  diners: 'Diners Club',
+  discover: 'Discover',
+  isracard: 'Isracard',
+  cal: 'Cal - כאל',
+  max: 'Max - לאומי קארד',
+  other: 'Other',
+}
+
 // Credit Card Item Component
 function CreditCardItem({ card, currencySymbol, localeString, onEdit, onDelete }) {
   const { t } = useI18n()
@@ -231,6 +244,9 @@ function CreditCardItem({ card, currencySymbol, localeString, onEdit, onDelete }
     : null
 
   const isNearLimit = limitUsedPercent !== null && limitUsedPercent >= 80
+
+  // Get display name for card type
+  const cardDisplayName = CARD_TYPE_NAMES[card.name] || card.name
 
   return (
     <Link href={`/credit-cards/${card.id}`}>
@@ -246,7 +262,7 @@ function CreditCardItem({ card, currencySymbol, localeString, onEdit, onDelete }
             </div>
             <div>
               <h3 className="font-semibold text-[rgb(var(--text-primary))]">
-                {card.name}
+                {cardDisplayName}
               </h3>
               <p className="text-sm text-[rgb(var(--text-tertiary))]">
                 •••• {card.lastFourDigits}
@@ -444,6 +460,28 @@ function CreditCardModal({ isOpen, onClose, editingCard, accounts, onSuccess }) 
     '#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#6366F1'
   ]
 
+  const cardTypes = [
+    { id: 'visa', name: 'Visa', color: '#1A1F71' },
+    { id: 'mastercard', name: 'Mastercard', color: '#EB001B' },
+    { id: 'amex', name: 'American Express', color: '#006FCF' },
+    { id: 'diners', name: 'Diners Club', color: '#0079BE' },
+    { id: 'discover', name: 'Discover', color: '#FF6000' },
+    { id: 'isracard', name: 'Isracard', color: '#00529B' },
+    { id: 'cal', name: 'Cal - כאל', color: '#E31E24' },
+    { id: 'max', name: 'Max - לאומי קארד', color: '#00A0DF' },
+    { id: 'other', name: t('creditCards.cardTypes.other'), color: '#6B7280' },
+  ]
+
+  // Auto-set color when card type changes
+  const handleCardTypeChange = (cardType) => {
+    const selectedCard = cardTypes.find(c => c.id === cardType)
+    setFormData({ 
+      ...formData, 
+      name: cardType,
+      color: selectedCard?.color || '#3B82F6'
+    })
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -451,13 +489,22 @@ function CreditCardModal({ isOpen, onClose, editingCard, accounts, onSuccess }) 
       title={editingCard ? t('creditCards.editCard') : t('creditCards.addCard')}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label={t('creditCards.cardName')}
-          value={formData.name}
-          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-          placeholder={t('creditCards.cardNamePlaceholder')}
-          required
-        />
+        <div>
+          <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-1">
+            {t('creditCards.cardType')}
+          </label>
+          <select
+            value={formData.name}
+            onChange={(e) => handleCardTypeChange(e.target.value)}
+            className="w-full h-11 px-3 rounded-xl bg-[rgb(var(--bg-tertiary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
+            required
+          >
+            <option value="">{t('creditCards.selectCardType')}</option>
+            {cardTypes.map(card => (
+              <option key={card.id} value={card.id}>{card.name}</option>
+            ))}
+          </select>
+        </div>
 
         <Input
           label={t('creditCards.lastFourDigits')}
