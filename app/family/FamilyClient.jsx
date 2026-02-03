@@ -17,6 +17,7 @@ import { InvitesCard } from '@/components/family/InvitesCard'
 import { InsightsCard } from '@/components/family/InsightsCard'
 import { RolesCard } from '@/components/family/RolesCard'
 import { ActionsCard } from '@/components/family/ActionsCard'
+import { TransactionsCard } from '@/components/family/TransactionsCard'
 
 export function FamilyClient() {
   const { t } = useI18n()
@@ -167,6 +168,9 @@ export function FamilyClient() {
 
       {/* Overview Cards */}
       <FamilyOverview household={household} />
+
+      {/* Recent Transactions */}
+      <TransactionsCard household={household} />
 
       {/* Main Content - 2 Column on Desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
