@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { updateTransactionSchema } from '@/lib/validations'
@@ -162,6 +163,9 @@ export async function PATCH(request, { params }) {
       },
     })
     
+    // Invalidate dashboard cache
+    revalidateTag('dashboard')
+    
     return NextResponse.json({ transaction })
   } catch (error) {
     if (error.name === 'ZodError') {
@@ -268,6 +272,9 @@ export async function DELETE(request, { params }) {
         entityId: id,
       },
     })
+    
+    // Invalidate dashboard cache
+    revalidateTag('dashboard')
     
     return NextResponse.json({ success: true })
   } catch (error) {

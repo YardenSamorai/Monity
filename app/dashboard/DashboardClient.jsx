@@ -29,6 +29,19 @@ import { useI18n } from '@/lib/i18n-context'
 import Link from 'next/link'
 import { CreditCardVisual } from '@/components/dashboard/CreditCardVisual'
 
+// Goal icon mapping
+const GOAL_ICONS = {
+  emergency_fund: '🐷',
+  vacation: '✈️',
+  home: '🏠',
+  debt_free: '💳',
+  invest: '📈',
+  education: '🎓',
+  car: '🚗',
+  wedding: '💒',
+  other: '🎯',
+}
+
 export function DashboardClient({ 
   totalBalance, 
   totalIncome, 
@@ -620,7 +633,7 @@ export function DashboardClient({
                         href="/goals"
                         className="flex items-center gap-3 px-4 py-3 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
                       >
-                        <span className="text-xl">{goal.icon || '🎯'}</span>
+                        <span className="text-xl">{GOAL_ICONS[goal.icon] || goal.icon || '🎯'}</span>
                         <div className="flex-1 min-w-0">
                           <p className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
                             {goal.name}

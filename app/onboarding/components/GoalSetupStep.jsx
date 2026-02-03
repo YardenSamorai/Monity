@@ -137,7 +137,7 @@ export function GoalSetupStep({ selectedGoals, onComplete, onBack, currencySymbo
             value={formData.targetDate}
             onChange={(e) => setFormData(prev => ({ ...prev, targetDate: e.target.value }))}
             min={new Date().toISOString().split('T')[0]}
-            className="w-full px-4 py-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:border-transparent"
+            className="w-full px-4 py-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:border-transparent dark:[color-scheme:dark]"
           />
         </div>
 

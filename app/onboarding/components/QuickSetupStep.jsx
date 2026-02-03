@@ -13,7 +13,7 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
   const [showIncomeForm, setShowIncomeForm] = useState(false)
   const [showExpenseForm, setShowExpenseForm] = useState(false)
   
-  const [recurringIncome, setRecurringIncome] = useState(null)
+  const [recurringIncomes, setRecurringIncomes] = useState([])
   const [recurringExpenses, setRecurringExpenses] = useState([])
 
   const [incomeForm, setIncomeForm] = useState({
@@ -53,11 +53,11 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
       if (!response.ok) throw new Error('Failed to create recurring income')
 
       const data = await response.json()
-      setRecurringIncome({
+      setRecurringIncomes(prev => [...prev, {
         ...data.recurringIncome,
         amount: Number(incomeForm.amount),
         description: incomeForm.description,
-      })
+      }])
       setShowIncomeForm(false)
       setIncomeForm({ description: '', amount: '', dayOfMonth: '10' })
       toast.success(t('onboarding.quickSetup.incomeAdded'))
@@ -108,7 +108,7 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
   }
 
   const handleContinue = () => {
-    onNext({ recurringIncome, recurringExpenses })
+    onNext({ recurringIncomes, recurringExpenses })
   }
 
   return (
@@ -137,26 +137,29 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
           </div>
         </div>
 
-        {recurringIncome ? (
-          <div className="p-4 rounded-xl bg-[rgb(var(--positive))]/5 border border-[rgb(var(--positive))]/20">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-[rgb(var(--positive))] flex items-center justify-center">
-                  <Check className="w-4 h-4 text-white" />
+        <div className="space-y-2">
+          {recurringIncomes.map((income, index) => (
+            <div key={index} className="p-3 rounded-xl bg-[rgb(var(--positive))]/5 border border-[rgb(var(--positive))]/20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 rounded-lg bg-[rgb(var(--positive))] flex items-center justify-center">
+                    <Check className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm text-[rgb(var(--text-primary))]">{income.description}</p>
+                    <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                      {t('onboarding.quickSetup.dayOfMonth', { day: income.dayOfMonth || incomeForm.dayOfMonth })}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-[rgb(var(--text-primary))]">{recurringIncome.description}</p>
-                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                    {t('onboarding.quickSetup.dayOfMonth', { day: recurringIncome.dayOfMonth || incomeForm.dayOfMonth })}
-                  </p>
-                </div>
+                <span className="font-bold text-sm text-[rgb(var(--positive))]" dir="ltr">
+                  +{currencySymbol}{income.amount.toLocaleString()}
+                </span>
               </div>
-              <span className="font-bold text-[rgb(var(--positive))]" dir="ltr">
-                +{currencySymbol}{recurringIncome.amount.toLocaleString()}
-              </span>
             </div>
-          </div>
-        ) : showIncomeForm ? (
+          ))}
+
+          {showIncomeForm ? (
           <div className="p-4 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] space-y-3">
             <input
               type="text"
@@ -207,14 +210,15 @@ export function QuickSetupStep({ onNext, onBack, onSkip, account, categories, cu
             </div>
           </div>
         ) : (
-          <button
-            onClick={() => setShowIncomeForm(true)}
-            className="w-full p-4 rounded-xl border-2 border-dashed border-[rgb(var(--border-primary))] text-[rgb(var(--text-tertiary))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors flex items-center justify-center gap-2"
-          >
-            <Plus className="w-5 h-5" />
-            {t('onboarding.quickSetup.addIncome')}
-          </button>
-        )}
+            <button
+              onClick={() => setShowIncomeForm(true)}
+              className="w-full p-4 rounded-xl border-2 border-dashed border-[rgb(var(--border-primary))] text-[rgb(var(--text-tertiary))] hover:border-[rgb(var(--accent))] hover:text-[rgb(var(--accent))] transition-colors flex items-center justify-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              {t('onboarding.quickSetup.addIncome')}
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Recurring Expenses Section */}
