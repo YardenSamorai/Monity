@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { useI18n } from '@/lib/i18n-context'
-import { formatCurrency } from '@/lib/utils'
-import { TrendingUp, TrendingDown, Wallet, PieChart } from 'lucide-react'
+import { formatCurrency, cn } from '@/lib/utils'
+import { TrendingUp, TrendingDown, Wallet, PieChart, ArrowRight } from 'lucide-react'
 
 export function FamilyOverview({ household }) {
   const { t, currencySymbol, localeString } = useI18n()
@@ -99,30 +100,41 @@ export function FamilyOverview({ household }) {
   ]
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {cards.map((card, index) => {
-        const Icon = card.icon
-        return (
-          <Card key={index} className="p-4">
-            <div className="flex items-start justify-between mb-3">
-              <div className={`w-10 h-10 rounded-xl ${card.iconBg} flex items-center justify-center`}>
-                <Icon className={`w-5 h-5 ${card.iconColor}`} />
+    <div className="space-y-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {cards.map((card, index) => {
+          const Icon = card.icon
+          return (
+            <Card key={index} className="p-4">
+              <div className="flex items-start justify-between mb-3">
+                <div className={`w-10 h-10 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <Icon className={`w-5 h-5 ${card.iconColor}`} />
+                </div>
               </div>
-            </div>
-            <p className="text-xs text-[rgb(var(--text-tertiary))] mb-1">
-              {card.label}
-            </p>
-            <p className={`text-xl font-bold ${card.valueColor}`}>
-              {card.value}
-            </p>
-            {card.subtitle && (
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                {card.subtitle}
+              <p className="text-xs text-[rgb(var(--text-tertiary))] mb-1">
+                {card.label}
               </p>
-            )}
-          </Card>
-        )
-      })}
+              <p className={`text-xl font-bold ${card.valueColor}`}>
+                {card.value}
+              </p>
+              {card.subtitle && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                  {card.subtitle}
+                </p>
+              )}
+            </Card>
+          )
+        })}
+      </div>
+      
+      {/* View All Transactions Link */}
+      <Link 
+        href="/family/transactions"
+        className="flex items-center justify-center gap-2 p-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+      >
+        <span className="text-sm font-medium">{t('family.viewAllTransactions')}</span>
+        <ArrowRight className="w-4 h-4" />
+      </Link>
     </div>
   )
 }
