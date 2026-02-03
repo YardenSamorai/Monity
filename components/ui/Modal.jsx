@@ -54,11 +54,10 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
 
       {/* Mobile: Bottom Sheet / Desktop: Centered Dialog */}
       <div className={cn(
-        // Mobile: Bottom sheet
-        "fixed inset-x-0 bottom-0 md:inset-auto",
-        // Desktop: Centered
-        "md:fixed md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2",
-        "md:p-4"
+        // Mobile: Bottom sheet positioning
+        "fixed inset-x-0 bottom-0",
+        // Desktop: Centered with proper positioning
+        "md:inset-0 md:flex md:items-center md:justify-center md:p-4"
       )}>
         <div
           className={cn(
@@ -66,17 +65,17 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }) {
             'border border-[rgb(var(--border-primary))]',
             // Mobile: Full width bottom sheet with top rounded corners
             'rounded-t-2xl md:rounded-xl',
-            // Mobile: Max height with safe area
+            // Height constraints
             'max-h-[90vh] md:max-h-[85vh]',
             'overflow-hidden flex flex-col',
-            // Desktop sizes
+            // Desktop sizes - add width
             sizes[size],
             // Animation
-            'transition-transform duration-300 ease-out',
-            // Mobile: Slide up from bottom
+            'transition-all duration-300 ease-out',
+            // Mobile: Slide up / Desktop: Fade + scale
             isAnimating 
-              ? 'translate-y-0 md:translate-y-0' 
-              : 'translate-y-full md:translate-y-8 md:opacity-0'
+              ? 'translate-y-0 md:translate-y-0 md:opacity-100 md:scale-100' 
+              : 'translate-y-full md:translate-y-4 md:opacity-0 md:scale-95'
           )}
         >
           {/* Drag Handle - Mobile Only */}
