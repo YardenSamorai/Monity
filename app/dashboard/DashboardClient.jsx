@@ -689,6 +689,16 @@ export function DashboardClient({
                   <span className="text-sm text-[rgb(var(--text-primary))]">{t('nav.analytics')}</span>
                   <ChevronRight className={cn("w-4 h-4 text-[rgb(var(--text-tertiary))]", isRTL && "rtl-flip")} />
                 </Link>
+                <Link
+                  href="/credit-cards"
+                  className="flex items-center justify-between px-4 py-3 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-[rgb(var(--accent))]" />
+                    <span className="text-sm text-[rgb(var(--text-primary))]">{t('creditCards.title')}</span>
+                  </div>
+                  <ChevronRight className={cn("w-4 h-4 text-[rgb(var(--text-tertiary))]", isRTL && "rtl-flip")} />
+                </Link>
               </div>
             </div>
           </aside>
