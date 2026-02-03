@@ -8,7 +8,7 @@ export const metadata = {
   title: 'Welcome to Monity',
 }
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }) {
   const { userId } = await auth()
   
   if (!userId) {
@@ -20,8 +20,16 @@ export default async function OnboardingPage() {
     redirect('/sign-in')
   }
 
-  // If user has already completed onboarding, redirect to dashboard
+  // In Next.js 16, searchParams is a Promise
+  const params = await searchParams
+  const returnTo = params?.returnTo || null
+  const token = params?.token || null
+
+  // If user has already completed onboarding, redirect to returnTo or dashboard
   if (user.hasCompletedOnboarding) {
+    if (returnTo && token) {
+      redirect(`${returnTo}?token=${token}`)
+    }
     redirect('/dashboard')
   }
 
@@ -31,6 +39,11 @@ export default async function OnboardingPage() {
     orderBy: { name: 'asc' }
   })
 
-  return <OnboardingClient categories={categories} />
+  // Build redirect URL for after onboarding
+  const redirectAfterOnboarding = returnTo && token 
+    ? `${returnTo}?token=${token}` 
+    : '/dashboard'
+
+  return <OnboardingClient categories={categories} redirectTo={redirectAfterOnboarding} />
 }
 

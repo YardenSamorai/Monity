@@ -13,7 +13,7 @@ import { QuickSetupStep } from './components/QuickSetupStep'
 import { CompletionStep } from './components/CompletionStep'
 import { cn } from '@/lib/utils'
 
-export function OnboardingClient({ categories }) {
+export function OnboardingClient({ categories, redirectTo = '/dashboard' }) {
   const router = useRouter()
   const { t, isRTL, locale, currencySymbol, currency } = useI18n()
   const { toast } = useToast()
@@ -147,7 +147,8 @@ export function OnboardingClient({ categories }) {
         t('onboarding.successDescription')
       )
       
-      router.push('/dashboard')
+      // Redirect to the specified URL (could be family invite or dashboard)
+      router.push(redirectTo)
     } catch (error) {
       console.error('Error completing onboarding:', error)
       toast.error(t('common.error'), error.message)

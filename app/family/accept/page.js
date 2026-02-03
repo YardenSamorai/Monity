@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getOrCreateUser } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { AcceptInvitationClient } from './AcceptInvitationClient'
 
@@ -16,6 +17,20 @@ export default async function AcceptInvitationPage({ searchParams }) {
   // In Next.js 16, searchParams is a Promise
   const params = await searchParams
   const token = params?.token
+
+  // Check if user needs onboarding
+  if (!user.hasCompletedOnboarding) {
+    // Check if user has any accounts (might have skipped onboarding before)
+    const accountCount = await prisma.account.count({
+      where: { userId: user.id }
+    })
+    
+    if (accountCount === 0) {
+      // Save the invitation token and redirect to onboarding
+      // The token will be passed back after onboarding completes
+      redirect(`/onboarding?returnTo=/family/accept&token=${token || ''}`)
+    }
+  }
 
   return (
     <AppShell>
