@@ -206,7 +206,7 @@ const getDashboardData = unstable_cache(
       fetchedAt: now.toISOString(),
     }
   },
-  ['dashboard-data'],
+  ['dashboard-data-v2'],
   { revalidate: 5, tags: ['dashboard'] }
 )
 
