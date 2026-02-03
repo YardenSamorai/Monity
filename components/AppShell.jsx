@@ -463,8 +463,8 @@ export default function AppShell({ children }) {
         household={household}
         onSuccess={async () => {
           setIsTransactionModalOpen(false)
-          // Force hard refresh to bypass cache
-          window.location.reload()
+          // Refresh the current page data without full reload
+          router.refresh()
         }}
       />
     </div>
