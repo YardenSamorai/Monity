@@ -8,22 +8,39 @@ import { TagSelector } from '@/components/tags/TagSelector'
 import { useToast } from '@/lib/toast-context'
 import { useI18n } from '@/lib/i18n-context'
 import { cn } from '@/lib/utils'
+import { Building2, Banknote, CreditCard } from 'lucide-react'
 
 // Cache household data at module level to avoid refetching
 let cachedHousehold = null
 let householdFetched = false
 
+// Card type names mapping
+const CARD_TYPE_NAMES = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  diners: 'Diners Club',
+  discover: 'Discover',
+  isracard: 'Isracard',
+  cal: 'Cal - כאל',
+  max: 'Max - לאומי קארד',
+  other: 'Other',
+}
+
 export function TransactionModal({ isOpen, onClose, accounts, categories, onSuccess, editingTransaction = null, household: propHousehold = null }) {
   const { toast } = useToast()
   const { t } = useI18n()
   const [loading, setLoading] = useState(false)
+  const [creditCards, setCreditCards] = useState([])
   const isEditing = !!editingTransaction
   
   const [formData, setFormData] = useState({
     type: 'expense',
     amount: '',
     description: '',
+    paymentMethod: 'account', // 'account', 'cash', 'creditCard'
     accountId: accounts[0]?.id || '',
+    creditCardId: '',
     categoryId: '',
     date: new Date().toISOString().slice(0, 16),
     notes: '',
@@ -31,6 +48,20 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
   })
   const [transactionTags, setTransactionTags] = useState([])
   const [household, setHousehold] = useState(propHousehold || cachedHousehold)
+
+  // Fetch credit cards
+  useEffect(() => {
+    fetch('/api/credit-cards')
+      .then(res => res.json())
+      .then(data => {
+        const cards = data.creditCards || []
+        setCreditCards(cards)
+        if (cards.length > 0 && !formData.creditCardId) {
+          setFormData(prev => ({ ...prev, creditCardId: cards[0].id }))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   // Load household once (use cache after first fetch)
   useEffect(() => {
@@ -70,7 +101,9 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
         type: editingTransaction.type,
         amount: String(editingTransaction.amount),
         description: editingTransaction.description,
+        paymentMethod: 'account', // When editing, assume it's account (credit card transactions are edited separately)
         accountId: editingTransaction.accountId,
+        creditCardId: creditCards[0]?.id || '',
         categoryId: editingTransaction.categoryId || '',
         date: new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16),
         notes: editingTransaction.notes || '',
@@ -88,7 +121,9 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
         type: 'expense',
         amount: '',
         description: '',
+        paymentMethod: 'account',
         accountId: accounts[0]?.id || '',
+        creditCardId: creditCards[0]?.id || '',
         categoryId: '',
         date: new Date().toISOString().slice(0, 16),
         notes: '',
@@ -96,42 +131,66 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
       })
       setTransactionTags([])
     }
-  }, [isOpen, editingTransaction, accounts])
+  }, [isOpen, editingTransaction, accounts, creditCards])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const url = isEditing 
-        ? `/api/transactions/${editingTransaction.id}`
-        : '/api/transactions'
-      
-      const method = isEditing ? 'PATCH' : 'POST'
+      // Credit card transaction
+      if (formData.paymentMethod === 'creditCard' && formData.creditCardId) {
+        const response = await fetch(`/api/credit-cards/${formData.creditCardId}/transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: parseFloat(formData.amount),
+            description: formData.description,
+            categoryId: formData.categoryId || null,
+            date: new Date(formData.date).toISOString(),
+          }),
+        })
 
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          amount: parseFloat(formData.amount),
-          categoryId: formData.categoryId || null,
-          notes: formData.notes || null,
-          date: new Date(formData.date).toISOString(),
-          isShared: formData.isShared && household ? true : false,
-          householdId: formData.isShared && household ? household.id : null,
-        }),
-      })
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to create credit card transaction')
+        }
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || (isEditing ? 'Failed to update transaction' : 'Failed to create transaction'))
-      }
-
-      if (isEditing) {
-        toast.success(t('transactions.updated'), t('transactions.updatedSuccess'))
+        toast.success(t('transactions.created'), t('creditCards.transactionAdded'))
       } else {
-        toast.success(t('transactions.created'), t('transactions.createdSuccess'))
+        // Regular bank/cash transaction
+        const url = isEditing 
+          ? `/api/transactions/${editingTransaction.id}`
+          : '/api/transactions'
+        
+        const method = isEditing ? 'PATCH' : 'POST'
+
+        const response = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: formData.type,
+            amount: parseFloat(formData.amount),
+            description: formData.description,
+            accountId: formData.accountId,
+            categoryId: formData.categoryId || null,
+            notes: formData.notes || null,
+            date: new Date(formData.date).toISOString(),
+            isShared: formData.isShared && household ? true : false,
+            householdId: formData.isShared && household ? household.id : null,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || (isEditing ? 'Failed to update transaction' : 'Failed to create transaction'))
+        }
+
+        if (isEditing) {
+          toast.success(t('transactions.updated'), t('transactions.updatedSuccess'))
+        } else {
+          toast.success(t('transactions.created'), t('transactions.createdSuccess'))
+        }
       }
       
       onSuccess?.()
@@ -143,7 +202,9 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
           type: 'expense',
           amount: '',
           description: '',
+          paymentMethod: 'account',
           accountId: accounts[0]?.id || '',
+          creditCardId: creditCards[0]?.id || '',
           categoryId: '',
           date: new Date().toISOString().slice(0, 16),
           notes: '',
@@ -164,6 +225,13 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
   const filteredCategories = categories.filter(
     cat => cat.type === formData.type || cat.type === 'both'
   )
+
+  // Payment method options
+  const paymentMethods = [
+    { id: 'account', icon: Building2, label: t('transactions.paymentMethods.account') },
+    { id: 'cash', icon: Banknote, label: t('transactions.paymentMethods.cash') },
+    { id: 'creditCard', icon: CreditCard, label: t('transactions.paymentMethods.creditCard') },
+  ]
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? t('transactions.editTransaction') : t('transactions.addTransaction')} size="md">
@@ -203,20 +271,84 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
             required
           />
 
-          {/* Account and Category - side by side on mobile */}
+          {/* Payment Method Selector - only show for expenses and not editing */}
+          {formData.type === 'expense' && !isEditing && (
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-2">
+                {t('transactions.paymentMethod')}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {paymentMethods.map(method => {
+                  const Icon = method.icon
+                  const isSelected = formData.paymentMethod === method.id
+                  const isDisabled = method.id === 'creditCard' && creditCards.length === 0
+                  
+                  return (
+                    <button
+                      key={method.id}
+                      type="button"
+                      disabled={isDisabled}
+                      onClick={() => setFormData({ ...formData, paymentMethod: method.id })}
+                      className={cn(
+                        "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all",
+                        isSelected
+                          ? "border-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5"
+                          : "border-[rgb(var(--border-primary))] hover:border-[rgb(var(--text-tertiary))]",
+                        isDisabled && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <Icon className={cn(
+                        "w-5 h-5",
+                        isSelected ? "text-[rgb(var(--accent))]" : "text-[rgb(var(--text-tertiary))]"
+                      )} />
+                      <span className={cn(
+                        "text-xs font-medium",
+                        isSelected ? "text-[rgb(var(--accent))]" : "text-[rgb(var(--text-secondary))]"
+                      )}>
+                        {method.label}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              {creditCards.length === 0 && (
+                <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1.5">
+                  {t('transactions.noCreditCards')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Account/Credit Card and Category - side by side on mobile */}
           <div className="grid grid-cols-2 gap-3">
-            <Select
-              label={t('transactions.account')}
-              value={formData.accountId}
-              onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
-              required
-            >
-              {accounts.map((account) => (
-                <option key={account.id} value={account.id}>
-                  {account.name}
-                </option>
-              ))}
-            </Select>
+            {/* Show Account dropdown for account/cash, or Credit Card dropdown for creditCard */}
+            {formData.paymentMethod === 'creditCard' && formData.type === 'expense' && !isEditing ? (
+              <Select
+                label={t('creditCards.selectCard')}
+                value={formData.creditCardId}
+                onChange={(e) => setFormData({ ...formData, creditCardId: e.target.value })}
+                required
+              >
+                {creditCards.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {CARD_TYPE_NAMES[card.name] || card.name} •••• {card.lastFourDigits}
+                  </option>
+                ))}
+              </Select>
+            ) : (
+              <Select
+                label={t('transactions.account')}
+                value={formData.accountId}
+                onChange={(e) => setFormData({ ...formData, accountId: e.target.value })}
+                required
+              >
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </Select>
+            )}
 
             <Select
               label={t('transactions.category')}
@@ -248,8 +380,8 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
             placeholder={t('transactions.notesPlaceholder')}
           />
 
-          {/* Shared toggle - only show if user has household */}
-          {household && (
+          {/* Shared toggle - only show if user has household and not credit card */}
+          {household && formData.paymentMethod !== 'creditCard' && (
             <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[rgb(var(--bg-tertiary))]">
               <div className="flex-1 min-w-0">
                 <label className="block text-sm font-medium text-[rgb(var(--text-primary))]">
@@ -316,4 +448,3 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
     </Modal>
   )
 }
-
