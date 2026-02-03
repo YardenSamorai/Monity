@@ -33,6 +33,7 @@ export default async function AnalyticsPage() {
   // Fetch all data in parallel using Promise.all with optimized select
   const [
     transactions,
+    creditCardTransactions,
     budgets,
     recurringTransactions,
     recurringIncomes,
@@ -52,6 +53,24 @@ export default async function AnalyticsPage() {
         categoryId: true,
         recurringTransactionId: true,
         category: { select: { id: true, name: true, color: true } },
+      },
+      orderBy: { date: 'asc' },
+    }),
+    
+    // Fetch credit card transactions for the last 6 months
+    prisma.creditCardTransaction.findMany({
+      where: {
+        userId: user.id,
+        date: { gte: sixMonthsAgo },
+      },
+      select: {
+        id: true,
+        amount: true,
+        date: true,
+        categoryId: true,
+        status: true,
+        category: { select: { id: true, name: true, color: true } },
+        creditCard: { select: { id: true, name: true, lastFourDigits: true } },
       },
       orderBy: { date: 'asc' },
     }),
@@ -102,13 +121,28 @@ export default async function AnalyticsPage() {
     }),
   ])
   
+  // Transform credit card transactions to look like regular expense transactions
+  const ccTransactionsAsExpenses = creditCardTransactions.map(cc => ({
+    id: cc.id,
+    type: 'expense',
+    amount: cc.amount,
+    date: cc.date,
+    categoryId: cc.categoryId,
+    category: cc.category,
+    recurringTransactionId: null, // Credit card transactions are never recurring
+    isCreditCard: true,
+  }))
+  
+  // Combine regular transactions with credit card transactions
+  const allTransactions = [...transactions, ...ccTransactionsAsExpenses]
+  
   // Calculate current month stats
-  const currentMonthTransactions = transactions.filter(t => {
+  const currentMonthTransactions = allTransactions.filter(t => {
     const date = new Date(t.date)
     return date >= startOfMonth && date <= endOfMonth
   })
   
-  const prevMonthTransactions = transactions.filter(t => {
+  const prevMonthTransactions = allTransactions.filter(t => {
     const date = new Date(t.date)
     return date >= startOfPrevMonth && date <= endOfPrevMonth
   })
@@ -172,7 +206,7 @@ export default async function AnalyticsPage() {
     const monthStart = new Date(currentYear, currentMonth - i, 1)
     const monthEnd = new Date(currentYear, currentMonth - i + 1, 0, 23, 59, 59)
     
-    const monthTransactions = transactions.filter(t => {
+    const monthTransactions = allTransactions.filter(t => {
       const date = new Date(t.date)
       return date >= monthStart && date <= monthEnd
     })
