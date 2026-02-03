@@ -65,6 +65,40 @@ export async function PATCH(request, { params }) {
     const validated = updateTransactionSchema.parse({ ...body, id })
     console.log('[PATCH Transaction] Validated:', JSON.stringify(validated, null, 2))
     
+    // Verify categoryId exists if provided
+    if (validated.categoryId) {
+      const categoryExists = await prisma.category.findFirst({
+        where: { 
+          id: validated.categoryId,
+          OR: [
+            { userId: user.id },
+            { isDefault: true }
+          ]
+        }
+      })
+      if (!categoryExists) {
+        console.error('[PATCH Transaction] Category not found:', validated.categoryId)
+        return NextResponse.json(
+          { error: 'Category not found' },
+          { status: 400 }
+        )
+      }
+    }
+    
+    // Verify accountId exists if provided
+    if (validated.accountId) {
+      const accountExists = await prisma.account.findFirst({
+        where: { id: validated.accountId, userId: user.id }
+      })
+      if (!accountExists) {
+        console.error('[PATCH Transaction] Account not found:', validated.accountId)
+        return NextResponse.json(
+          { error: 'Account not found' },
+          { status: 400 }
+        )
+      }
+    }
+    
     // Revert old balance change
     const oldBalanceChange = existing.type === 'income' 
       ? -Number(existing.amount) 
