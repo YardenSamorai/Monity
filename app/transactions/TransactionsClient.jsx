@@ -36,6 +36,19 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
     fetch('/api/households').then(res => res.json()).then(data => { if (data.household) setHousehold(data.household) }).catch(() => {})
   }, [])
 
+  // Card type names mapping for display
+  const CARD_TYPE_NAMES = {
+    visa: 'Visa',
+    mastercard: 'Mastercard',
+    amex: 'American Express',
+    diners: 'Diners Club',
+    discover: 'Discover',
+    isracard: 'Isracard',
+    cal: 'Cal',
+    max: 'Max',
+    other: 'Card',
+  }
+
   const handleSuccess = async () => {
     const params = new URLSearchParams()
     if (advancedFilters.startDate) params.append('startDate', advancedFilters.startDate)
@@ -46,9 +59,50 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
     if (filterType !== 'all') params.append('type', filterType)
     if (includeShared && household) params.append('includeShared', 'true')
     
-    const response = await fetch(`/api/transactions?${params.toString()}`)
-    const data = await response.json()
-    setTransactions(data.transactions)
+    // Fetch both regular transactions and credit card transactions
+    const [transactionsRes, creditCardsRes] = await Promise.all([
+      fetch(`/api/transactions?${params.toString()}`),
+      fetch('/api/credit-cards'),
+    ])
+    
+    const transactionsData = await transactionsRes.json()
+    const creditCardsData = await creditCardsRes.json()
+    
+    // Get all credit card transactions
+    const allCCTransactions = []
+    for (const card of (creditCardsData.creditCards || [])) {
+      const ccTxRes = await fetch(`/api/credit-cards/${card.id}/transactions`)
+      const ccTxData = await ccTxRes.json()
+      
+      // Transform to match regular transaction format
+      const transformed = (ccTxData.transactions || []).map(ccTx => ({
+        id: ccTx.id,
+        type: 'expense',
+        amount: ccTx.amount,
+        description: ccTx.description,
+        date: ccTx.date,
+        notes: ccTx.notes,
+        isShared: false,
+        isCreditCard: true,
+        creditCardStatus: ccTx.status,
+        account: {
+          id: card.id,
+          name: `${CARD_TYPE_NAMES[card.name] || card.name} •••• ${card.lastFourDigits}`,
+          type: 'credit',
+        },
+        category: ccTx.category,
+        savingsGoal: null,
+        tags: [],
+      }))
+      
+      allCCTransactions.push(...transformed)
+    }
+    
+    // Merge and sort all transactions
+    const allTransactions = [...(transactionsData.transactions || []), ...allCCTransactions]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+    
+    setTransactions(allTransactions)
   }
 
   const handleEdit = (transaction) => {
@@ -64,7 +118,12 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
   const handleDeleteConfirm = async () => {
     if (!transactionToDelete) return
     try {
-      const response = await fetch(`/api/transactions/${transactionToDelete.id}`, { method: 'DELETE' })
+      // Use different API for credit card transactions
+      const url = transactionToDelete.isCreditCard
+        ? `/api/credit-cards/${transactionToDelete.account.id}/transactions/${transactionToDelete.id}`
+        : `/api/transactions/${transactionToDelete.id}`
+      
+      const response = await fetch(url, { method: 'DELETE' })
       if (!response.ok) throw new Error('Failed to delete')
       toast.success(t('transactions.deleted'))
       setTransactions(transactions.filter(t => t.id !== transactionToDelete.id))
