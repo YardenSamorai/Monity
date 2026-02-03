@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n-context'
 import { formatCurrency, cn } from '@/lib/utils'
 import { Plus, ChevronLeft, ChevronRight, CreditCard as CreditCardIcon, Wifi } from 'lucide-react'
+import { useRealtime, EVENTS } from '@/lib/realtime-context'
 
 // Card brand names
 const CARD_BRANDS = {
@@ -26,14 +27,53 @@ export function CreditCardVisual() {
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
+  const { subscribe } = useRealtime()
 
-  useEffect(() => {
+  // Fetch credit cards data
+  const fetchCards = useCallback(() => {
     fetch('/api/credit-cards')
       .then(res => res.json())
       .then(data => setCards(data.creditCards || []))
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
+
+  // Initial fetch
+  useEffect(() => {
+    fetchCards()
+  }, [fetchCards])
+
+  // Subscribe to real-time updates for credit cards
+  useEffect(() => {
+    // Listen to credit card transaction events
+    const unsubCCTransaction = subscribe(EVENTS.CREDIT_CARD_TRANSACTION, () => {
+      fetchCards()
+    })
+    
+    // Listen to credit card CRUD events
+    const unsubCCCreated = subscribe(EVENTS.CREDIT_CARD_CREATED, () => {
+      fetchCards()
+    })
+    const unsubCCUpdated = subscribe(EVENTS.CREDIT_CARD_UPDATED, () => {
+      fetchCards()
+    })
+    const unsubCCDeleted = subscribe(EVENTS.CREDIT_CARD_DELETED, () => {
+      fetchCards()
+    })
+    
+    // Listen to dashboard update (catch-all)
+    const unsubDashboard = subscribe(EVENTS.DASHBOARD_UPDATE, () => {
+      fetchCards()
+    })
+
+    return () => {
+      unsubCCTransaction()
+      unsubCCCreated()
+      unsubCCUpdated()
+      unsubCCDeleted()
+      unsubDashboard()
+    }
+  }, [subscribe, fetchCards])
 
   const handlePrev = () => {
     setCurrentIndex(prev => (prev > 0 ? prev - 1 : cards.length - 1))
