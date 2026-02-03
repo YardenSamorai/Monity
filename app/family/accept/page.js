@@ -13,7 +13,9 @@ export default async function AcceptInvitationPage({ searchParams }) {
     redirect('/sign-in')
   }
 
-  const token = searchParams?.token
+  // In Next.js 16, searchParams is a Promise
+  const params = await searchParams
+  const token = params?.token
 
   return (
     <AppShell>
