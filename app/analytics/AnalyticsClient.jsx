@@ -264,7 +264,7 @@ export function AnalyticsClient({
   }
 
   return (
-    <div className="min-h-screen p-4 lg:p-8 space-y-8">
+    <div className="min-h-screen p-4 lg:p-8 space-y-6 lg:space-y-8">
       {/* Page Header */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
@@ -272,10 +272,10 @@ export function AnalyticsClient({
             <BarChart3 className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-light-text-primary dark:text-dark-text-primary">
+            <h1 className="text-xl lg:text-3xl font-bold text-[rgb(var(--text-primary))]">
               {t('analytics.title')}
             </h1>
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+            <p className="text-sm text-[rgb(var(--text-tertiary))]">
               {new Date(currentDate).toLocaleDateString(localeString, { 
                 month: 'long', 
                 year: 'numeric' 
@@ -341,10 +341,10 @@ export function AnalyticsClient({
                 <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+                <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
                   {t('analytics.smartInsights')}
                 </h2>
-                <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                <p className="text-sm text-[rgb(var(--text-tertiary))]">
                   {t('analytics.smartInsightsDesc')}
                 </p>
               </div>
@@ -366,10 +366,10 @@ export function AnalyticsClient({
                   {insight.icon}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-semibold text-light-text-primary dark:text-dark-text-primary">
+                  <h3 className="font-semibold text-[rgb(var(--text-primary))]">
                     {insight.title}
                   </h3>
-                  <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mt-0.5">
+                  <p className="text-sm text-[rgb(var(--text-secondary))] mt-0.5">
                     {insight.description}
                   </p>
                 </div>
@@ -380,100 +380,105 @@ export function AnalyticsClient({
       )}
 
       {/* Charts Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
         {/* Expense Trend Chart */}
-        <Card className="col-span-1 lg:col-span-2">
-          <div className="flex items-center justify-between mb-6">
+        <Card className="col-span-1 lg:col-span-2 overflow-hidden">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 lg:mb-6">
             <div>
-              <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+              <h2 className="text-base lg:text-lg font-semibold text-[rgb(var(--text-primary))]">
                 {t('analytics.expenseTrends')}
               </h2>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+              <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))]">
                 {t('analytics.last6Months')}
               </p>
             </div>
             <div className="flex gap-2">
               <Badge variant={selectedTimeRange === '6months' ? 'default' : 'secondary'} 
-                     className="cursor-pointer"
+                     className="cursor-pointer text-xs"
                      onClick={() => setSelectedTimeRange('6months')}>
                 6 {t('analytics.months')}
               </Badge>
             </div>
           </div>
           
-          <ChartContainer config={trendsChartConfig} className="h-72 w-full">
-            <AreaChart data={monthlyTrends} accessibilityLayer>
-              <defs>
-                <linearGradient id="fillIncome" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0.1}/>
-                </linearGradient>
-                <linearGradient id="fillExpenses" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-expenses)" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="var(--color-expenses)" stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
-              <XAxis 
-                dataKey="month" 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent 
-                    formatter={(value, name) => (
-                      <div className="flex items-center gap-2">
-                        <span>{trendsChartConfig[name]?.label || name}</span>
-                        <span className="font-bold">{formatCurrency(value, { locale: localeString, symbol: currencySymbol })}</span>
-                      </div>
-                    )}
-                  />
-                }
-              />
-              <ChartLegend content={<ChartLegendContent />} />
-              <Area 
-                type="natural" 
-                dataKey="income" 
-                stroke="var(--color-income)" 
-                strokeWidth={2}
-                fill="url(#fillIncome)" 
-                stackId="a"
-              />
-              <Area 
-                type="natural" 
-                dataKey="expenses" 
-                stroke="var(--color-expenses)" 
-                strokeWidth={2}
-                fill="url(#fillExpenses)" 
-                stackId="b"
-              />
-            </AreaChart>
-          </ChartContainer>
+          <div className="w-full overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+            <ChartContainer config={trendsChartConfig} className="h-48 sm:h-64 lg:h-72 min-w-[400px] w-full">
+              <AreaChart data={monthlyTrends} accessibilityLayer>
+                <defs>
+                  <linearGradient id="fillIncome" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-income)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-income)" stopOpacity={0.1}/>
+                  </linearGradient>
+                  <linearGradient id="fillExpenses" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="var(--color-expenses)" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="var(--color-expenses)" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgb(var(--border-primary))" />
+                <XAxis 
+                  dataKey="month" 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tick={{ fontSize: 11, fill: 'rgb(var(--text-tertiary))' }}
+                />
+                <YAxis 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 11, fill: 'rgb(var(--text-tertiary))' }}
+                  width={40}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent 
+                      formatter={(value, name) => (
+                        <div className="flex items-center gap-2">
+                          <span>{trendsChartConfig[name]?.label || name}</span>
+                          <span className="font-bold">{formatCurrency(value, { locale: localeString, symbol: currencySymbol })}</span>
+                        </div>
+                      )}
+                    />
+                  }
+                />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Area 
+                  type="natural" 
+                  dataKey="income" 
+                  stroke="var(--color-income)" 
+                  strokeWidth={2}
+                  fill="url(#fillIncome)" 
+                  stackId="a"
+                />
+                <Area 
+                  type="natural" 
+                  dataKey="expenses" 
+                  stroke="var(--color-expenses)" 
+                  strokeWidth={2}
+                  fill="url(#fillExpenses)" 
+                  stackId="b"
+                />
+              </AreaChart>
+            </ChartContainer>
+          </div>
         </Card>
 
         {/* Category Breakdown - Donut Chart with Center Label */}
-        <Card className="flex flex-col">
+        <Card className="flex flex-col overflow-hidden">
           <div className="mb-4">
-            <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+            <h2 className="text-base lg:text-lg font-semibold text-[rgb(var(--text-primary))]">
               {t('analytics.categoryBreakdown')}
             </h2>
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+            <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))]">
               {t('analytics.expensesByCategory')}
             </p>
           </div>
           
           {pieData.length > 0 ? (
             <div className="flex flex-col flex-1">
-              <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[220px]">
+              <ChartContainer config={pieChartConfig} className="mx-auto aspect-square h-[180px] sm:h-[220px]">
                 <RechartsPieChart>
                   <ChartTooltip
                     cursor={false}
@@ -482,13 +487,13 @@ export function AnalyticsClient({
                         hideLabel
                         formatter={(value, name, item) => (
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-light-text-tertiary dark:text-dark-text-tertiary">
+                            <span className="text-[rgb(var(--text-tertiary))]">
                               {item.payload.name}
                             </span>
-                            <span className="font-bold text-light-text-primary dark:text-dark-text-primary">
+                            <span className="font-bold text-[rgb(var(--text-primary))]">
                               {formatCurrency(value, { locale: localeString, symbol: currencySymbol })}
                             </span>
-                            <span className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                            <span className="text-xs text-[rgb(var(--text-tertiary))]">
                               {((value / currentMonthExpenses) * 100).toFixed(1)}% {t('analytics.ofTotal')}
                             </span>
                           </div>
@@ -500,9 +505,9 @@ export function AnalyticsClient({
                     data={pieData}
                     dataKey="value"
                     nameKey="name"
-                    innerRadius={60}
-                    outerRadius={85}
-                    strokeWidth={5}
+                    innerRadius={50}
+                    outerRadius={75}
+                    strokeWidth={3}
                   >
                     {pieData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.fill} />
@@ -520,14 +525,14 @@ export function AnalyticsClient({
                               <tspan
                                 x={viewBox.cx}
                                 y={viewBox.cy - 4}
-                                className="fill-light-text-primary dark:fill-dark-text-primary text-xl font-bold"
+                                className="fill-[rgb(var(--text-primary))] text-base sm:text-lg font-bold"
                               >
                                 {formatCurrency(currentMonthExpenses, { locale: localeString, symbol: currencySymbol })}
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
-                                y={(viewBox.cy || 0) + 16}
-                                className="fill-light-text-tertiary dark:fill-dark-text-tertiary text-xs"
+                                y={(viewBox.cy || 0) + 14}
+                                className="fill-[rgb(var(--text-tertiary))] text-[10px] sm:text-xs"
                               >
                                 {t('analytics.totalExpenses')}
                               </tspan>
@@ -541,26 +546,26 @@ export function AnalyticsClient({
               </ChartContainer>
               
               {/* Category Legend */}
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 space-y-1.5">
                 {pieData.map((cat, index) => {
                   const percent = ((cat.value / currentMonthExpenses) * 100).toFixed(0)
                   return (
                     <div 
                       key={index} 
-                      className="flex items-center gap-3 p-2 rounded-lg hover:bg-light-surface dark:hover:bg-dark-surface transition-colors cursor-default"
+                      className="flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 rounded-lg hover:bg-[rgb(var(--bg-tertiary))] transition-colors cursor-default"
                     >
                       <div 
-                        className="w-3 h-3 rounded-sm flex-shrink-0" 
+                        className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-sm flex-shrink-0" 
                         style={{ backgroundColor: cat.fill }}
                       />
-                      <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary flex-1 truncate">
+                      <span className="text-xs sm:text-sm text-[rgb(var(--text-secondary))] flex-1 truncate">
                         {cat.name}
                       </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-light-text-primary dark:text-dark-text-primary tabular-nums">
+                      <div className="flex items-center gap-1.5 sm:gap-2">
+                        <span className="text-xs sm:text-sm font-semibold text-[rgb(var(--text-primary))] tabular-nums">
                           {formatCurrency(cat.value, { locale: localeString, symbol: currencySymbol })}
                         </span>
-                        <span className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary w-10 text-right tabular-nums">
+                        <span className="text-[10px] sm:text-xs text-[rgb(var(--text-tertiary))] w-8 sm:w-10 text-end tabular-nums">
                           {percent}%
                         </span>
                       </div>
@@ -570,57 +575,62 @@ export function AnalyticsClient({
               </div>
             </div>
           ) : (
-            <div className="h-64 flex items-center justify-center text-light-text-tertiary dark:text-dark-text-tertiary">
+            <div className="h-48 sm:h-64 flex items-center justify-center text-[rgb(var(--text-tertiary))]">
               {t('analytics.noExpensesYet')}
             </div>
           )}
         </Card>
 
         {/* Spending by Day of Week */}
-        <Card>
-          <div className="mb-6">
-            <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+        <Card className="overflow-hidden">
+          <div className="mb-4 lg:mb-6">
+            <h2 className="text-base lg:text-lg font-semibold text-[rgb(var(--text-primary))]">
               {t('analytics.spendingByDay')}
             </h2>
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+            <p className="text-xs lg:text-sm text-[rgb(var(--text-tertiary))]">
               {t('analytics.weeklyPattern')}
             </p>
           </div>
           
-          <ChartContainer config={dayChartConfig} className="h-64 w-full">
-            <BarChart data={dayOfWeekData} accessibilityLayer>
-              <CartesianGrid vertical={false} />
-              <XAxis 
-                dataKey="day" 
-                tickLine={false}
-                tickMargin={10}
-                axisLine={false}
-              />
-              <YAxis 
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent 
-                    formatter={(value) => (
-                      <span className="font-bold">
-                        {formatCurrency(value, { locale: localeString, symbol: currencySymbol })}
-                      </span>
-                    )}
-                  />
-                }
-              />
-              <Bar 
-                dataKey="amount" 
-                fill="var(--color-amount)" 
-                radius={[6, 6, 0, 0]}
-              />
-            </BarChart>
-          </ChartContainer>
+          <div className="w-full overflow-x-auto -mx-4 px-4 lg:mx-0 lg:px-0">
+            <ChartContainer config={dayChartConfig} className="h-48 sm:h-56 lg:h-64 min-w-[300px] w-full">
+              <BarChart data={dayOfWeekData} accessibilityLayer>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="rgb(var(--border-primary))" />
+                <XAxis 
+                  dataKey="day" 
+                  tickLine={false}
+                  tickMargin={8}
+                  axisLine={false}
+                  tick={{ fontSize: 10, fill: 'rgb(var(--text-tertiary))' }}
+                />
+                <YAxis 
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={8}
+                  tickFormatter={(value) => `${(value / 1000).toFixed(0)}k`}
+                  tick={{ fontSize: 10, fill: 'rgb(var(--text-tertiary))' }}
+                  width={35}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={
+                    <ChartTooltipContent 
+                      formatter={(value) => (
+                        <span className="font-bold">
+                          {formatCurrency(value, { locale: localeString, symbol: currencySymbol })}
+                        </span>
+                      )}
+                    />
+                  }
+                />
+                <Bar 
+                  dataKey="amount" 
+                  fill="var(--color-amount)" 
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          </div>
         </Card>
       </div>
 
@@ -629,10 +639,10 @@ export function AnalyticsClient({
         <Card>
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+              <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
                 {t('analytics.budgetVsActual')}
               </h2>
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+              <p className="text-sm text-[rgb(var(--text-tertiary))]">
                 {t('analytics.budgetProgress')}
               </p>
             </div>
@@ -647,7 +657,7 @@ export function AnalyticsClient({
                       className="w-3 h-3 rounded-full" 
                       style={{ backgroundColor: budget.categoryColor }}
                     />
-                    <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                    <span className="font-medium text-[rgb(var(--text-primary))]">
                       {budget.isUncategorized || !budget.categoryName ? t('transactions.uncategorized') : budget.categoryName}
                     </span>
                     {budget.percentage >= 100 && (
@@ -661,12 +671,12 @@ export function AnalyticsClient({
                       </Badge>
                     )}
                   </div>
-                  <div className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                  <div className="text-sm text-[rgb(var(--text-secondary))]">
                     {formatCurrency(budget.spent, { locale: localeString, symbol: currencySymbol })} / {formatCurrency(budget.budget, { locale: localeString, symbol: currencySymbol })}
                   </div>
                 </div>
                 <Progress value={budget.spent} max={budget.budget} />
-                <div className="flex justify-between text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                <div className="flex justify-between text-xs text-[rgb(var(--text-tertiary))]">
                   <span>{budget.percentage.toFixed(0)}% {t('analytics.used')}</span>
                   <span>
                     {budget.remaining >= 0 
@@ -684,10 +694,10 @@ export function AnalyticsClient({
       {/* Fixed vs Variable Expenses */}
       <Card>
         <div className="mb-6">
-          <h2 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary">
+          <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
             {t('analytics.fixedVsVariable')}
           </h2>
-          <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+          <p className="text-sm text-[rgb(var(--text-tertiary))]">
             {t('analytics.fixedVsVariableDesc')}
           </p>
         </div>
@@ -701,15 +711,15 @@ export function AnalyticsClient({
                   <Repeat className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 </div>
                 <div>
-                  <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                  <span className="font-medium text-[rgb(var(--text-primary))]">
                     {t('analytics.fixedExpenses')}
                   </span>
-                  <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
                     {t('analytics.fixedExpensesHint')}
                   </p>
                 </div>
               </div>
-              <span className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
+              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">
                 {formatCurrency(totalFixed, { locale: localeString, symbol: currencySymbol })}
               </span>
             </div>
@@ -720,18 +730,18 @@ export function AnalyticsClient({
                   <div key={expense.id} className="flex items-center justify-between py-2 border-b border-light-border-light dark:border-dark-border-light last:border-0">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: expense.color }} />
-                      <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                      <span className="text-sm text-[rgb(var(--text-secondary))]">
                         {expense.isUncategorized || !expense.name ? t('transactions.uncategorized') : expense.name}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
+                    <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
                       {formatCurrency(expense.amount, { locale: localeString, symbol: currencySymbol })}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary py-4 text-center">
+              <p className="text-sm text-[rgb(var(--text-tertiary))] py-4 text-center">
                 {t('analytics.noFixedExpenses')}
               </p>
             )}
@@ -745,15 +755,15 @@ export function AnalyticsClient({
                   <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <span className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                  <span className="font-medium text-[rgb(var(--text-primary))]">
                     {t('analytics.variableExpenses')}
                   </span>
-                  <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
                     {t('analytics.variableExpensesHint')}
                   </p>
                 </div>
               </div>
-              <span className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
+              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">
                 {formatCurrency(totalVariable, { locale: localeString, symbol: currencySymbol })}
               </span>
             </div>
@@ -764,18 +774,18 @@ export function AnalyticsClient({
                   <div key={expense.id} className="flex items-center justify-between py-2 border-b border-light-border-light dark:border-dark-border-light last:border-0">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full" style={{ backgroundColor: expense.color }} />
-                      <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+                      <span className="text-sm text-[rgb(var(--text-secondary))]">
                         {expense.isUncategorized || !expense.name ? t('transactions.uncategorized') : expense.name}
                       </span>
                     </div>
-                    <span className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
+                    <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
                       {formatCurrency(expense.amount, { locale: localeString, symbol: currencySymbol })}
                     </span>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary py-4 text-center">
+              <p className="text-sm text-[rgb(var(--text-tertiary))] py-4 text-center">
                 {t('analytics.noVariableExpenses')}
               </p>
             )}
@@ -784,16 +794,16 @@ export function AnalyticsClient({
         
         {/* Summary Bar */}
         {currentMonthExpenses > 0 && (
-          <div className="mt-6 pt-6 border-t border-light-border dark:border-dark-border">
+          <div className="mt-6 pt-6 border-t border-[rgb(var(--border-primary))]">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+              <span className="text-sm text-[rgb(var(--text-secondary))]">
                 {t('analytics.expenseComposition')}
               </span>
-              <span className="text-sm text-light-text-secondary dark:text-dark-text-secondary">
+              <span className="text-sm text-[rgb(var(--text-secondary))]">
                 {((totalFixed / currentMonthExpenses) * 100).toFixed(0)}% {t('analytics.fixed')} / {((totalVariable / currentMonthExpenses) * 100).toFixed(0)}% {t('analytics.variable')}
               </span>
             </div>
-            <div className="h-3 bg-light-surface dark:bg-dark-surface rounded-full overflow-hidden flex">
+            <div className="h-3 bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden flex">
               <div 
                 className="bg-blue-500 transition-all duration-500"
                 style={{ width: `${(totalFixed / currentMonthExpenses) * 100}%` }}
@@ -810,13 +820,13 @@ export function AnalyticsClient({
       {/* Empty State */}
       {expensesByCategory.length === 0 && (
         <Card className="text-center py-12">
-          <div className="w-16 h-16 rounded-2xl bg-light-surface dark:bg-dark-surface flex items-center justify-center mx-auto mb-4">
-            <BarChart3 className="w-8 h-8 text-light-text-tertiary dark:text-dark-text-tertiary" />
+          <div className="w-16 h-16 rounded-2xl bg-[rgb(var(--bg-tertiary))] flex items-center justify-center mx-auto mb-4">
+            <BarChart3 className="w-8 h-8 text-[rgb(var(--text-tertiary))]" />
           </div>
-          <h3 className="text-lg font-semibold text-light-text-primary dark:text-dark-text-primary mb-2">
+          <h3 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-2">
             {t('analytics.noDataYet')}
           </h3>
-          <p className="text-light-text-secondary dark:text-dark-text-secondary max-w-md mx-auto">
+          <p className="text-[rgb(var(--text-secondary))] max-w-md mx-auto">
             {t('analytics.noDataDesc')}
           </p>
         </Card>
