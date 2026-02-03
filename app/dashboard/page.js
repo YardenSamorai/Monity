@@ -33,6 +33,7 @@ const getDashboardData = unstable_cache(
       budgets,
       goals,
       creditCardTransactions,
+      recentCreditCardTransactions,
     ] = await Promise.all([
       prisma.account.findMany({
         where: { userId, isActive: true },
@@ -100,7 +101,7 @@ const getDashboardData = unstable_cache(
       }),
       prisma.transaction.findMany({
         where: { userId },
-        take: 5,
+        take: 10, // Get more to merge with CC transactions
         orderBy: { date: 'desc' },
         select: {
           id: true,
@@ -173,6 +174,21 @@ const getDashboardData = unstable_cache(
           category: { select: { id: true, name: true, color: true, icon: true } },
         },
       }),
+      // Recent credit card transactions (for "recent transactions" widget)
+      prisma.creditCardTransaction.findMany({
+        where: { userId },
+        take: 10,
+        orderBy: { date: 'desc' },
+        select: {
+          id: true,
+          amount: true,
+          description: true,
+          date: true,
+          status: true,
+          creditCard: { select: { id: true, name: true, lastFourDigits: true } },
+          category: { select: { id: true, name: true, color: true, icon: true } },
+        },
+      }),
     ])
     
     return {
@@ -186,6 +202,7 @@ const getDashboardData = unstable_cache(
       budgets,
       goals,
       creditCardTransactions,
+      recentCreditCardTransactions,
       fetchedAt: now.toISOString(),
     }
   },
@@ -216,6 +233,7 @@ export default async function DashboardPage() {
     budgets,
     goals,
     creditCardTransactions,
+    recentCreditCardTransactions,
   } = await getDashboardData(user.id)
   
   // Check if user needs onboarding
@@ -343,6 +361,40 @@ export default async function DashboardPage() {
     ? allMonthlyExpenses.reduce((max, t) => Number(t.amount) > Number(max.amount) ? t : max, allMonthlyExpenses[0])
     : null
 
+  // Card type names for display
+  const CARD_TYPE_NAMES = {
+    visa: 'Visa',
+    mastercard: 'Mastercard',
+    amex: 'American Express',
+    diners: 'Diners',
+    discover: 'Discover',
+    isracard: 'Isracard',
+    cal: 'Cal',
+    max: 'Max',
+    other: 'Card',
+  }
+
+  // Merge recent transactions with recent credit card transactions
+  const recentCCTransformed = (recentCreditCardTransactions || []).map(cc => ({
+    id: cc.id,
+    type: 'expense',
+    amount: cc.amount,
+    description: cc.description,
+    date: cc.date,
+    isCreditCard: true,
+    creditCardStatus: cc.status,
+    account: {
+      id: cc.creditCard.id,
+      name: `${CARD_TYPE_NAMES[cc.creditCard.name] || cc.creditCard.name} •••• ${cc.creditCard.lastFourDigits}`,
+      type: 'credit',
+    },
+    category: cc.category,
+  }))
+
+  const allRecentTransactions = [...recentTransactions, ...recentCCTransformed]
+    .sort((a, b) => new Date(b.date) - new Date(a.date))
+    .slice(0, 5)
+
   return (
     <AppShell>
       <DashboardClient
@@ -351,7 +403,7 @@ export default async function DashboardPage() {
         totalExpenses={totalExpensesWithRecurring}
         netCashFlow={netCashFlow}
         accounts={serializePrismaData(accounts)}
-        recentTransactions={serializePrismaData(recentTransactions)}
+        recentTransactions={serializePrismaData(allRecentTransactions)}
         currentDate={now.toISOString()}
         recurringIncomeAmount={recurringIncomeAmount + recurringTransactionIncomeAmount}
         recurringExpenseAmount={recurringExpenseAmount}

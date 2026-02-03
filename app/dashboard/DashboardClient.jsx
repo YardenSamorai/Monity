@@ -529,23 +529,35 @@ export function DashboardClient({
                       "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
                       transaction.type === 'income' 
                         ? "bg-positive-subtle text-positive" 
+                        : transaction.isCreditCard
+                        ? "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400"
                         : "bg-negative-subtle text-negative"
                     )}>
                       {transaction.type === 'income' 
                         ? <ArrowUpRight className="w-4 h-4" />
+                        : transaction.isCreditCard
+                        ? <CreditCard className="w-4 h-4" />
                         : <ArrowDownRight className="w-4 h-4" />
                       }
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
-                        {transaction.description}
-                      </p>
+                      <div className="flex items-center gap-1.5">
+                        <p className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
+                          {transaction.description}
+                        </p>
+                        {transaction.isCreditCard && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex-shrink-0">
+                            {t('creditCards.title')}
+                          </span>
+                        )}
+                      </div>
                       <p className="text-xs text-[rgb(var(--text-tertiary))]">
                         {new Date(transaction.date).toLocaleDateString(localeString, { 
                           day: 'numeric', 
                           month: 'short' 
                         })}
                         {transaction.category && ` · ${transaction.category.name}`}
+                        {transaction.isCreditCard && ` · ${transaction.account?.name}`}
                       </p>
                     </div>
                     <p 
