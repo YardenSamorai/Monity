@@ -17,15 +17,17 @@ import {
   X,
   UserPlus,
   Settings,
-  ChevronRight,
   Wallet,
-  Calendar,
   TrendingUp,
-  DollarSign,
   PieChart,
   LogOut,
   Clock,
-  Banknote
+  Banknote,
+  Receipt,
+  Target,
+  LayoutDashboard,
+  ArrowDownRight,
+  ArrowUpRight
 } from 'lucide-react'
 
 export function FamilyClient() {
@@ -34,7 +36,7 @@ export function FamilyClient() {
   const { showLoading, hideLoading } = useLoading()
   const [household, setHousehold] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeView, setActiveView] = useState('overview') // overview, members, income, settings
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [copied, setCopied] = useState(false)
@@ -90,7 +92,6 @@ export function FamilyClient() {
 
   const handleInvite = async () => {
     if (!inviteEmail) {
-      // Just copy the link
       handleCopyLink()
       return
     }
@@ -149,6 +150,29 @@ export function FamilyClient() {
     }
   }
 
+  const handleCancelInvitation = async (invitationId) => {
+    if (!confirm(t('family.confirmCancelInvitation'))) return
+
+    showLoading()
+    try {
+      const response = await fetch(`/api/households/invite/${invitationId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to cancel invitation')
+      }
+
+      toast.success(t('family.invitationCancelled'))
+      fetchHousehold()
+    } catch (error) {
+      toast.error(t('family.cancelInvitationFailed'), error.message)
+    } finally {
+      hideLoading()
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -180,109 +204,92 @@ export function FamilyClient() {
     )
   }
 
-  // Main family view
+  const tabs = [
+    { id: 'dashboard', label: t('family.tabs.dashboard'), icon: LayoutDashboard },
+    { id: 'transactions', label: t('family.tabs.transactions'), icon: Receipt },
+    { id: 'members', label: t('family.members'), icon: Users },
+    { id: 'settings', label: t('family.tabs.settings'), icon: Settings },
+  ]
+
   return (
-    <div className="pb-6">
-      {/* Header Card with Total Income */}
-      <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-5 rounded-b-3xl mb-4">
-        <div className="flex items-center justify-between mb-4">
+    <div className="pb-20">
+      {/* Header */}
+      <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-4 sm:p-5 rounded-b-3xl">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-emerald-100 text-sm">{household.name}</p>
-            <p className="text-3xl font-bold mt-1">
+            <p className="text-2xl sm:text-3xl font-bold mt-1">
               {formatCurrency(household.totalHouseholdIncome || 0, { locale: localeString, symbol: currencySymbol })}
             </p>
-            <p className="text-emerald-100 text-sm mt-1">
-              {t('family.totalMonthlyIncome')}
+            <p className="text-emerald-100 text-xs sm:text-sm mt-1">
+              {t('family.totalMonthlyIncome')} • {household.members.length} {t('family.members')}
             </p>
           </div>
           <button
             onClick={() => setIsInviteModalOpen(true)}
-            className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+            className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
           >
-            <UserPlus className="w-6 h-6" />
+            <UserPlus className="w-5 h-5" />
           </button>
-        </div>
-        
-        {/* Quick Stats */}
-        <div className="flex gap-3 mt-4">
-          <div className="flex-1 bg-white/10 rounded-xl p-3">
-            <Users className="w-5 h-5 mb-1 text-emerald-200" />
-            <p className="text-xl font-semibold">{household.members.length}</p>
-            <p className="text-xs text-emerald-200">{t('family.members')}</p>
-          </div>
-          <div className="flex-1 bg-white/10 rounded-xl p-3">
-            <Banknote className="w-5 h-5 mb-1 text-emerald-200" />
-            <p className="text-xl font-semibold">{household.members.filter(m => m.monthlySalary).length}</p>
-            <p className="text-xs text-emerald-200">{t('family.withSalary')}</p>
-          </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="px-4 space-y-4">
-        {/* Members Section */}
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
-              {t('family.membersOverview')}
-            </h2>
-          </div>
-          
-          <div className="space-y-2">
-            {household.members.map((member) => (
-              <MemberCard 
-                key={member.id} 
-                member={member} 
-                currencySymbol={currencySymbol}
-                localeString={localeString}
-                isCurrentUser={member.isCurrentUser}
-                onUpdate={fetchHousehold}
-              />
-            ))}
-          </div>
-        </section>
+      {/* Tabs - Scrollable on mobile */}
+      <div className="sticky top-0 z-10 bg-[rgb(var(--bg-primary))] border-b border-[rgb(var(--border-primary))]">
+        <div className="flex overflow-x-auto scrollbar-hide">
+          {tabs.map((tab) => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'flex-1 min-w-[80px] flex flex-col items-center gap-1 py-3 px-2 text-xs font-medium transition-colors border-b-2',
+                  activeTab === tab.id
+                    ? 'border-[rgb(var(--accent))] text-[rgb(var(--accent))]'
+                    : 'border-transparent text-[rgb(var(--text-tertiary))]'
+                )}
+              >
+                <Icon className="w-5 h-5" />
+                <span className="truncate">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
 
-        {/* Pending Invitations */}
-        {household.invitations && household.invitations.length > 0 && (
-          <section>
-            <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-3">
-              {t('family.pendingInvitations')}
-            </h2>
-            <div className="space-y-2">
-              {household.invitations.map((invitation) => (
-                <div
-                  key={invitation.id}
-                  className="flex items-center justify-between p-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
-                      <Clock className="w-5 h-5 text-amber-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-[rgb(var(--text-primary))]">
-                        {invitation.email || t('family.linkInvitation')}
-                      </p>
-                      <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                        {t('family.pending')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+      {/* Tab Content */}
+      <div className="p-4">
+        {activeTab === 'dashboard' && (
+          <FamilyDashboard 
+            household={household} 
+            currencySymbol={currencySymbol} 
+            localeString={localeString} 
+          />
         )}
-
-        {/* Actions */}
-        <section className="pt-4">
-          <button
-            onClick={handleLeaveHousehold}
-            className="w-full flex items-center justify-center gap-2 p-4 rounded-xl text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            <span className="font-medium">{t('family.leaveHousehold')}</span>
-          </button>
-        </section>
+        {activeTab === 'transactions' && (
+          <FamilyTransactions 
+            household={household} 
+            currencySymbol={currencySymbol} 
+            localeString={localeString} 
+          />
+        )}
+        {activeTab === 'members' && (
+          <FamilyMembers 
+            household={household} 
+            currencySymbol={currencySymbol} 
+            localeString={localeString}
+            onUpdate={fetchHousehold}
+          />
+        )}
+        {activeTab === 'settings' && (
+          <FamilySettings 
+            household={household}
+            onLeave={handleLeaveHousehold}
+            onCancelInvitation={handleCancelInvitation}
+            localeString={localeString}
+          />
+        )}
       </div>
 
       {/* Invite Modal */}
@@ -347,6 +354,340 @@ export function FamilyClient() {
   )
 }
 
+// Dashboard Tab
+function FamilyDashboard({ household, currencySymbol, localeString }) {
+  const { t } = useI18n()
+  const [stats, setStats] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const now = new Date()
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+
+    fetch(`/api/transactions?onlyShared=true&startDate=${start.toISOString()}&endDate=${end.toISOString()}`)
+      .then(res => res.json())
+      .then(data => {
+        const transactions = data.transactions || []
+        const expenses = transactions.filter(t => t.type === 'expense')
+        const income = transactions.filter(t => t.type === 'income')
+        setStats({
+          totalExpenses: expenses.reduce((sum, t) => sum + Number(t.amount), 0),
+          totalIncome: income.reduce((sum, t) => sum + Number(t.amount), 0),
+          count: transactions.length,
+          recentTransactions: transactions.slice(0, 5),
+        })
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[rgb(var(--accent))] border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  const totalHouseholdIncome = household.totalHouseholdIncome || 0
+  const sharedExpenses = stats?.totalExpenses || 0
+  const remaining = totalHouseholdIncome - sharedExpenses
+
+  return (
+    <div className="space-y-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-rose-500/20 flex items-center justify-center">
+              <ArrowDownRight className="w-4 h-4 text-rose-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-rose-500">
+            {formatCurrency(sharedExpenses, { locale: localeString, symbol: currencySymbol })}
+          </p>
+          <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1">
+            {t('family.sharedExpenses')}
+          </p>
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+              <ArrowUpRight className="w-4 h-4 text-emerald-500" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-emerald-500">
+            {formatCurrency(stats?.totalIncome || 0, { locale: localeString, symbol: currencySymbol })}
+          </p>
+          <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1">
+            {t('family.sharedIncome')}
+          </p>
+        </Card>
+
+        <Card className="p-4 col-span-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                {t('family.potentialSavings')}
+              </p>
+              <p className={cn(
+                "text-2xl font-bold mt-1",
+                remaining >= 0 ? "text-blue-500" : "text-rose-500"
+              )}>
+                {formatCurrency(Math.abs(remaining), { locale: localeString, symbol: currencySymbol })}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                {t('family.sharedTransactions')}
+              </p>
+              <p className="text-2xl font-bold text-[rgb(var(--text-primary))] mt-1">
+                {stats?.count || 0}
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      {/* Members Summary */}
+      <Card className="p-4">
+        <h3 className="font-semibold text-[rgb(var(--text-primary))] mb-3">
+          {t('family.membersOverview')}
+        </h3>
+        <div className="space-y-3">
+          {household.members.map(member => (
+            <div key={member.id} className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold text-sm bg-gradient-to-br",
+                  getGradient(member.id)
+                )}>
+                  {getInitials(member.name, member.email)}
+                </div>
+                <div>
+                  <p className="font-medium text-sm text-[rgb(var(--text-primary))]">
+                    {member.name || member.email?.split('@')[0]}
+                  </p>
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                    {member.role === 'owner' ? t('family.owner') : t('family.member')}
+                  </p>
+                </div>
+              </div>
+              <p className={cn(
+                "font-semibold text-sm",
+                member.monthlySalary ? "text-emerald-500" : "text-[rgb(var(--text-tertiary))]"
+              )}>
+                {member.monthlySalary 
+                  ? formatCurrency(member.monthlySalary, { locale: localeString, symbol: currencySymbol })
+                  : '-'
+                }
+              </p>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      {/* Recent Transactions */}
+      {stats?.recentTransactions?.length > 0 && (
+        <Card className="p-4">
+          <h3 className="font-semibold text-[rgb(var(--text-primary))] mb-3">
+            {t('transactions.recentTransactions')}
+          </h3>
+          <div className="space-y-3">
+            {stats.recentTransactions.map(transaction => (
+              <div key={transaction.id} className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm text-[rgb(var(--text-primary))]">
+                    {transaction.description}
+                  </p>
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                    {new Date(transaction.date).toLocaleDateString(localeString)}
+                  </p>
+                </div>
+                <p className={cn(
+                  "font-semibold text-sm",
+                  transaction.type === 'income' ? "text-emerald-500" : "text-rose-500"
+                )}>
+                  {transaction.type === 'income' ? '+' : '-'}
+                  {formatCurrency(transaction.amount, { locale: localeString, symbol: currencySymbol })}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// Transactions Tab
+function FamilyTransactions({ household, currencySymbol, localeString }) {
+  const { t } = useI18n()
+  const [transactions, setTransactions] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/transactions?onlyShared=true')
+      .then(res => res.json())
+      .then(data => setTransactions(data.transactions || []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-[rgb(var(--accent))] border-t-transparent"></div>
+      </div>
+    )
+  }
+
+  if (transactions.length === 0) {
+    return (
+      <Card className="p-8">
+        <EmptyState
+          icon={<Receipt className="w-10 h-10" />}
+          title={t('family.noSharedTransactions')}
+          description={t('family.noSharedTransactionsDescription')}
+        />
+      </Card>
+    )
+  }
+
+  // Group by date
+  const grouped = transactions.reduce((acc, t) => {
+    const date = new Date(t.date).toLocaleDateString(localeString)
+    if (!acc[date]) acc[date] = []
+    acc[date].push(t)
+    return acc
+  }, {})
+
+  return (
+    <div className="space-y-4">
+      {Object.entries(grouped).map(([date, txns]) => (
+        <div key={date}>
+          <p className="text-xs font-medium text-[rgb(var(--text-tertiary))] mb-2 px-1">
+            {date}
+          </p>
+          <Card className="divide-y divide-[rgb(var(--border-primary))]">
+            {txns.map(transaction => (
+              <div key={transaction.id} className="flex items-center justify-between p-4">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-[rgb(var(--text-primary))] truncate">
+                    {transaction.description}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {transaction.category && (
+                      <span
+                        className="text-xs px-2 py-0.5 rounded-full"
+                        style={{
+                          backgroundColor: `${transaction.category.color}20`,
+                          color: transaction.category.color,
+                        }}
+                      >
+                        {transaction.category.name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <p className={cn(
+                  "font-semibold ms-4",
+                  transaction.type === 'income' ? "text-emerald-500" : "text-rose-500"
+                )}>
+                  {transaction.type === 'income' ? '+' : '-'}
+                  {formatCurrency(transaction.amount, { locale: localeString, symbol: currencySymbol })}
+                </p>
+              </div>
+            ))}
+          </Card>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Members Tab
+function FamilyMembers({ household, currencySymbol, localeString, onUpdate }) {
+  const { t } = useI18n()
+
+  return (
+    <div className="space-y-3">
+      {household.members.map((member) => (
+        <MemberCard 
+          key={member.id} 
+          member={member} 
+          currencySymbol={currencySymbol}
+          localeString={localeString}
+          isCurrentUser={member.isCurrentUser}
+          onUpdate={onUpdate}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Settings Tab
+function FamilySettings({ household, onLeave, onCancelInvitation, localeString }) {
+  const { t } = useI18n()
+
+  return (
+    <div className="space-y-4">
+      {/* Pending Invitations */}
+      {household.invitations && household.invitations.length > 0 && (
+        <Card className="p-4">
+          <h3 className="font-semibold text-[rgb(var(--text-primary))] mb-3">
+            {t('family.pendingInvitations')}
+          </h3>
+          <div className="space-y-2">
+            {household.invitations.map((invitation) => (
+              <div
+                key={invitation.id}
+                className="flex items-center justify-between p-3 rounded-xl bg-[rgb(var(--bg-tertiary))]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-[rgb(var(--text-primary))]">
+                      {invitation.email || t('family.linkInvitation')}
+                    </p>
+                    <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                      {invitation.expiresAt && new Date(invitation.expiresAt).toLocaleDateString(localeString)}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => onCancelInvitation(invitation.id)}
+                  className="p-2 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      {/* Danger Zone */}
+      <Card className="p-4">
+        <h3 className="font-semibold text-[rgb(var(--text-primary))] mb-3">
+          {t('settings.dangerZone')}
+        </h3>
+        <button
+          onClick={onLeave}
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="font-medium">{t('family.leaveHousehold')}</span>
+        </button>
+      </Card>
+    </div>
+  )
+}
+
 // Member Card Component
 function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpdate }) {
   const { t } = useI18n()
@@ -377,28 +718,10 @@ function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpd
     }
   }
 
-  const getInitials = (name, email) => {
-    if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    if (email) return email[0].toUpperCase()
-    return '?'
-  }
-
-  const getGradient = (id) => {
-    const gradients = [
-      'from-blue-500 to-purple-500',
-      'from-emerald-500 to-teal-500',
-      'from-orange-500 to-rose-500',
-      'from-pink-500 to-violet-500',
-      'from-cyan-500 to-blue-500',
-    ]
-    return gradients[id.charCodeAt(0) % gradients.length]
-  }
-
   return (
-    <div className="bg-[rgb(var(--bg-secondary))] rounded-xl border border-[rgb(var(--border-primary))] overflow-hidden">
+    <Card className="overflow-hidden">
       <div className="p-4">
         <div className="flex items-center gap-3">
-          {/* Avatar */}
           <div className={cn(
             "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-gradient-to-br",
             getGradient(member.id)
@@ -406,7 +729,6 @@ function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpd
             {getInitials(member.name, member.email)}
           </div>
           
-          {/* Info */}
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <p className="font-medium text-[rgb(var(--text-primary))] truncate">
@@ -423,7 +745,6 @@ function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpd
             </p>
           </div>
 
-          {/* Salary Display */}
           <div className="text-right">
             {member.monthlySalary ? (
               <>
@@ -444,23 +765,21 @@ function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpd
           </div>
         </div>
 
-        {/* Edit Button for Current User */}
         {isCurrentUser && !isEditing && (
           <button
             onClick={() => setIsEditing(true)}
-            className="w-full mt-3 py-2 text-sm font-medium text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10 rounded-lg hover:bg-[rgb(var(--accent))]/20 transition-colors"
+            className="w-full mt-3 py-2.5 text-sm font-medium text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10 rounded-xl hover:bg-[rgb(var(--accent))]/20 transition-colors"
           >
             {member.monthlySalary ? t('common.edit') : t('family.addSalary')}
           </button>
         )}
       </div>
 
-      {/* Edit Form */}
       {isCurrentUser && isEditing && (
-        <div className="px-4 pb-4 pt-2 border-t border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-tertiary))]">
+        <div className="px-4 pb-4 pt-3 border-t border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-tertiary))]">
           <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="block text-xs font-medium text-[rgb(var(--text-secondary))] mb-1">
+              <label className="block text-xs font-medium text-[rgb(var(--text-secondary))] mb-1.5">
                 {t('family.monthlySalary')}
               </label>
               <input
@@ -468,17 +787,17 @@ function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpd
                 value={salary}
                 onChange={(e) => setSalary(e.target.value)}
                 placeholder="0"
-                className="w-full h-10 px-3 rounded-lg bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
+                className="w-full h-11 px-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-[rgb(var(--text-secondary))] mb-1">
+              <label className="block text-xs font-medium text-[rgb(var(--text-secondary))] mb-1.5">
                 {t('family.salaryDay')}
               </label>
               <select
                 value={salaryDay}
                 onChange={(e) => setSalaryDay(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
+                className="w-full h-11 px-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
               >
                 <option value="">{t('family.selectDay')}</option>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
@@ -490,20 +809,38 @@ function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpd
           <div className="flex gap-2">
             <button
               onClick={() => setIsEditing(false)}
-              className="flex-1 h-10 rounded-lg border border-[rgb(var(--border-primary))] text-[rgb(var(--text-secondary))] font-medium"
+              className="flex-1 h-11 rounded-xl border border-[rgb(var(--border-primary))] text-[rgb(var(--text-secondary))] font-medium"
             >
               {t('common.cancel')}
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="flex-1 h-10 rounded-lg bg-[rgb(var(--accent))] text-white font-medium disabled:opacity-50"
+              className="flex-1 h-11 rounded-xl bg-[rgb(var(--accent))] text-white font-medium disabled:opacity-50"
             >
               {saving ? t('common.saving') : t('common.save')}
             </button>
           </div>
         </div>
       )}
-    </div>
+    </Card>
   )
+}
+
+// Helper functions
+function getInitials(name, email) {
+  if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+  if (email) return email[0].toUpperCase()
+  return '?'
+}
+
+function getGradient(id) {
+  const gradients = [
+    'from-blue-500 to-purple-500',
+    'from-emerald-500 to-teal-500',
+    'from-orange-500 to-rose-500',
+    'from-pink-500 to-violet-500',
+    'from-cyan-500 to-blue-500',
+  ]
+  return gradients[id.charCodeAt(0) % gradients.length]
 }
