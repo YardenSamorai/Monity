@@ -1,30 +1,32 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { EmptyState } from '@/components/ui/EmptyState'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
+import { EmptyState } from '@/components/ui/EmptyState'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, cn } from '@/lib/utils'
 import { 
   Users, 
-  Mail, 
-  Link as LinkIcon, 
   Copy, 
   Check, 
   X,
   UserPlus,
   Settings,
+  ChevronRight,
+  Wallet,
+  Calendar,
   TrendingUp,
-  Target,
-  Receipt,
-  BarChart3
+  DollarSign,
+  PieChart,
+  LogOut,
+  Clock,
+  Banknote
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 
 export function FamilyClient() {
   const { t, currencySymbol, localeString } = useI18n()
@@ -32,13 +34,11 @@ export function FamilyClient() {
   const { showLoading, hideLoading } = useLoading()
   const [household, setHousehold] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('dashboard')
+  const [activeView, setActiveView] = useState('overview') // overview, members, income, settings
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteLink, setInviteLink] = useState('')
   const [copied, setCopied] = useState(false)
 
-  // Fetch household data
   useEffect(() => {
     fetchHousehold()
   }, [])
@@ -47,13 +47,10 @@ export function FamilyClient() {
     try {
       const response = await fetch('/api/households')
       if (!response.ok) {
-        // If 401, user is not authenticated - that's fine, just set to null
         if (response.status === 401) {
           setHousehold(null)
           return
         }
-        // For other errors, log but don't throw
-        console.error('Failed to fetch household:', response.status, response.statusText)
         setHousehold(null)
         return
       }
@@ -73,24 +70,12 @@ export function FamilyClient() {
       const response = await fetch('/api/households', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: `${t('family.household')}` }),
+        body: JSON.stringify({ name: t('family.household') }),
       })
 
       if (!response.ok) {
         const error = await response.json()
-        const errorMessage = error.error || 'Failed to create household'
-        // If user already belongs to a household, refresh to show it
-        if (errorMessage.includes('already belongs')) {
-          try {
-            await fetchHousehold()
-          } catch (e) {
-            // Ignore fetch errors, just show the message
-            console.error('Error refreshing household:', e)
-          }
-          toast.info(t('family.alreadyMember'), errorMessage)
-          return
-        }
-        throw new Error(errorMessage)
+        throw new Error(error.error || 'Failed to create household')
       }
 
       const data = await response.json()
@@ -104,7 +89,11 @@ export function FamilyClient() {
   }
 
   const handleInvite = async () => {
-    if (!inviteEmail && !inviteLink) return
+    if (!inviteEmail) {
+      // Just copy the link
+      handleCopyLink()
+      return
+    }
 
     showLoading()
     try {
@@ -112,9 +101,8 @@ export function FamilyClient() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          email: inviteEmail || undefined, 
-          inviteLink: !inviteEmail,
-          locale: localeString?.split('-')[0] || 'en', // Pass locale for email language
+          email: inviteEmail,
+          locale: localeString?.split('-')[0] || 'en',
         }),
       })
 
@@ -123,23 +111,10 @@ export function FamilyClient() {
         throw new Error(error.error || 'Failed to send invitation')
       }
 
-      const data = await response.json()
-      if (data.inviteLink) {
-        setInviteLink(data.inviteLink)
-      }
-      
-      // Show appropriate message based on whether email was sent
-      if (data.emailSent) {
-        toast.success(t('family.inviteSent'), t('family.emailSentTo', { email: inviteEmail }))
-      } else if (data.emailError) {
-        toast.warning(t('family.inviteCreated'), t('family.emailFailed'))
-      } else {
-        toast.success(t('family.inviteSent'), t('family.inviteSentSuccess'))
-      }
-      
+      toast.success(t('family.inviteSent'), t('family.emailSentTo', { email: inviteEmail }))
       setIsInviteModalOpen(false)
       setInviteEmail('')
-      fetchHousehold() // Refresh to see pending invitations
+      fetchHousehold()
     } catch (error) {
       toast.error(t('family.inviteFailed'), error.message)
     } finally {
@@ -148,7 +123,7 @@ export function FamilyClient() {
   }
 
   const handleCopyLink = () => {
-    const link = inviteLink || (household ? `${window.location.origin}/family/accept?token=${household.inviteToken}` : '')
+    const link = household ? `${window.location.origin}/family/accept?token=${household.inviteToken}` : ''
     navigator.clipboard.writeText(link)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -160,15 +135,11 @@ export function FamilyClient() {
 
     showLoading()
     try {
-      const response = await fetch('/api/households/leave', {
-        method: 'DELETE',
-      })
-
+      const response = await fetch('/api/households/leave', { method: 'DELETE' })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to leave household')
       }
-
       setHousehold(null)
       toast.success(t('family.left'), t('family.leftSuccess'))
     } catch (error) {
@@ -178,33 +149,10 @@ export function FamilyClient() {
     }
   }
 
-  const handleCancelInvitation = async (invitationId) => {
-    if (!confirm(t('family.confirmCancelInvitation'))) return
-
-    showLoading()
-    try {
-      const response = await fetch(`/api/households/invite/${invitationId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to cancel invitation')
-      }
-
-      toast.success(t('family.invitationCancelled'))
-      fetchHousehold() // Refresh to update the list
-    } catch (error) {
-      toast.error(t('family.cancelInvitationFailed'), error.message)
-    } finally {
-      hideLoading()
-    }
-  }
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-light-accent dark:border-dark-accent"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-[rgb(var(--accent))] border-t-transparent"></div>
       </div>
     )
   }
@@ -212,103 +160,129 @@ export function FamilyClient() {
   // No household - show create screen
   if (!household) {
     return (
-      <div className="max-w-2xl mx-auto py-4 sm:py-8 px-4">
-        <Card className="p-6 sm:p-8 text-center">
-          <Users className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 text-light-accent dark:text-dark-accent" />
-          <h1 className="text-xl sm:text-2xl font-bold mb-2 text-light-text-primary dark:text-dark-text-primary">
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-500/20 to-purple-500/20 flex items-center justify-center">
+            <Users className="w-10 h-10 text-blue-500" />
+          </div>
+          <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">
             {t('family.welcome')}
           </h1>
-          <p className="text-sm sm:text-base text-light-text-secondary dark:text-dark-text-secondary mb-6">
+          <p className="text-[rgb(var(--text-secondary))] mb-8">
             {t('family.welcomeDescription')}
           </p>
-          <Button onClick={handleCreateHousehold} className="mx-auto w-full sm:w-auto">
-            <UserPlus className="w-4 h-4 mr-2" />
+          <Button onClick={handleCreateHousehold} className="w-full h-12 text-base">
+            <UserPlus className="w-5 h-5 me-2" />
             {t('family.createHousehold')}
           </Button>
-        </Card>
+        </div>
       </div>
     )
   }
 
-  // Has household - show tabs
-  const tabs = [
-    { id: 'dashboard', label: t('family.tabs.dashboard'), icon: BarChart3 },
-    { id: 'transactions', label: t('family.tabs.transactions'), icon: Receipt },
-    { id: 'budget', label: t('family.tabs.budget'), icon: Target },
-    { id: 'goals', label: t('family.tabs.goals'), icon: TrendingUp },
-    { id: 'settings', label: t('family.tabs.settings'), icon: Settings },
-  ]
-
+  // Main family view
   return (
-    <div className="max-w-7xl mx-auto py-4 sm:py-6 px-4">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
-            {household.name}
-          </h1>
-          <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
-            {t('family.membersCount', { count: household.members.length })}
-          </p>
+    <div className="pb-6">
+      {/* Header Card with Total Income */}
+      <div className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white p-5 rounded-b-3xl mb-4">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <p className="text-emerald-100 text-sm">{household.name}</p>
+            <p className="text-3xl font-bold mt-1">
+              {formatCurrency(household.totalHouseholdIncome || 0, { locale: localeString, symbol: currencySymbol })}
+            </p>
+            <p className="text-emerald-100 text-sm mt-1">
+              {t('family.totalMonthlyIncome')}
+            </p>
+          </div>
+          <button
+            onClick={() => setIsInviteModalOpen(true)}
+            className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+          >
+            <UserPlus className="w-6 h-6" />
+          </button>
         </div>
-        <Button
-          variant="secondary"
-          onClick={() => setIsInviteModalOpen(true)}
-          disabled={household.members.length >= 6}
-          className="w-full sm:w-auto"
-        >
-          <UserPlus className="w-4 h-4 mr-2" />
-          {t('family.inviteMember')}
-        </Button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-2 mb-6 border-b border-light-border dark:border-dark-border overflow-x-auto">
-        <div className="flex gap-2 min-w-max">
-          {tabs.map((tab) => {
-            const Icon = tab.icon
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  'flex items-center gap-2 px-3 sm:px-4 py-2 sm:py-3 border-b-2 transition-colors whitespace-nowrap',
-                  activeTab === tab.id
-                    ? 'border-light-accent dark:border-dark-accent text-light-accent dark:text-dark-accent'
-                    : 'border-transparent text-light-text-tertiary dark:text-dark-text-tertiary hover:text-light-text-secondary dark:hover:text-dark-text-secondary'
-                )}
-              >
-                <Icon className="w-4 h-4 flex-shrink-0" />
-                <span className="text-sm sm:text-base">{tab.label}</span>
-              </button>
-            )
-          })}
+        
+        {/* Quick Stats */}
+        <div className="flex gap-3 mt-4">
+          <div className="flex-1 bg-white/10 rounded-xl p-3">
+            <Users className="w-5 h-5 mb-1 text-emerald-200" />
+            <p className="text-xl font-semibold">{household.members.length}</p>
+            <p className="text-xs text-emerald-200">{t('family.members')}</p>
+          </div>
+          <div className="flex-1 bg-white/10 rounded-xl p-3">
+            <Banknote className="w-5 h-5 mb-1 text-emerald-200" />
+            <p className="text-xl font-semibold">{household.members.filter(m => m.monthlySalary).length}</p>
+            <p className="text-xs text-emerald-200">{t('family.withSalary')}</p>
+          </div>
         </div>
       </div>
 
-      {/* Tab Content */}
-      <div className="mt-6">
-        {activeTab === 'dashboard' && (
-          <FamilyDashboard household={household} />
+      {/* Content */}
+      <div className="px-4 space-y-4">
+        {/* Members Section */}
+        <section>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))]">
+              {t('family.membersOverview')}
+            </h2>
+          </div>
+          
+          <div className="space-y-2">
+            {household.members.map((member) => (
+              <MemberCard 
+                key={member.id} 
+                member={member} 
+                currencySymbol={currencySymbol}
+                localeString={localeString}
+                isCurrentUser={member.isCurrentUser}
+                onUpdate={fetchHousehold}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Pending Invitations */}
+        {household.invitations && household.invitations.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold text-[rgb(var(--text-primary))] mb-3">
+              {t('family.pendingInvitations')}
+            </h2>
+            <div className="space-y-2">
+              {household.invitations.map((invitation) => (
+                <div
+                  key={invitation.id}
+                  className="flex items-center justify-between p-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                      <Clock className="w-5 h-5 text-amber-500" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-[rgb(var(--text-primary))]">
+                        {invitation.email || t('family.linkInvitation')}
+                      </p>
+                      <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                        {t('family.pending')}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
-        {activeTab === 'transactions' && (
-          <FamilyTransactions household={household} />
-        )}
-        {activeTab === 'budget' && (
-          <FamilyBudget household={household} />
-        )}
-        {activeTab === 'goals' && (
-          <FamilyGoals household={household} />
-        )}
-        {activeTab === 'settings' && (
-          <FamilySettings 
-            household={household} 
-            onLeave={handleLeaveHousehold} 
-            onCancelInvitation={handleCancelInvitation}
-            locale={localeString}
-            onHouseholdUpdate={fetchHousehold}
-          />
-        )}
+
+        {/* Actions */}
+        <section className="pt-4">
+          <button
+            onClick={handleLeaveHousehold}
+            className="w-full flex items-center justify-center gap-2 p-4 rounded-xl text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 transition-colors"
+          >
+            <LogOut className="w-5 h-5" />
+            <span className="font-medium">{t('family.leaveHousehold')}</span>
+          </button>
+        </section>
       </div>
 
       {/* Invite Modal */}
@@ -317,37 +291,36 @@ export function FamilyClient() {
         onClose={() => {
           setIsInviteModalOpen(false)
           setInviteEmail('')
-          setInviteLink('')
         }}
         title={t('family.inviteMember')}
       >
-        <div className="p-4 sm:p-6 space-y-4">
+        <div className="space-y-4">
           <Input
             label={t('family.inviteEmail')}
             type="email"
             value={inviteEmail}
             onChange={(e) => setInviteEmail(e.target.value)}
-            placeholder="example@email.com"
+            placeholder="email@example.com"
           />
 
-          <div className="pt-4 border-t border-light-border dark:border-dark-border">
-            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-2">
+          <div className="pt-4 border-t border-[rgb(var(--border-primary))]">
+            <p className="text-sm text-[rgb(var(--text-secondary))] mb-3">
               {t('family.orShareLink')}
             </p>
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              value={inviteLink || (household ? `${window.location.origin}/family/accept?token=${household.inviteToken}` : '')}
-              readOnly
-              className="flex-1 text-xs sm:text-base"
-            />
-            <Button
-              variant="secondary"
-              onClick={handleCopyLink}
-              className="flex-shrink-0 w-full sm:w-auto"
-            >
-              {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            </Button>
-          </div>
+            <div className="flex gap-2">
+              <input
+                value={`${window.location.origin}/family/accept?token=${household?.inviteToken || ''}`}
+                readOnly
+                className="flex-1 h-11 px-3 rounded-xl bg-[rgb(var(--bg-tertiary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] text-sm truncate"
+              />
+              <Button
+                variant="secondary"
+                onClick={handleCopyLink}
+                className="flex-shrink-0 w-11 h-11 !p-0"
+              >
+                {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+              </Button>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -357,7 +330,6 @@ export function FamilyClient() {
               onClick={() => {
                 setIsInviteModalOpen(false)
                 setInviteEmail('')
-                setInviteLink('')
               }}
             >
               {t('common.cancel')}
@@ -365,9 +337,8 @@ export function FamilyClient() {
             <Button
               className="flex-1"
               onClick={handleInvite}
-              disabled={!inviteEmail && !inviteLink}
             >
-              {t('family.sendInvite')}
+              {inviteEmail ? t('family.sendInvite') : t('common.copy')}
             </Button>
           </div>
         </div>
@@ -376,405 +347,138 @@ export function FamilyClient() {
   )
 }
 
-// Placeholder components for tabs
-function FamilyDashboard({ household }) {
-  const { t, currencySymbol, localeString: locale } = useI18n()
-  const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!household) return
-
-    // Get current month
-    const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), 1)
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
-
-    fetch(`/api/transactions?onlyShared=true&startDate=${start.toISOString()}&endDate=${end.toISOString()}`)
-      .then(res => res.json())
-      .then(data => {
-        const transactions = data.transactions || []
-        const expenses = transactions.filter(t => t.type === 'expense')
-        const income = transactions.filter(t => t.type === 'income')
-        const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0)
-        const totalIncome = income.reduce((sum, t) => sum + Number(t.amount), 0)
-        setStats({
-          totalExpenses,
-          totalIncome,
-          net: totalIncome - totalExpenses,
-          count: transactions.length,
-        })
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [household])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-light-accent dark:border-dark-accent"></div>
-      </div>
-    )
-  }
-
-  // Calculate potential monthly balance
-  const totalHouseholdIncome = household.totalHouseholdIncome || 0
-  const sharedExpenses = stats?.totalExpenses || 0
-  const potentialSavings = totalHouseholdIncome - sharedExpenses
-
-  return (
-    <div className="space-y-4">
-      {/* Household Income Overview */}
-      <Card className="p-5 sm:p-6 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-cyan-500/10 border-emerald-500/20">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-1">
-              {t('family.totalMonthlyIncome')}
-            </p>
-            <p className="text-3xl sm:text-4xl font-bold text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(totalHouseholdIncome, { locale, symbol: currencySymbol })}
-            </p>
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-2">
-              {t('family.fromMembers', { count: household.members.filter(m => m.monthlySalary).length })}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {household.members.filter(m => m.monthlySalary).map(member => (
-              <div key={member.id} className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm">
-                {member.name?.split(' ')[0] || member.email?.split('@')[0]}: {formatCurrency(member.monthlySalary, { locale, symbol: currencySymbol })}
-              </div>
-            ))}
-          </div>
-        </div>
-      </Card>
-
-      {/* Monthly Stats */}
-      {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          <Card className="p-4">
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('family.sharedExpenses')}
-            </p>
-            <p className="text-2xl font-bold text-rose-500 dark:text-rose-400">
-              {formatCurrency(stats.totalExpenses, { locale, symbol: currencySymbol })}
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('family.sharedIncome')}
-            </p>
-            <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
-              {formatCurrency(stats.totalIncome, { locale, symbol: currencySymbol })}
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('family.potentialSavings')}
-            </p>
-            <p className={cn(
-              "text-2xl font-bold",
-              potentialSavings >= 0 
-                ? "text-blue-500 dark:text-blue-400"
-                : "text-rose-500 dark:text-rose-400"
-            )}>
-              {formatCurrency(Math.abs(potentialSavings), { locale, symbol: currencySymbol })}
-            </p>
-          </Card>
-          <Card className="p-4">
-            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('family.sharedTransactions')}
-            </p>
-            <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
-              {stats.count}
-            </p>
-          </Card>
-        </div>
-      )}
-
-      {/* Members Overview */}
-      <Card className="p-4 sm:p-6">
-        <h3 className="text-lg font-semibold mb-4 text-light-text-primary dark:text-dark-text-primary">
-          {t('family.membersOverview')}
-        </h3>
-        <div className="space-y-3">
-          {household.members.map(member => (
-            <div key={member.id} className="flex items-center justify-between p-3 rounded-xl bg-light-surface dark:bg-dark-surface">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
-                  {(member.name || member.email || '?')[0].toUpperCase()}
-                </div>
-                <div>
-                  <p className="font-medium text-light-text-primary dark:text-dark-text-primary">
-                    {member.name || member.email}
-                  </p>
-                  <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {member.role === 'owner' ? t('family.owner') : t('family.member')}
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                {member.monthlySalary ? (
-                  <>
-                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(member.monthlySalary, { locale, symbol: currencySymbol })}
-                    </p>
-                    {member.salaryDay && (
-                      <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                        {t('family.paidOnDay', { day: member.salaryDay })}
-                      </p>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {t('family.noSalarySet')}
-                  </p>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
-function FamilyTransactions({ household }) {
-  const { t, currencySymbol, localeString: locale } = useI18n()
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!household) return
-
-    fetch('/api/transactions?onlyShared=true')
-      .then(res => res.json())
-      .then(data => setTransactions(data.transactions || []))
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [household])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-light-accent dark:border-dark-accent"></div>
-      </div>
-    )
-  }
-
-  if (transactions.length === 0) {
-    return (
-      <Card className="p-6">
-        <EmptyState
-          icon={<Receipt className="w-8 h-8" />}
-          title={t('family.noSharedTransactions')}
-          description={t('family.noSharedTransactionsDescription')}
-        />
-      </Card>
-    )
-  }
-
-  return (
-    <Card className="p-4 sm:p-6">
-      <div className="space-y-3">
-        {transactions.map((transaction) => (
-          <div
-            key={transaction.id}
-            className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border dark:border-dark-border"
-          >
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
-                {transaction.description}
-              </p>
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
-                  {new Date(transaction.date).toLocaleDateString()}
-                </span>
-                {transaction.category && (
-                  <span
-                    className="text-xs px-2 py-0.5 rounded-full"
-                    style={{
-                      backgroundColor: `${transaction.category.color}20`,
-                      color: transaction.category.color,
-                    }}
-                  >
-                    {transaction.category.name}
-                  </span>
-                )}
-                {transaction.isShared && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent">
-                    {t('transactions.shared')}
-                  </span>
-                )}
-              </div>
-            </div>
-            <div className="ml-4 text-right flex-shrink-0">
-              <p className={cn(
-                "font-semibold",
-                transaction.type === 'income'
-                  ? "text-light-success dark:text-dark-success"
-                  : "text-light-danger dark:text-dark-danger"
-              )}>
-                {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, { locale, symbol: currencySymbol })}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </Card>
-  )
-}
-
-function FamilyBudget({ household }) {
+// Member Card Component
+function MemberCard({ member, currencySymbol, localeString, isCurrentUser, onUpdate }) {
   const { t } = useI18n()
-  const [budgets, setBudgets] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!household) return
-
-    // Fetch shared budgets
-    fetch('/api/budgets')
-      .then(res => res.json())
-      .then(data => {
-        // Filter for shared budgets (would need API support)
-        setBudgets([])
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [household])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-light-accent dark:border-dark-accent"></div>
-      </div>
-    )
-  }
-
-  return (
-    <Card className="p-4 sm:p-6">
-      <EmptyState
-        icon={<Target className="w-8 h-8" />}
-        title={t('family.comingSoon')}
-        description={t('family.budgetComingSoon')}
-      />
-    </Card>
-  )
-}
-
-function FamilyGoals({ household }) {
-  const { t } = useI18n()
-  const [goals, setGoals] = useState([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    if (!household) return
-
-    // Fetch shared goals
-    fetch('/api/goals')
-      .then(res => res.json())
-      .then(data => {
-        // Filter for shared goals (would need API support)
-        setGoals([])
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [household])
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[40vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-light-accent dark:border-dark-accent"></div>
-      </div>
-    )
-  }
-
-  return (
-    <Card className="p-4 sm:p-6">
-      <EmptyState
-        icon={<TrendingUp className="w-8 h-8" />}
-        title={t('family.comingSoon')}
-        description={t('family.goalsComingSoon')}
-      />
-    </Card>
-  )
-}
-
-function FamilySettings({ household, onLeave, onCancelInvitation, locale, onHouseholdUpdate }) {
-  const { t, currencySymbol, localeString } = useI18n()
   const { toast } = useToast()
-  const [salaryData, setSalaryData] = useState({
-    monthlySalary: '',
-    salaryDay: '',
-  })
-  const [isSaving, setIsSaving] = useState(false)
-  const [currentUserMember, setCurrentUserMember] = useState(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [salary, setSalary] = useState(member.monthlySalary || '')
+  const [salaryDay, setSalaryDay] = useState(member.salaryDay || '')
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    // Find current user's member data
-    const currentMember = household.members.find(m => m.isCurrentUser)
-    if (currentMember) {
-      setCurrentUserMember(currentMember)
-      setSalaryData({
-        monthlySalary: currentMember.monthlySalary || '',
-        salaryDay: currentMember.salaryDay || '',
-      })
-    }
-  }, [household.members])
-
-  const handleSaveSalary = async () => {
-    setIsSaving(true)
+  const handleSave = async () => {
+    setSaving(true)
     try {
       const response = await fetch('/api/households/members/salary', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(salaryData),
+        body: JSON.stringify({ monthlySalary: salary, salaryDay }),
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to save salary')
-      }
+      if (!response.ok) throw new Error('Failed to save')
 
-      toast.success(t('family.salarySaved'), t('family.salarySavedSuccess'))
-      if (onHouseholdUpdate) onHouseholdUpdate()
+      toast.success(t('family.salarySaved'))
+      setIsEditing(false)
+      onUpdate()
     } catch (error) {
-      toast.error(t('family.salarySaveFailed'), error.message)
+      toast.error(t('family.salarySaveFailed'))
     } finally {
-      setIsSaving(false)
+      setSaving(false)
     }
   }
 
+  const getInitials = (name, email) => {
+    if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    if (email) return email[0].toUpperCase()
+    return '?'
+  }
+
+  const getGradient = (id) => {
+    const gradients = [
+      'from-blue-500 to-purple-500',
+      'from-emerald-500 to-teal-500',
+      'from-orange-500 to-rose-500',
+      'from-pink-500 to-violet-500',
+      'from-cyan-500 to-blue-500',
+    ]
+    return gradients[id.charCodeAt(0) % gradients.length]
+  }
+
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Salary Management Card */}
-      <Card className="p-4 sm:p-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-2 text-light-text-primary dark:text-dark-text-primary">
-            {t('family.mySalary')}
-          </h3>
-          <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-4">
-            {t('family.mySalaryDescription')}
-          </p>
+    <div className="bg-[rgb(var(--bg-secondary))] rounded-xl border border-[rgb(var(--border-primary))] overflow-hidden">
+      <div className="p-4">
+        <div className="flex items-center gap-3">
+          {/* Avatar */}
+          <div className={cn(
+            "w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold bg-gradient-to-br",
+            getGradient(member.id)
+          )}>
+            {getInitials(member.name, member.email)}
+          </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-            <Input
-              label={t('family.monthlySalary')}
-              type="number"
-              step="0.01"
-              min="0"
-              value={salaryData.monthlySalary}
-              onChange={(e) => setSalaryData({ ...salaryData, monthlySalary: e.target.value })}
-              placeholder="0.00"
-            />
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-[rgb(var(--text-primary))] truncate">
+                {member.name || member.email}
+              </p>
+              {isCurrentUser && (
+                <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-500">
+                  {t('family.you')}
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-[rgb(var(--text-tertiary))]">
+              {member.role === 'owner' ? t('family.owner') : t('family.member')}
+            </p>
+          </div>
+
+          {/* Salary Display */}
+          <div className="text-right">
+            {member.monthlySalary ? (
+              <>
+                <p className="font-semibold text-emerald-500">
+                  {formatCurrency(member.monthlySalary, { locale: localeString, symbol: currencySymbol })}
+                </p>
+                {member.salaryDay && (
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                    {t('family.paidOnDay', { day: member.salaryDay })}
+                  </p>
+                )}
+              </>
+            ) : (
+              <p className="text-sm text-[rgb(var(--text-tertiary))]">
+                {t('family.noSalarySet')}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Edit Button for Current User */}
+        {isCurrentUser && !isEditing && (
+          <button
+            onClick={() => setIsEditing(true)}
+            className="w-full mt-3 py-2 text-sm font-medium text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10 rounded-lg hover:bg-[rgb(var(--accent))]/20 transition-colors"
+          >
+            {member.monthlySalary ? t('common.edit') : t('family.addSalary')}
+          </button>
+        )}
+      </div>
+
+      {/* Edit Form */}
+      {isCurrentUser && isEditing && (
+        <div className="px-4 pb-4 pt-2 border-t border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-tertiary))]">
+          <div className="grid grid-cols-2 gap-3 mb-3">
             <div>
-              <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-1.5">
+              <label className="block text-xs font-medium text-[rgb(var(--text-secondary))] mb-1">
+                {t('family.monthlySalary')}
+              </label>
+              <input
+                type="number"
+                value={salary}
+                onChange={(e) => setSalary(e.target.value)}
+                placeholder="0"
+                className="w-full h-10 px-3 rounded-lg bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[rgb(var(--text-secondary))] mb-1">
                 {t('family.salaryDay')}
               </label>
               <select
-                value={salaryData.salaryDay}
-                onChange={(e) => setSalaryData({ ...salaryData, salaryDay: e.target.value })}
-                className="w-full h-11 px-4 rounded-xl bg-[rgb(var(--bg-tertiary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+                value={salaryDay}
+                onChange={(e) => setSalaryDay(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))]"
               >
                 <option value="">{t('family.selectDay')}</option>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
@@ -783,122 +487,23 @@ function FamilySettings({ household, onLeave, onCancelInvitation, locale, onHous
               </select>
             </div>
           </div>
-          
-          <Button onClick={handleSaveSalary} disabled={isSaving} className="w-full sm:w-auto">
-            {isSaving ? t('common.saving') : t('common.save')}
-          </Button>
-        </div>
-      </Card>
-
-      {/* Members & Their Salaries Card */}
-      <Card className="p-4 sm:p-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-4 text-light-text-primary dark:text-dark-text-primary">
-            {t('family.householdIncome')}
-          </h3>
-          
-          {/* Total Income */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 mb-4">
-            <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-1">
-              {t('family.totalMonthlyIncome')}
-            </p>
-            <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
-              {formatCurrency(household.totalHouseholdIncome || 0, { locale: localeString, symbol: currencySymbol })}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            {household.members.map((member) => (
-              <div
-                key={member.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl bg-light-surface dark:bg-dark-surface"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
-                    {member.name || member.email}
-                    {member.isCurrentUser && (
-                      <span className="text-xs text-light-accent dark:text-dark-accent ml-2">({t('family.you')})</span>
-                    )}
-                  </p>
-                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                    {member.role === 'owner' ? t('family.owner') : t('family.member')}
-                    {member.salaryDay && ` • ${t('family.paidOnDay', { day: member.salaryDay })}`}
-                  </p>
-                </div>
-                <div className="text-right">
-                  {member.monthlySalary ? (
-                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {formatCurrency(member.monthlySalary, { locale: localeString, symbol: currencySymbol })}
-                    </p>
-                  ) : (
-                    <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                      {t('family.noSalarySet')}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="flex gap-2">
+            <button
+              onClick={() => setIsEditing(false)}
+              className="flex-1 h-10 rounded-lg border border-[rgb(var(--border-primary))] text-[rgb(var(--text-secondary))] font-medium"
+            >
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="flex-1 h-10 rounded-lg bg-[rgb(var(--accent))] text-white font-medium disabled:opacity-50"
+            >
+              {saving ? t('common.saving') : t('common.save')}
+            </button>
           </div>
         </div>
-      </Card>
-
-      {household.invitations && household.invitations.length > 0 && (
-        <Card className="p-4 sm:p-6">
-          <div>
-            <h3 className="text-lg font-semibold mb-4 text-light-text-primary dark:text-dark-text-primary">
-              {t('family.pendingInvitations')}
-            </h3>
-            <div className="space-y-2">
-              {household.invitations.map((invitation) => (
-                <div
-                  key={invitation.id}
-                  className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 p-3 rounded-xl bg-light-surface dark:bg-dark-surface"
-                >
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
-                      {invitation.email || t('family.linkInvitation')}
-                    </p>
-                    <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
-                      {t('family.invitedBy')} {invitation.invitedBy?.name || invitation.invitedBy?.email}
-                    </p>
-                    {invitation.expiresAt && (
-                      <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary mt-1">
-                        {t('family.expiresAt')} {new Date(invitation.expiresAt).toLocaleDateString(locale)}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs px-2 py-1 rounded-full bg-light-warning/10 dark:bg-dark-warning/10 text-light-warning dark:text-dark-warning whitespace-nowrap">
-                      {t('family.pending')}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onCancelInvitation(invitation.id)}
-                      className="text-light-danger dark:text-dark-danger hover:bg-light-danger/10 dark:hover:bg-dark-danger/10"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
       )}
-
-      <Card className="p-4 sm:p-6">
-        <div className="pt-4 sm:pt-6 border-t border-light-border dark:border-dark-border">
-          <Button
-            variant="secondary"
-            onClick={onLeave}
-            className="w-full sm:w-auto text-light-danger dark:text-dark-danger hover:bg-light-danger/10 dark:hover:bg-dark-danger/10"
-          >
-            <X className="w-4 h-4 mr-2" />
-            {t('family.leaveHousehold')}
-          </Button>
-        </div>
-      </Card>
     </div>
   )
 }
