@@ -455,12 +455,10 @@ export default function AppShell({ children }) {
         onClose={() => setIsTransactionModalOpen(false)}
         accounts={accounts}
         categories={categories}
-        onSuccess={() => {
+        onSuccess={async () => {
           setIsTransactionModalOpen(false)
-          // Refresh page if on transactions or dashboard
-          if (pathname === '/transactions' || pathname === '/dashboard') {
-            router.refresh()
-          }
+          // Force hard refresh to bypass cache
+          window.location.reload()
         }}
       />
     </div>

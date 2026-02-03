@@ -6,8 +6,8 @@ import { DashboardClient } from './DashboardClient'
 import { getMonthRange, serializePrismaData } from '@/lib/utils'
 import { unstable_cache } from 'next/cache'
 
-// Allow caching for 30 seconds, then revalidate in background
-export const revalidate = 30
+// Revalidate every 5 seconds for more responsive updates
+export const revalidate = 5
 
 // Cache dashboard data per user
 const getDashboardData = unstable_cache(
@@ -150,7 +150,7 @@ const getDashboardData = unstable_cache(
     }
   },
   ['dashboard-data'],
-  { revalidate: 30, tags: ['dashboard'] }
+  { revalidate: 5, tags: ['dashboard'] }
 )
 
 export default async function DashboardPage() {
