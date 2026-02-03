@@ -20,7 +20,8 @@ import {
   Zap,
   Smartphone,
   Bell,
-  Plus
+  Plus,
+  CreditCard
 } from 'lucide-react'
 import { ThemeToggle } from './ui/ThemeToggle'
 import { cn } from '@/lib/utils'
@@ -117,6 +118,7 @@ export default function AppShell({ children }) {
     { name: t('nav.transactions'), href: '/transactions', icon: Receipt },
     { name: t('nav.budget'), href: '/budget', icon: Target },
     { name: t('nav.goals'), href: '/goals', icon: PiggyBank },
+    { name: t('nav.creditCards'), href: '/credit-cards', icon: CreditCard },
     { name: t('nav.family'), href: '/family', icon: Users },
     { name: t('nav.analytics'), href: '/analytics', icon: TrendingUp },
     { name: t('nav.insights'), href: '/insights', icon: Sparkles },
