@@ -370,7 +370,13 @@ model HouseholdMember {
   householdId String
   userId      String
   role        String    @default("member") // "owner", "admin", "member"
-  joinedAt   DateTime  @default(now())
+  joinedAt    DateTime  @default(now())
+  
+  // Salary information
+  monthlySalary    Decimal?  @db.Decimal(12, 2)
+  salaryDay        Int?      // Day of month salary is received (1-31)
+  salaryUpdatedAt  DateTime?
+  
   household  Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 

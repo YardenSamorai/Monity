@@ -62,10 +62,16 @@ export async function GET(request) {
       orderBy: { createdAt: 'desc' },
     })
 
+    // Calculate total household income
+    const totalHouseholdIncome = member.household.members.reduce((sum, m) => {
+      return sum + (m.monthlySalary ? Number(m.monthlySalary) : 0)
+    }, 0)
+
     return NextResponse.json({
       household: {
         ...member.household,
         role: member.role,
+        totalHouseholdIncome,
         members: member.household.members.map(m => ({
           id: m.id,
           userId: m.user.id,
@@ -73,6 +79,9 @@ export async function GET(request) {
           email: m.user.email,
           role: m.role,
           joinedAt: m.joinedAt,
+          monthlySalary: m.monthlySalary ? Number(m.monthlySalary) : null,
+          salaryDay: m.salaryDay,
+          isCurrentUser: m.userId === user.id,
         })),
         invitations,
       },

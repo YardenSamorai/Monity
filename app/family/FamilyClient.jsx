@@ -306,6 +306,7 @@ export function FamilyClient() {
             onLeave={handleLeaveHousehold} 
             onCancelInvitation={handleCancelInvitation}
             locale={localeString}
+            onHouseholdUpdate={fetchHousehold}
           />
         )}
       </div>
@@ -416,42 +417,72 @@ function FamilyDashboard({ household }) {
     )
   }
 
+  // Calculate potential monthly balance
+  const totalHouseholdIncome = household.totalHouseholdIncome || 0
+  const sharedExpenses = stats?.totalExpenses || 0
+  const potentialSavings = totalHouseholdIncome - sharedExpenses
+
   return (
     <div className="space-y-4">
+      {/* Household Income Overview */}
+      <Card className="p-5 sm:p-6 bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-cyan-500/10 border-emerald-500/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-1">
+              {t('family.totalMonthlyIncome')}
+            </p>
+            <p className="text-3xl sm:text-4xl font-bold text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(totalHouseholdIncome, { locale, symbol: currencySymbol })}
+            </p>
+            <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mt-2">
+              {t('family.fromMembers', { count: household.members.filter(m => m.monthlySalary).length })}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {household.members.filter(m => m.monthlySalary).map(member => (
+              <div key={member.id} className="px-3 py-1.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 text-sm">
+                {member.name?.split(' ')[0] || member.email?.split('@')[0]}: {formatCurrency(member.monthlySalary, { locale, symbol: currencySymbol })}
+              </div>
+            ))}
+          </div>
+        </div>
+      </Card>
+
+      {/* Monthly Stats */}
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <Card className="p-4">
             <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('dashboard.expenses')}
+              {t('family.sharedExpenses')}
             </p>
-            <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
+            <p className="text-2xl font-bold text-rose-500 dark:text-rose-400">
               {formatCurrency(stats.totalExpenses, { locale, symbol: currencySymbol })}
             </p>
           </Card>
           <Card className="p-4">
             <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('dashboard.income')}
+              {t('family.sharedIncome')}
             </p>
-            <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
+            <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">
               {formatCurrency(stats.totalIncome, { locale, symbol: currencySymbol })}
             </p>
           </Card>
           <Card className="p-4">
             <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('dashboard.net')}
+              {t('family.potentialSavings')}
             </p>
             <p className={cn(
               "text-2xl font-bold",
-              stats.net >= 0 
-                ? "text-light-success dark:text-dark-success"
-                : "text-light-danger dark:text-dark-danger"
+              potentialSavings >= 0 
+                ? "text-blue-500 dark:text-blue-400"
+                : "text-rose-500 dark:text-rose-400"
             )}>
-              {formatCurrency(Math.abs(stats.net), { locale, symbol: currencySymbol })}
+              {formatCurrency(Math.abs(potentialSavings), { locale, symbol: currencySymbol })}
             </p>
           </Card>
           <Card className="p-4">
             <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-1">
-              {t('transactions.transactionsCount')}
+              {t('family.sharedTransactions')}
             </p>
             <p className="text-2xl font-bold text-light-text-primary dark:text-dark-text-primary">
               {stats.count}
@@ -459,12 +490,49 @@ function FamilyDashboard({ household }) {
           </Card>
         </div>
       )}
-      <Card className="p-6">
-        <EmptyState
-          icon={<BarChart3 className="w-8 h-8" />}
-          title={t('family.comingSoon')}
-          description={t('family.dashboardComingSoon')}
-        />
+
+      {/* Members Overview */}
+      <Card className="p-4 sm:p-6">
+        <h3 className="text-lg font-semibold mb-4 text-light-text-primary dark:text-dark-text-primary">
+          {t('family.membersOverview')}
+        </h3>
+        <div className="space-y-3">
+          {household.members.map(member => (
+            <div key={member.id} className="flex items-center justify-between p-3 rounded-xl bg-light-surface dark:bg-dark-surface">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-semibold">
+                  {(member.name || member.email || '?')[0].toUpperCase()}
+                </div>
+                <div>
+                  <p className="font-medium text-light-text-primary dark:text-dark-text-primary">
+                    {member.name || member.email}
+                  </p>
+                  <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {member.role === 'owner' ? t('family.owner') : t('family.member')}
+                  </p>
+                </div>
+              </div>
+              <div className="text-right">
+                {member.monthlySalary ? (
+                  <>
+                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(member.monthlySalary, { locale, symbol: currencySymbol })}
+                    </p>
+                    {member.salaryDay && (
+                      <p className="text-xs text-light-text-tertiary dark:text-dark-text-tertiary">
+                        {t('family.paidOnDay', { day: member.salaryDay })}
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                    {t('family.noSalarySet')}
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </Card>
     </div>
   )
@@ -632,34 +700,142 @@ function FamilyGoals({ household }) {
   )
 }
 
-function FamilySettings({ household, onLeave, onCancelInvitation, locale }) {
-  const { t } = useI18n()
+function FamilySettings({ household, onLeave, onCancelInvitation, locale, onHouseholdUpdate }) {
+  const { t, currencySymbol, localeString } = useI18n()
+  const { toast } = useToast()
+  const [salaryData, setSalaryData] = useState({
+    monthlySalary: '',
+    salaryDay: '',
+  })
+  const [isSaving, setIsSaving] = useState(false)
+  const [currentUserMember, setCurrentUserMember] = useState(null)
+
+  useEffect(() => {
+    // Find current user's member data
+    const currentMember = household.members.find(m => m.isCurrentUser)
+    if (currentMember) {
+      setCurrentUserMember(currentMember)
+      setSalaryData({
+        monthlySalary: currentMember.monthlySalary || '',
+        salaryDay: currentMember.salaryDay || '',
+      })
+    }
+  }, [household.members])
+
+  const handleSaveSalary = async () => {
+    setIsSaving(true)
+    try {
+      const response = await fetch('/api/households/members/salary', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(salaryData),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to save salary')
+      }
+
+      toast.success(t('family.salarySaved'), t('family.salarySavedSuccess'))
+      if (onHouseholdUpdate) onHouseholdUpdate()
+    } catch (error) {
+      toast.error(t('family.salarySaveFailed'), error.message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Salary Management Card */}
+      <Card className="p-4 sm:p-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-2 text-light-text-primary dark:text-dark-text-primary">
+            {t('family.mySalary')}
+          </h3>
+          <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary mb-4">
+            {t('family.mySalaryDescription')}
+          </p>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <Input
+              label={t('family.monthlySalary')}
+              type="number"
+              step="0.01"
+              min="0"
+              value={salaryData.monthlySalary}
+              onChange={(e) => setSalaryData({ ...salaryData, monthlySalary: e.target.value })}
+              placeholder="0.00"
+            />
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--text-secondary))] mb-1.5">
+                {t('family.salaryDay')}
+              </label>
+              <select
+                value={salaryData.salaryDay}
+                onChange={(e) => setSalaryData({ ...salaryData, salaryDay: e.target.value })}
+                className="w-full h-11 px-4 rounded-xl bg-[rgb(var(--bg-tertiary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))]"
+              >
+                <option value="">{t('family.selectDay')}</option>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                  <option key={day} value={day}>{day}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          <Button onClick={handleSaveSalary} disabled={isSaving} className="w-full sm:w-auto">
+            {isSaving ? t('common.saving') : t('common.save')}
+          </Button>
+        </div>
+      </Card>
+
+      {/* Members & Their Salaries Card */}
       <Card className="p-4 sm:p-6">
         <div>
           <h3 className="text-lg font-semibold mb-4 text-light-text-primary dark:text-dark-text-primary">
-            {t('family.members')}
+            {t('family.householdIncome')}
           </h3>
+          
+          {/* Total Income */}
+          <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 mb-4">
+            <p className="text-sm text-emerald-600 dark:text-emerald-400 mb-1">
+              {t('family.totalMonthlyIncome')}
+            </p>
+            <p className="text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">
+              {formatCurrency(household.totalHouseholdIncome || 0, { locale: localeString, symbol: currencySymbol })}
+            </p>
+          </div>
+
           <div className="space-y-2">
             {household.members.map((member) => (
               <div
                 key={member.id}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 p-3 rounded-xl bg-light-surface dark:bg-dark-surface"
+                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl bg-light-surface dark:bg-dark-surface"
               >
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-light-text-primary dark:text-dark-text-primary truncate">
                     {member.name || member.email}
+                    {member.isCurrentUser && (
+                      <span className="text-xs text-light-accent dark:text-dark-accent ml-2">({t('family.you')})</span>
+                    )}
                   </p>
                   <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
                     {member.role === 'owner' ? t('family.owner') : t('family.member')}
+                    {member.salaryDay && ` • ${t('family.paidOnDay', { day: member.salaryDay })}`}
                   </p>
                 </div>
-                {member.role === 'owner' && (
-                  <span className="text-xs px-2 py-1 rounded-full bg-light-accent/10 dark:bg-dark-accent/10 text-light-accent dark:text-dark-accent whitespace-nowrap">
-                    {t('family.owner')}
-                  </span>
-                )}
+                <div className="text-right">
+                  {member.monthlySalary ? (
+                    <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+                      {formatCurrency(member.monthlySalary, { locale: localeString, symbol: currencySymbol })}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+                      {t('family.noSalarySet')}
+                    </p>
+                  )}
+                </div>
               </div>
             ))}
           </div>
