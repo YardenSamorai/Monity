@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -98,6 +99,9 @@ export async function PUT(request, { params }) {
       },
     })
 
+    // Invalidate dashboard cache
+    revalidateTag('dashboard')
+
     return NextResponse.json({ recurringTransaction })
   } catch (error) {
     console.error('Error updating recurring transaction:', error)
@@ -163,6 +167,9 @@ export async function DELETE(request, { params }) {
     await prisma.recurringTransaction.delete({
       where: { id },
     })
+
+    // Invalidate dashboard cache
+    revalidateTag('dashboard')
 
     return NextResponse.json({ 
       success: true,
