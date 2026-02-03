@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyRecurringIncomeChange, notifyDashboardUpdate } from '@/lib/pusher'
 
 // GET /api/recurring-income - List recurring incomes
 export async function GET(request) {
@@ -136,6 +138,12 @@ export async function POST(request) {
         // Don't fail the whole request if transaction creation fails
       }
     }
+
+    // Revalidate cache and notify
+    revalidateTag('recurring-income')
+    revalidateTag('dashboard')
+    notifyRecurringIncomeChange(user.id, 'created', recurringIncome).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_created' }).catch(() => {})
 
     return NextResponse.json({ recurringIncome }, { status: 201 })
   } catch (error) {

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createCategorySchema } from '@/lib/validations'
+import { notifyCategoryChange } from '@/lib/pusher'
 
 // GET /api/categories - List categories
 export async function GET(request) {
@@ -62,6 +64,10 @@ export async function POST(request) {
         parentId: validated.parentId,
       },
     })
+    
+    // Revalidate cache and notify
+    revalidateTag('categories')
+    notifyCategoryChange(user.id, 'created', category).catch(() => {})
     
     return NextResponse.json({ category }, { status: 201 })
   } catch (error) {

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
 import { sendFamilyInvitationEmail, isEmailConfigured } from '@/lib/email'
+import { notifyHouseholdEvent, EVENTS } from '@/lib/pusher'
 
 // POST /api/households/invite - Invite user to household
 export async function POST(request) {
@@ -144,6 +146,13 @@ export async function POST(request) {
       } else {
         console.log('Email not configured - skipping email send')
       }
+
+      // Notify household members about the invite
+      revalidateTag('household')
+      notifyHouseholdEvent(member.household.id, EVENTS.INVITE_SENT, {
+        invitation,
+        invitedBy: user.name || user.email,
+      }).catch(() => {})
 
       return NextResponse.json({
         invitation: {

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyHouseholdEvent, EVENTS } from '@/lib/pusher'
 
 // POST /api/households/accept - Accept household invitation
 export async function POST(request) {
@@ -125,6 +127,13 @@ export async function POST(request) {
         },
       })
 
+      // Notify household members about the new member
+      revalidateTag('household')
+      notifyHouseholdEvent(household.id, EVENTS.MEMBER_JOINED, {
+        memberName: user.name || user.email,
+        memberId: user.id,
+      }).catch(() => {})
+
       return NextResponse.json({
         household: {
           ...updatedHousehold,
@@ -213,6 +222,17 @@ export async function POST(request) {
         },
       },
     })
+
+    // Notify household members about the new member
+    revalidateTag('household')
+    notifyHouseholdEvent(invitation.household.id, EVENTS.MEMBER_JOINED, {
+      memberName: user.name || user.email,
+      memberId: user.id,
+    }).catch(() => {})
+    notifyHouseholdEvent(invitation.household.id, EVENTS.INVITE_ACCEPTED, {
+      memberName: user.name || user.email,
+      memberId: user.id,
+    }).catch(() => {})
 
     return NextResponse.json({
       household: {

@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createAccountSchema } from '@/lib/validations'
+import { notifyAccountChange } from '@/lib/pusher'
 
 // PUT /api/accounts/[id] - Update account
 export async function PUT(request, { params }) {
@@ -35,6 +37,11 @@ export async function PUT(request, { params }) {
         isActive: validated.isActive !== undefined ? validated.isActive : account.isActive,
       },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('accounts')
+    revalidateTag('dashboard')
+    notifyAccountChange(user.id, 'updated', updated).catch(() => {})
 
     return NextResponse.json({ account: updated })
   } catch (error) {
@@ -105,6 +112,11 @@ export async function DELETE(request, { params }) {
     await prisma.account.delete({
       where: { id },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('accounts')
+    revalidateTag('dashboard')
+    notifyAccountChange(user.id, 'deleted', { id }).catch(() => {})
 
     return NextResponse.json({ 
       success: true,

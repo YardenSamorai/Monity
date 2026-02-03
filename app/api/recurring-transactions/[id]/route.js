@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyRecurringTransactionChange, notifyDashboardUpdate } from '@/lib/pusher'
 
 // PUT /api/recurring-transactions/[id] - Update recurring transaction
 export async function PUT(request, { params }) {
@@ -99,8 +100,11 @@ export async function PUT(request, { params }) {
       },
     })
 
-    // Invalidate dashboard cache
+    // Invalidate dashboard cache and notify
     revalidateTag('dashboard')
+    revalidateTag('recurring-transactions')
+    notifyRecurringTransactionChange(user.id, 'updated', recurringTransaction).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_transaction_updated' }).catch(() => {})
 
     return NextResponse.json({ recurringTransaction })
   } catch (error) {
@@ -168,8 +172,12 @@ export async function DELETE(request, { params }) {
       where: { id },
     })
 
-    // Invalidate dashboard cache
+    // Invalidate dashboard cache and notify
     revalidateTag('dashboard')
+    revalidateTag('recurring-transactions')
+    revalidateTag('transactions')
+    notifyRecurringTransactionChange(user.id, 'deleted', { id }).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_transaction_deleted' }).catch(() => {})
 
     return NextResponse.json({ 
       success: true,

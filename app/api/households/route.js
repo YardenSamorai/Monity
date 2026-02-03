@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { randomBytes } from 'crypto'
+import { notifyDashboardUpdate } from '@/lib/pusher'
 
 // GET /api/households - Get user's household
 export async function GET(request) {
@@ -164,6 +166,10 @@ export async function POST(request) {
         },
       },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('household')
+    notifyDashboardUpdate(user.id, { action: 'household_created' }).catch(() => {})
 
     return NextResponse.json({
       household: {

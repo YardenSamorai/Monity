@@ -145,8 +145,9 @@ export async function POST(request, { params }) {
       },
     })
 
-    // Invalidate dashboard cache
+    // Invalidate cache
     revalidateTag('dashboard')
+    revalidateTag('credit-cards')
     
     // Trigger real-time updates (non-blocking)
     notifyDashboardUpdate(user.id, { action: 'credit_card_transaction' }).catch(() => {})

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyRecurringTransactionChange, notifyDashboardUpdate } from '@/lib/pusher'
 
 // GET /api/recurring-transactions - List recurring transactions
 export async function GET(request) {
@@ -209,6 +211,12 @@ export async function POST(request) {
     } else {
       console.log(`Skipping transaction creation for recurring ${type}: shouldCreateNow=${shouldCreateNow}, endDate=${endDateObj}`)
     }
+
+    // Revalidate cache and notify
+    revalidateTag('recurring-transactions')
+    revalidateTag('dashboard')
+    notifyRecurringTransactionChange(user.id, 'created', recurringTransaction).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_transaction_created' }).catch(() => {})
 
     return NextResponse.json({ recurringTransaction }, { status: 201 })
   } catch (error) {

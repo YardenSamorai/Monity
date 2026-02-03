@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyRecurringIncomeChange, notifyDashboardUpdate } from '@/lib/pusher'
 
 // PUT /api/recurring-income/[id] - Update recurring income
 export async function PUT(request, { params }) {
@@ -82,6 +84,12 @@ export async function PUT(request, { params }) {
       },
     })
 
+    // Revalidate cache and notify
+    revalidateTag('recurring-income')
+    revalidateTag('dashboard')
+    notifyRecurringIncomeChange(user.id, 'updated', recurringIncome).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_updated' }).catch(() => {})
+
     return NextResponse.json({ recurringIncome })
   } catch (error) {
     console.error('Error updating recurring income:', error)
@@ -124,6 +132,12 @@ export async function PATCH(request, { params }) {
         category: true,
       },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('recurring-income')
+    revalidateTag('dashboard')
+    notifyRecurringIncomeChange(user.id, 'updated', recurringIncome).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_toggled' }).catch(() => {})
 
     return NextResponse.json({ recurringIncome })
   } catch (error) {
@@ -186,6 +200,13 @@ export async function DELETE(request, { params }) {
     await prisma.recurringIncome.delete({
       where: { id },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('recurring-income')
+    revalidateTag('dashboard')
+    revalidateTag('transactions')
+    notifyRecurringIncomeChange(user.id, 'deleted', { id }).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_deleted' }).catch(() => {})
 
     return NextResponse.json({ 
       success: true,

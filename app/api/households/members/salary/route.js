@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyHouseholdEvent, EVENTS } from '@/lib/pusher'
 
 // PUT /api/households/members/salary - Update own salary
 export async function PUT(request) {
@@ -44,6 +46,13 @@ export async function PUT(request) {
         },
       },
     })
+
+    // Revalidate cache and notify household members
+    revalidateTag('household')
+    notifyHouseholdEvent(member.household.id, EVENTS.MEMBER_UPDATED, {
+      memberName: user.name || user.email,
+      memberId: user.id,
+    }).catch(() => {})
 
     return NextResponse.json({
       member: {

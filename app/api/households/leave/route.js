@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyHouseholdEvent, EVENTS } from '@/lib/pusher'
 
 // DELETE /api/households/leave - Leave household
 export async function DELETE(request) {
@@ -51,7 +53,16 @@ export async function DELETE(request) {
       await prisma.householdMember.delete({
         where: { id: member.id },
       })
+      
+      // Notify remaining household members
+      notifyHouseholdEvent(member.household.id, EVENTS.MEMBER_LEFT, {
+        memberName: user.name || user.email,
+        memberId: user.id,
+      }).catch(() => {})
     }
+
+    // Revalidate cache
+    revalidateTag('household')
 
     return NextResponse.json({ success: true })
   } catch (error) {

@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { notifyGoalChange } from '@/lib/pusher'
 
 const updateGoalSchema = z.object({
   name: z.string().min(1).optional(),
@@ -60,7 +61,11 @@ export async function PUT(request, { params }) {
       data: updateData,
     })
 
+    // Revalidate cache and notify
     revalidateTag('goals')
+    revalidateTag('dashboard')
+    notifyGoalChange(user.id, 'updated', updated).catch(() => {})
+    
     return NextResponse.json({ goal: updated })
   } catch (error) {
     if (error.name === 'ZodError') {
@@ -106,7 +111,11 @@ export async function DELETE(request, { params }) {
       where: { id },
     })
 
+    // Revalidate cache and notify
     revalidateTag('goals')
+    revalidateTag('dashboard')
+    notifyGoalChange(user.id, 'deleted', { id }).catch(() => {})
+    
     return NextResponse.json({ success: true, message: 'Goal deleted successfully' })
   } catch (error) {
     console.error('Error deleting goal:', error)

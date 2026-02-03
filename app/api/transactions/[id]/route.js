@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { updateTransactionSchema } from '@/lib/validations'
+import { notifyTransactionChange, notifyDashboardUpdate } from '@/lib/pusher'
 
 // GET /api/transactions/[id] - Get single transaction
 export async function GET(request, { params }) {
@@ -163,8 +164,11 @@ export async function PATCH(request, { params }) {
       },
     })
     
-    // Invalidate dashboard cache
+    // Invalidate cache and notify
     revalidateTag('dashboard')
+    revalidateTag('transactions')
+    notifyTransactionChange(user.id, 'updated', transaction, householdId).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'transaction_updated' }).catch(() => {})
     
     return NextResponse.json({ transaction })
   } catch (error) {
@@ -273,8 +277,11 @@ export async function DELETE(request, { params }) {
       },
     })
     
-    // Invalidate dashboard cache
+    // Invalidate cache and notify
     revalidateTag('dashboard')
+    revalidateTag('transactions')
+    notifyTransactionChange(user.id, 'deleted', { id }, transaction.householdId).catch(() => {})
+    notifyDashboardUpdate(user.id, { action: 'transaction_deleted' }).catch(() => {})
     
     return NextResponse.json({ success: true })
   } catch (error) {

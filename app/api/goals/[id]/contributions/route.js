@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { notifyGoalChange } from '@/lib/pusher'
 
 const createContributionSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
@@ -43,7 +45,7 @@ export async function POST(request, { params }) {
     })
 
     // Update goal's current amount
-    await prisma.savingsGoal.update({
+    const updatedGoal = await prisma.savingsGoal.update({
       where: { id },
       data: {
         currentAmount: {
@@ -51,6 +53,14 @@ export async function POST(request, { params }) {
         },
       },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('goals')
+    revalidateTag('dashboard')
+    notifyGoalChange(user.id, 'contribution', { 
+      ...updatedGoal, 
+      amount: validated.amount 
+    }).catch(() => {})
 
     return NextResponse.json({ contribution })
   } catch (error) {

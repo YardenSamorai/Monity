@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { notifyDashboardUpdate, EVENTS, triggerEvent, CHANNELS } from '@/lib/pusher'
 
 // GET /api/notifications - Get notifications for user
 export async function GET(request) {
@@ -63,6 +65,12 @@ export async function POST(request) {
         data: { isRead: true, readAt: new Date() },
       })
     }
+
+    // Revalidate cache and notify
+    revalidateTag('notifications')
+    triggerEvent(CHANNELS.dashboard(user.id), EVENTS.NOTIFICATION_READ, { 
+      timestamp: new Date().toISOString() 
+    }).catch(() => {})
 
     return NextResponse.json({ success: true })
   } catch (error) {

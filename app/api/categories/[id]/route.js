@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createCategorySchema } from '@/lib/validations'
+import { notifyCategoryChange } from '@/lib/pusher'
 
 // PUT /api/categories/[id] - Update category
 export async function PUT(request, { params }) {
@@ -40,6 +42,11 @@ export async function PUT(request, { params }) {
         parentId: validated.parentId,
       },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('categories')
+    revalidateTag('dashboard')
+    notifyCategoryChange(user.id, 'updated', updated).catch(() => {})
 
     return NextResponse.json({ category: updated })
   } catch (error) {
@@ -136,6 +143,11 @@ export async function DELETE(request, { params }) {
       }
       throw deleteError
     }
+
+    // Revalidate cache and notify
+    revalidateTag('categories')
+    revalidateTag('dashboard')
+    notifyCategoryChange(user.id, 'deleted', { id }).catch(() => {})
 
     return NextResponse.json({ 
       success: true,

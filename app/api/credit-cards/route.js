@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { notifyCreditCardChange } from '@/lib/pusher'
 
 const createCreditCardSchema = z.object({
   name: z.string().min(1).max(100),
@@ -145,6 +147,11 @@ export async function POST(request) {
         },
       },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('credit-cards')
+    revalidateTag('dashboard')
+    notifyCreditCardChange(user.id, 'created', creditCard).catch(() => {})
 
     return NextResponse.json({ creditCard }, { status: 201 })
   } catch (error) {

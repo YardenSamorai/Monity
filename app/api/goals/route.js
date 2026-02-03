@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { notifyGoalChange } from '@/lib/pusher'
 
 // GET - Fetch all goals for the current user
 export async function GET(request) {
@@ -89,7 +90,11 @@ export async function POST(request) {
       })
     }
 
+    // Revalidate cache and notify
     revalidateTag('goals')
+    revalidateTag('dashboard')
+    notifyGoalChange(user.id, 'created', goal).catch(() => {})
+    
     return NextResponse.json({ goal })
   } catch (error) {
     if (error.name === 'ZodError') {

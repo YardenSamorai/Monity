@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createBudgetSchema } from '@/lib/validations'
+import { notifyBudgetChange } from '@/lib/pusher'
 
 // GET /api/budgets - List budgets
 export async function GET(request) {
@@ -72,6 +74,11 @@ export async function POST(request) {
         include: { category: true },
       })
       
+      // Revalidate cache and notify
+      revalidateTag('budgets')
+      revalidateTag('dashboard')
+      notifyBudgetChange(user.id, 'updated', budget).catch(() => {})
+      
       return NextResponse.json({ budget })
     }
     
@@ -87,6 +94,11 @@ export async function POST(request) {
         category: true,
       },
     })
+    
+    // Revalidate cache and notify
+    revalidateTag('budgets')
+    revalidateTag('dashboard')
+    notifyBudgetChange(user.id, 'created', budget).catch(() => {})
     
     return NextResponse.json({ budget }, { status: 201 })
   } catch (error) {

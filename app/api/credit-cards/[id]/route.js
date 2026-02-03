@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
+import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { notifyCreditCardChange } from '@/lib/pusher'
 
 const updateCreditCardSchema = z.object({
   name: z.string().min(1).max(100).optional(),
@@ -162,6 +164,11 @@ export async function PATCH(request, { params }) {
       },
     })
 
+    // Revalidate cache and notify
+    revalidateTag('credit-cards')
+    revalidateTag('dashboard')
+    notifyCreditCardChange(user.id, 'updated', creditCard).catch(() => {})
+
     return NextResponse.json({ creditCard })
   } catch (error) {
     console.error('Error updating credit card:', error)
@@ -229,6 +236,11 @@ export async function DELETE(request, { params }) {
     await prisma.creditCard.delete({
       where: { id },
     })
+
+    // Revalidate cache and notify
+    revalidateTag('credit-cards')
+    revalidateTag('dashboard')
+    notifyCreditCardChange(user.id, 'deleted', { id }).catch(() => {})
 
     return NextResponse.json({ success: true })
   } catch (error) {

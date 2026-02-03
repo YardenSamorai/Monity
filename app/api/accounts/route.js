@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createAccountSchema } from '@/lib/validations'
+import { notifyAccountChange } from '@/lib/pusher'
 
 // GET /api/accounts - List accounts
 export async function GET(request) {
@@ -59,9 +60,11 @@ export async function POST(request) {
       },
     })
     
-    // Revalidate cache
+    // Revalidate cache and notify
     revalidateTag('dashboard')
     revalidateTag('transactions')
+    revalidateTag('accounts')
+    notifyAccountChange(user.id, 'created', account).catch(() => {})
     
     return NextResponse.json({ account }, { status: 201 })
   } catch (error) {
