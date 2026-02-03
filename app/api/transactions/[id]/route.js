@@ -60,7 +60,10 @@ export async function PATCH(request, { params }) {
     }
     
     const body = await request.json()
+    console.log('[PATCH Transaction] Body received:', JSON.stringify(body, null, 2))
+    
     const validated = updateTransactionSchema.parse({ ...body, id })
+    console.log('[PATCH Transaction] Validated:', JSON.stringify(validated, null, 2))
     
     // Revert old balance change
     const oldBalanceChange = existing.type === 'income' 
@@ -133,15 +136,16 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ transaction })
   } catch (error) {
     if (error.name === 'ZodError') {
+      console.error('[PATCH Transaction] Validation error:', JSON.stringify(error.errors, null, 2))
       return NextResponse.json(
         { error: 'Validation error', details: error.errors },
         { status: 400 }
       )
     }
     
-    console.error('Error updating transaction:', error)
+    console.error('[PATCH Transaction] Error:', error.message, error.stack)
     return NextResponse.json(
-      { error: 'Failed to update transaction' },
+      { error: 'Failed to update transaction', message: error.message },
       { status: 500 }
     )
   }
