@@ -346,7 +346,7 @@ export async function POST(request) {
     revalidateTag('transactions')
     
     // Trigger real-time updates (non-blocking)
-    notifyDashboardUpdate(user.id, { action: 'transaction_created' }).catch(() => {})
+    notifyDashboardUpdate(user.clerkUserId, { action: 'transaction_created' }).catch((err) => console.error('Pusher error:', err))
     
     // If shared transaction, notify household members
     if (householdId) {

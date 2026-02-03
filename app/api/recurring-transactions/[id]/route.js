@@ -103,8 +103,8 @@ export async function PUT(request, { params }) {
     // Invalidate dashboard cache and notify
     revalidateTag('dashboard')
     revalidateTag('recurring-transactions')
-    notifyRecurringTransactionChange(user.id, 'updated', recurringTransaction).catch(() => {})
-    notifyDashboardUpdate(user.id, { action: 'recurring_transaction_updated' }).catch(() => {})
+    notifyRecurringTransactionChange(user.clerkUserId, 'updated', recurringTransaction).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_transaction_updated' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ recurringTransaction })
   } catch (error) {
@@ -176,8 +176,8 @@ export async function DELETE(request, { params }) {
     revalidateTag('dashboard')
     revalidateTag('recurring-transactions')
     revalidateTag('transactions')
-    notifyRecurringTransactionChange(user.id, 'deleted', { id }).catch(() => {})
-    notifyDashboardUpdate(user.id, { action: 'recurring_transaction_deleted' }).catch(() => {})
+    notifyRecurringTransactionChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_transaction_deleted' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ 
       success: true,

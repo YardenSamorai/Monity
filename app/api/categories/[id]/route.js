@@ -46,7 +46,7 @@ export async function PUT(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('categories')
     revalidateTag('dashboard')
-    notifyCategoryChange(user.id, 'updated', updated).catch(() => {})
+    notifyCategoryChange(user.clerkUserId, 'updated', updated).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ category: updated })
   } catch (error) {
@@ -147,7 +147,7 @@ export async function DELETE(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('categories')
     revalidateTag('dashboard')
-    notifyCategoryChange(user.id, 'deleted', { id }).catch(() => {})
+    notifyCategoryChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ 
       success: true,

@@ -49,7 +49,7 @@ export async function PUT(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('budgets')
     revalidateTag('dashboard')
-    notifyBudgetChange(user.id, 'updated', updated).catch(() => {})
+    notifyBudgetChange(user.clerkUserId, 'updated', updated).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ budget: updated })
   } catch (error) {
@@ -99,7 +99,7 @@ export async function DELETE(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('budgets')
     revalidateTag('dashboard')
-    notifyBudgetChange(user.id, 'deleted', { id }).catch(() => {})
+    notifyBudgetChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ 
       success: true,

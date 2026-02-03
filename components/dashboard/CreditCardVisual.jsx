@@ -31,9 +31,13 @@ export function CreditCardVisual() {
 
   // Fetch credit cards data
   const fetchCards = useCallback(() => {
+    console.log('[CreditCardVisual] Fetching credit cards...')
     fetch('/api/credit-cards')
       .then(res => res.json())
-      .then(data => setCards(data.creditCards || []))
+      .then(data => {
+        console.log('[CreditCardVisual] Got cards:', data.creditCards?.length, 'pending:', data.creditCards?.[0]?.pendingAmount)
+        setCards(data.creditCards || [])
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [])
@@ -45,28 +49,36 @@ export function CreditCardVisual() {
 
   // Subscribe to real-time updates for credit cards
   useEffect(() => {
+    console.log('[CreditCardVisual] Setting up realtime subscriptions')
+    
     // Listen to credit card transaction events
-    const unsubCCTransaction = subscribe(EVENTS.CREDIT_CARD_TRANSACTION, () => {
+    const unsubCCTransaction = subscribe(EVENTS.CREDIT_CARD_TRANSACTION, (data) => {
+      console.log('[CreditCardVisual] Received CREDIT_CARD_TRANSACTION event:', data)
       fetchCards()
     })
     
     // Listen to credit card CRUD events
-    const unsubCCCreated = subscribe(EVENTS.CREDIT_CARD_CREATED, () => {
+    const unsubCCCreated = subscribe(EVENTS.CREDIT_CARD_CREATED, (data) => {
+      console.log('[CreditCardVisual] Received CREDIT_CARD_CREATED event:', data)
       fetchCards()
     })
-    const unsubCCUpdated = subscribe(EVENTS.CREDIT_CARD_UPDATED, () => {
+    const unsubCCUpdated = subscribe(EVENTS.CREDIT_CARD_UPDATED, (data) => {
+      console.log('[CreditCardVisual] Received CREDIT_CARD_UPDATED event:', data)
       fetchCards()
     })
-    const unsubCCDeleted = subscribe(EVENTS.CREDIT_CARD_DELETED, () => {
+    const unsubCCDeleted = subscribe(EVENTS.CREDIT_CARD_DELETED, (data) => {
+      console.log('[CreditCardVisual] Received CREDIT_CARD_DELETED event:', data)
       fetchCards()
     })
     
     // Listen to dashboard update (catch-all)
-    const unsubDashboard = subscribe(EVENTS.DASHBOARD_UPDATE, () => {
+    const unsubDashboard = subscribe(EVENTS.DASHBOARD_UPDATE, (data) => {
+      console.log('[CreditCardVisual] Received DASHBOARD_UPDATE event:', data)
       fetchCards()
     })
 
     return () => {
+      console.log('[CreditCardVisual] Cleaning up subscriptions')
       unsubCCTransaction()
       unsubCCCreated()
       unsubCCUpdated()

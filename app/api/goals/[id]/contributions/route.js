@@ -57,10 +57,10 @@ export async function POST(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('goals')
     revalidateTag('dashboard')
-    notifyGoalChange(user.id, 'contribution', { 
+    notifyGoalChange(user.clerkUserId, 'contribution', { 
       ...updatedGoal, 
       amount: validated.amount 
-    }).catch(() => {})
+    }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ contribution })
   } catch (error) {

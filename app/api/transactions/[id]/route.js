@@ -167,8 +167,8 @@ export async function PATCH(request, { params }) {
     // Invalidate cache and notify
     revalidateTag('dashboard')
     revalidateTag('transactions')
-    notifyTransactionChange(user.id, 'updated', transaction, householdId).catch(() => {})
-    notifyDashboardUpdate(user.id, { action: 'transaction_updated' }).catch(() => {})
+    notifyTransactionChange(user.clerkUserId, 'updated', transaction, householdId).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.clerkUserId, { action: 'transaction_updated' }).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ transaction })
   } catch (error) {
@@ -280,8 +280,8 @@ export async function DELETE(request, { params }) {
     // Invalidate cache and notify
     revalidateTag('dashboard')
     revalidateTag('transactions')
-    notifyTransactionChange(user.id, 'deleted', { id }, transaction.householdId).catch(() => {})
-    notifyDashboardUpdate(user.id, { action: 'transaction_deleted' }).catch(() => {})
+    notifyTransactionChange(user.clerkUserId, 'deleted', { id }, transaction.householdId).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.clerkUserId, { action: 'transaction_deleted' }).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ success: true })
   } catch (error) {

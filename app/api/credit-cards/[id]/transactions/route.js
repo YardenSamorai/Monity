@@ -150,8 +150,15 @@ export async function POST(request, { params }) {
     revalidateTag('credit-cards')
     
     // Trigger real-time updates (non-blocking)
-    notifyDashboardUpdate(user.id, { action: 'credit_card_transaction' }).catch(() => {})
-    notifyCreditCardTransaction(user.id, transaction, card.name).catch(() => {})
+    // Use clerkUserId for Pusher channel (must match client-side user.id from Clerk)
+    const pusherUserId = user.clerkUserId
+    console.log('[API] Triggering Pusher events for clerkUserId:', pusherUserId)
+    notifyDashboardUpdate(pusherUserId, { action: 'credit_card_transaction' })
+      .then(() => console.log('[API] notifyDashboardUpdate sent successfully'))
+      .catch((err) => console.error('[API] notifyDashboardUpdate failed:', err))
+    notifyCreditCardTransaction(pusherUserId, transaction, card.name)
+      .then(() => console.log('[API] notifyCreditCardTransaction sent successfully'))
+      .catch((err) => console.error('[API] notifyCreditCardTransaction failed:', err))
 
     return NextResponse.json({ transaction }, { status: 201 })
   } catch (error) {

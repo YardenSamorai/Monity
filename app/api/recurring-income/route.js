@@ -142,8 +142,8 @@ export async function POST(request) {
     // Revalidate cache and notify
     revalidateTag('recurring-income')
     revalidateTag('dashboard')
-    notifyRecurringIncomeChange(user.id, 'created', recurringIncome).catch(() => {})
-    notifyDashboardUpdate(user.id, { action: 'recurring_income_created' }).catch(() => {})
+    notifyRecurringIncomeChange(user.clerkUserId, 'created', recurringIncome).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_income_created' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ recurringIncome }, { status: 201 })
   } catch (error) {

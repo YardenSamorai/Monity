@@ -64,7 +64,7 @@ export async function POST(request) {
     revalidateTag('dashboard')
     revalidateTag('transactions')
     revalidateTag('accounts')
-    notifyAccountChange(user.id, 'created', account).catch(() => {})
+    notifyAccountChange(user.clerkUserId, 'created', account).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ account }, { status: 201 })
   } catch (error) {

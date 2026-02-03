@@ -77,7 +77,7 @@ export async function POST(request) {
       // Revalidate cache and notify
       revalidateTag('budgets')
       revalidateTag('dashboard')
-      notifyBudgetChange(user.id, 'updated', budget).catch(() => {})
+      notifyBudgetChange(user.clerkUserId, 'updated', budget).catch((err) => console.error('Pusher error:', err))
       
       return NextResponse.json({ budget })
     }
@@ -98,7 +98,7 @@ export async function POST(request) {
     // Revalidate cache and notify
     revalidateTag('budgets')
     revalidateTag('dashboard')
-    notifyBudgetChange(user.id, 'created', budget).catch(() => {})
+    notifyBudgetChange(user.clerkUserId, 'created', budget).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ budget }, { status: 201 })
   } catch (error) {

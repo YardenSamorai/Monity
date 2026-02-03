@@ -167,7 +167,7 @@ export async function PATCH(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('credit-cards')
     revalidateTag('dashboard')
-    notifyCreditCardChange(user.id, 'updated', creditCard).catch(() => {})
+    notifyCreditCardChange(user.clerkUserId, 'updated', creditCard).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ creditCard })
   } catch (error) {
@@ -240,7 +240,7 @@ export async function DELETE(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('credit-cards')
     revalidateTag('dashboard')
-    notifyCreditCardChange(user.id, 'deleted', { id }).catch(() => {})
+    notifyCreditCardChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ success: true })
   } catch (error) {

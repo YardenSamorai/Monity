@@ -215,8 +215,8 @@ export async function POST(request) {
     // Revalidate cache and notify
     revalidateTag('recurring-transactions')
     revalidateTag('dashboard')
-    notifyRecurringTransactionChange(user.id, 'created', recurringTransaction).catch(() => {})
-    notifyDashboardUpdate(user.id, { action: 'recurring_transaction_created' }).catch(() => {})
+    notifyRecurringTransactionChange(user.clerkUserId, 'created', recurringTransaction).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_transaction_created' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ recurringTransaction }, { status: 201 })
   } catch (error) {

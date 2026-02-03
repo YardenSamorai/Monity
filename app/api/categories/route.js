@@ -67,7 +67,7 @@ export async function POST(request) {
     
     // Revalidate cache and notify
     revalidateTag('categories')
-    notifyCategoryChange(user.id, 'created', category).catch(() => {})
+    notifyCategoryChange(user.clerkUserId, 'created', category).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ category }, { status: 201 })
   } catch (error) {
