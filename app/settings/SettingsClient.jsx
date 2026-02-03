@@ -675,7 +675,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                 {accounts.map((account) => (
                   <div
                     key={account.id}
-                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border border-light-border-light dark:border-dark-border-light rounded-xl hover:border-light-border dark:hover:border-dark-border transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-3 border border-[rgb(var(--border-primary))] rounded-xl bg-[rgb(var(--bg-tertiary))] hover:border-[rgb(var(--text-tertiary))] transition-colors"
                   >
                     {/* Account Info */}
                     <div className="flex-1 min-w-0">
@@ -756,7 +756,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
             </div>
 
             {/* Info message */}
-            <div className="mb-4 p-3 rounded-xl bg-light-surface dark:bg-dark-surface border border-light-border-light dark:border-dark-border-light">
+            <div className="mb-4 p-3 rounded-xl bg-[rgb(var(--bg-tertiary))] border border-[rgb(var(--border-primary))]">
               <p className="text-xs lg:text-sm text-light-text-secondary dark:text-dark-text-secondary">
                 {t('settings.categoriesInfo')}
               </p>
@@ -844,7 +844,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                 {recurringIncomes.map((income) => (
                   <div
                     key={income.id}
-                    className="p-3 border border-light-border-light dark:border-dark-border-light rounded-xl"
+                    className="p-3 border border-[rgb(var(--border-primary))] rounded-xl bg-[rgb(var(--bg-tertiary))]"
                   >
                     {/* Info Row */}
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -872,7 +872,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                     </div>
                     
                     {/* Actions Row */}
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-light-border-light dark:border-dark-border-light">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-[rgb(var(--border-secondary))]">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -955,7 +955,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                 {recurringTransactions.filter(t => t.type === 'expense').map((transaction) => (
                   <div
                     key={transaction.id}
-                    className="p-3 border border-light-border-light dark:border-dark-border-light rounded-xl"
+                    className="p-3 border border-[rgb(var(--border-primary))] rounded-xl bg-[rgb(var(--bg-tertiary))]"
                   >
                     {/* Info Row */}
                     <div className="flex items-start gap-2 mb-2">
@@ -989,7 +989,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                     </div>
                     
                     {/* Actions Row */}
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-light-border-light dark:border-dark-border-light">
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-[rgb(var(--border-secondary))]">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1069,7 +1069,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                   return (
                     <div
                       key={token.id}
-                      className="p-4 border border-light-border-light dark:border-dark-border-light rounded-xl bg-light-surface dark:bg-dark-surface"
+                      className="p-4 border border-[rgb(var(--border-primary))] rounded-xl bg-[rgb(var(--bg-tertiary))]"
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                         <div className="flex-1 min-w-0">
@@ -1084,7 +1084,7 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                           
                           {/* Token Display */}
                           <div className="mb-2">
-                            <div className="flex items-center gap-2 p-3 rounded-lg bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border">
+                            <div className="flex items-center gap-2 p-3 rounded-lg bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]">
                               <code className="flex-1 text-sm font-mono text-light-text-primary dark:text-dark-text-primary break-all">
                                 {displayToken}
                               </code>
