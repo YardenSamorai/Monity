@@ -32,6 +32,7 @@ const getDashboardData = unstable_cache(
       categories,
       budgets,
       goals,
+      creditCardTransactions,
     ] = await Promise.all([
       prisma.account.findMany({
         where: { userId, isActive: true },
@@ -155,6 +156,23 @@ const getDashboardData = unstable_cache(
           priority: true,
         },
       }),
+      // Credit card transactions for current month
+      prisma.creditCardTransaction.findMany({
+        where: {
+          userId,
+          date: { gte: start, lte: end },
+        },
+        select: {
+          id: true,
+          amount: true,
+          description: true,
+          date: true,
+          status: true,
+          categoryId: true,
+          creditCard: { select: { id: true, name: true, lastFourDigits: true } },
+          category: { select: { id: true, name: true, color: true, icon: true } },
+        },
+      }),
     ])
     
     return {
@@ -167,6 +185,7 @@ const getDashboardData = unstable_cache(
       categories,
       budgets,
       goals,
+      creditCardTransactions,
       fetchedAt: now.toISOString(),
     }
   },
@@ -196,6 +215,7 @@ export default async function DashboardPage() {
     categories,
     budgets,
     goals,
+    creditCardTransactions,
   } = await getDashboardData(user.id)
   
   // Check if user needs onboarding
@@ -205,6 +225,23 @@ export default async function DashboardPage() {
   
   // Process data
   const monthlyExpenses = monthlyTransactions.filter(t => t.type === 'expense')
+  
+  // Transform credit card transactions to look like regular expenses for calculations
+  const ccExpenses = (creditCardTransactions || []).map(cc => ({
+    id: cc.id,
+    type: 'expense',
+    amount: cc.amount,
+    description: cc.description,
+    date: cc.date,
+    categoryId: cc.categoryId,
+    category: cc.category,
+    isCreditCard: true,
+    creditCardStatus: cc.status,
+  }))
+  
+  // Combine regular expenses with credit card expenses
+  const allMonthlyExpenses = [...monthlyExpenses, ...ccExpenses]
+  
   const actualRecurringExpenses = monthlyExpenses.filter(t => t.recurringTransactionId)
   const recurringExpenseDefinitions = recurringTransactions.filter(rt => rt.type === 'expense')
   
@@ -237,7 +274,7 @@ export default async function DashboardPage() {
     }, 0)
   
   const totalIncomeWithRecurring = totalIncome + recurringIncomeAmount + recurringTransactionIncomeAmount
-  const totalExpenses = monthlyExpenses.reduce((sum, t) => sum + Number(t.amount), 0)
+  const totalExpenses = allMonthlyExpenses.reduce((sum, t) => sum + Number(t.amount), 0)
   
   const recurringExpenseIdsWithTransactions = new Set(
     actualRecurringExpenses.map(e => e.recurringTransactionId).filter(Boolean)
@@ -257,9 +294,9 @@ export default async function DashboardPage() {
     .filter(t => t.type === 'expense')
     .reduce((sum, t) => sum + Number(t.amount), 0)
   
-  // Calculate spending by category
+  // Calculate spending by category (including credit card transactions)
   const spendingByCategory = {}
-  monthlyExpenses.forEach(t => {
+  allMonthlyExpenses.forEach(t => {
     const catId = t.categoryId || 'uncategorized'
     const catName = t.category?.name || 'Uncategorized'
     const catIcon = t.category?.icon || '📦'
@@ -277,9 +314,9 @@ export default async function DashboardPage() {
     .sort((a, b) => b.amount - a.amount)
     .slice(0, 5)
   
-  // Calculate budget alerts
+  // Calculate budget alerts (including credit card transactions)
   const budgetAlerts = budgets.map(budget => {
-    const spent = monthlyExpenses
+    const spent = allMonthlyExpenses
       .filter(t => t.categoryId === budget.categoryId)
       .reduce((sum, t) => sum + Number(t.amount), 0)
     
@@ -301,9 +338,9 @@ export default async function DashboardPage() {
     }
   }).filter(b => b.isOver || b.isNearLimit)
   
-  // Find biggest expense
-  const biggestExpense = monthlyExpenses.length > 0
-    ? monthlyExpenses.reduce((max, t) => Number(t.amount) > Number(max.amount) ? t : max, monthlyExpenses[0])
+  // Find biggest expense (including credit card transactions)
+  const biggestExpense = allMonthlyExpenses.length > 0
+    ? allMonthlyExpenses.reduce((max, t) => Number(t.amount) > Number(max.amount) ? t : max, allMonthlyExpenses[0])
     : null
 
   return (
@@ -321,7 +358,7 @@ export default async function DashboardPage() {
         actualIncome={totalIncome}
         actualExpenses={totalExpenses}
         categories={serializePrismaData(categories)}
-        monthlyExpenses={serializePrismaData(monthlyExpenses)}
+        monthlyExpenses={serializePrismaData(allMonthlyExpenses)}
         recurringExpenses={serializePrismaData(actualRecurringExpenses)}
         recurringExpenseDefinitions={serializePrismaData(recurringExpenseDefinitions)}
         // Insights data
