@@ -27,6 +27,7 @@ import {
 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import Link from 'next/link'
+import { CreditCardVisual } from '@/components/dashboard/CreditCardVisual'
 
 export function DashboardClient({ 
   totalBalance, 
@@ -574,6 +575,9 @@ export function DashboardClient({
               QUICK ACTIONS SIDEBAR - 4 cols on desktop
               ============================================ */}
           <aside className="col-span-12 lg:col-span-4 space-y-4">
+            {/* Credit Card Visual */}
+            <CreditCardVisual />
+
             {/* Goals Card */}
             {goals.length > 0 && (
               <div className="bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-xl overflow-hidden">
