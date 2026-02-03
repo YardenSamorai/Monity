@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { RecurringIncomeModal } from '@/components/forms/RecurringIncomeModal'
 import { ExpensesModal } from '@/components/ExpensesModal'
 import { AccountModal } from '@/components/forms/AccountModal'
 import { TransactionModal } from '@/components/forms/TransactionModal'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useDashboardRefresh } from '@/lib/realtime-context'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -67,10 +69,18 @@ export function DashboardClient({
   goals = [],
 }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
+  const router = useRouter()
   const [isRecurringIncomeModalOpen, setIsRecurringIncomeModalOpen] = useState(false)
   const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false)
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+
+  // Auto-refresh dashboard on real-time updates
+  const handleRealtimeUpdate = useCallback(() => {
+    router.refresh()
+  }, [router])
+  
+  useDashboardRefresh(handleRealtimeUpdate)
 
   const getAccountIcon = (type) => {
     const iconClass = "w-5 h-5"

@@ -3,6 +3,7 @@ import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
+import { notifyDashboardUpdate, notifyCreditCardTransaction } from '@/lib/pusher'
 
 const createTransactionSchema = z.object({
   amount: z.number().positive(),
@@ -146,6 +147,10 @@ export async function POST(request, { params }) {
 
     // Invalidate dashboard cache
     revalidateTag('dashboard')
+    
+    // Trigger real-time updates (non-blocking)
+    notifyDashboardUpdate(user.id, { action: 'credit_card_transaction' }).catch(() => {})
+    notifyCreditCardTransaction(user.id, transaction, card.name).catch(() => {})
 
     return NextResponse.json({ transaction }, { status: 201 })
   } catch (error) {

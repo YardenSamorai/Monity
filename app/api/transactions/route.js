@@ -4,6 +4,7 @@ import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { createTransactionSchema } from '@/lib/validations'
 import { suggestCategory } from '@/lib/ai-insights'
+import { notifyDashboardUpdate, notifyHouseholdTransaction } from '@/lib/pusher'
 
 // GET /api/transactions - List transactions
 export async function GET(request) {
@@ -343,6 +344,14 @@ export async function POST(request) {
     // Revalidate cache
     revalidateTag('dashboard')
     revalidateTag('transactions')
+    
+    // Trigger real-time updates (non-blocking)
+    notifyDashboardUpdate(user.id, { action: 'transaction_created' }).catch(() => {})
+    
+    // If shared transaction, notify household members
+    if (householdId) {
+      notifyHouseholdTransaction(householdId, transaction, user.name || 'Someone').catch(() => {})
+    }
     
     return NextResponse.json({ transaction }, { status: 201 })
   } catch (error) {

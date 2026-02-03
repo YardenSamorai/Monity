@@ -4,7 +4,8 @@ import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { UserButton } from '@clerk/nextjs'
+import { UserButton, useUser } from '@clerk/nextjs'
+import { RealtimeProvider, useRealtime, useDashboardRefresh } from '@/lib/realtime-context'
 import { 
   LayoutDashboard, 
   Receipt, 
@@ -79,6 +80,7 @@ export default function AppShell({ children }) {
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
   const [household, setHousehold] = useState(null)
+  const { user } = useUser()
   const { t, isRTL } = useI18n()
 
   // Fetch accounts, categories, and household for the transaction modal
@@ -145,8 +147,9 @@ export default function AppShell({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
-      {/* Desktop Sidebar */}
+    <RealtimeProvider userId={user?.id} householdId={household?.id}>
+      <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
+        {/* Desktop Sidebar */}
       <aside className={cn(
         "hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col",
         isRTL ? "lg:right-0 lg:border-l" : "lg:left-0 lg:border-r",
@@ -469,6 +472,7 @@ export default function AppShell({ children }) {
           router.refresh()
         }}
       />
-    </div>
+      </div>
+    </RealtimeProvider>
   )
 }
