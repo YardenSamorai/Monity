@@ -55,7 +55,7 @@ export function CreditCardVisual() {
             </h3>
           </div>
         </div>
-        <div className="aspect-[1.7/1] rounded-xl bg-[rgb(var(--bg-tertiary))] animate-pulse" />
+        <div className="aspect-[1.8/1] max-w-[280px] mx-auto rounded-xl bg-slate-200 dark:bg-slate-700 animate-pulse" />
       </Card>
     )
   }
@@ -74,9 +74,9 @@ export function CreditCardVisual() {
         </div>
         
         {/* Empty card skeleton */}
-        <div className="aspect-[1.7/1] rounded-xl border-2 border-dashed border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-tertiary))] flex flex-col items-center justify-center">
-          <CreditCardIcon className="w-8 h-8 text-[rgb(var(--text-tertiary))] mb-2" />
-          <p className="text-xs text-[rgb(var(--text-tertiary))] mb-2">
+        <div className="aspect-[1.8/1] max-w-[280px] mx-auto rounded-xl border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800 flex flex-col items-center justify-center">
+          <CreditCardIcon className="w-7 h-7 text-slate-400 dark:text-slate-500 mb-1.5" />
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
             {t('creditCards.emptyTitle')}
           </p>
           <Link href="/credit-cards">
@@ -122,66 +122,74 @@ export function CreditCardVisual() {
             <button
               onClick={handlePrev}
               className={cn(
-                "absolute top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-[rgb(var(--bg-secondary))]/90 border border-[rgb(var(--border-primary))] shadow-sm hover:bg-[rgb(var(--bg-tertiary))] transition-colors",
-                isRTL ? "right-1" : "left-1"
+                "absolute top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-600 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                isRTL ? "-right-1" : "-left-1"
               )}
             >
-              {isRTL ? <ChevronRight className="w-3.5 h-3.5 text-[rgb(var(--text-secondary))]" /> : <ChevronLeft className="w-3.5 h-3.5 text-[rgb(var(--text-secondary))]" />}
+              {isRTL ? <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" /> : <ChevronLeft className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />}
             </button>
             <button
               onClick={handleNext}
               className={cn(
-                "absolute top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-[rgb(var(--bg-secondary))]/90 border border-[rgb(var(--border-primary))] shadow-sm hover:bg-[rgb(var(--bg-tertiary))] transition-colors",
-                isRTL ? "left-1" : "right-1"
+                "absolute top-1/2 -translate-y-1/2 z-10 p-1 rounded-full bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-600 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors",
+                isRTL ? "-left-1" : "-right-1"
               )}
             >
-              {isRTL ? <ChevronLeft className="w-3.5 h-3.5 text-[rgb(var(--text-secondary))]" /> : <ChevronRight className="w-3.5 h-3.5 text-[rgb(var(--text-secondary))]" />}
+              {isRTL ? <ChevronLeft className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-600 dark:text-slate-300" />}
             </button>
           </>
         )}
 
-        {/* Credit Card Visual - Calm Design */}
+        {/* Credit Card Visual - Soft gradient design */}
         <Link href={`/credit-cards/${currentCard.id}`}>
           <div 
-            className="aspect-[1.7/1] rounded-xl p-4 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:shadow-md transition-shadow border border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-tertiary))]"
+            className="aspect-[1.8/1] max-w-[280px] mx-auto rounded-xl p-3.5 flex flex-col justify-between relative overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
+            style={{
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            }}
           >
+            {/* Subtle pattern overlay */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white" />
+              <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full bg-white" />
+            </div>
+
             {/* Top Row - Chip & Brand */}
-            <div className="flex items-start justify-between">
+            <div className="flex items-start justify-between relative z-10">
               {/* Chip */}
               <div className="flex items-center gap-1.5">
-                <div className="w-7 h-5 rounded bg-[rgb(var(--text-tertiary))]/20 border border-[rgb(var(--border-primary))]" />
-                <Wifi className="w-3.5 h-3.5 text-[rgb(var(--text-tertiary))] rotate-90" />
+                <div className="w-6 h-4 rounded-sm bg-amber-300/80" />
+                <Wifi className="w-3 h-3 text-white/70 rotate-90" />
               </div>
               
               {/* Brand */}
-              <span className="text-xs font-bold text-[rgb(var(--text-tertiary))] tracking-wider">
+              <span className="text-[10px] font-bold text-white/90 tracking-wider">
                 {brandName}
               </span>
             </div>
 
-            {/* Card Number */}
-            <div className="text-sm font-mono text-[rgb(var(--text-secondary))] tracking-widest">
+            {/* Card Number - Last 4 digits on the RIGHT */}
+            <div className="text-xs font-mono text-white/90 tracking-[0.15em] relative z-10 text-center" dir="ltr">
               •••• •••• •••• {currentCard.lastFourDigits}
             </div>
 
             {/* Bottom Row - Amount & Billing */}
-            <div className="flex items-end justify-between">
+            <div className="flex items-end justify-between relative z-10">
               <div>
-                <p className="text-[10px] text-[rgb(var(--text-tertiary))] mb-0.5 uppercase tracking-wide">
+                <p className="text-[9px] text-white/60 mb-0.5 uppercase tracking-wide">
                   {t('creditCards.pendingCharges')}
                 </p>
                 <p className={cn(
-                  "text-base font-semibold",
-                  isNearLimit ? "text-amber-600 dark:text-amber-400" : "text-[rgb(var(--text-primary))]"
+                  "text-sm font-semibold text-white"
                 )}>
                   {formatCurrency(currentCard.pendingAmount, { locale: localeString, symbol: currencySymbol })}
                 </p>
               </div>
               <div className="text-end">
-                <p className="text-[10px] text-[rgb(var(--text-tertiary))] mb-0.5 uppercase tracking-wide">
+                <p className="text-[9px] text-white/60 mb-0.5 uppercase tracking-wide">
                   {t('creditCards.billingDay')}
                 </p>
-                <p className="text-sm text-[rgb(var(--text-secondary))]">
+                <p className="text-xs text-white/90">
                   {currentCard.daysUntilBilling} {t('common.days')}
                 </p>
               </div>
@@ -200,8 +208,8 @@ export function CreditCardVisual() {
               className={cn(
                 "w-1.5 h-1.5 rounded-full transition-colors",
                 index === currentIndex 
-                  ? "bg-[rgb(var(--text-secondary))]" 
-                  : "bg-[rgb(var(--border-primary))]"
+                  ? "bg-[rgb(var(--accent))]" 
+                  : "bg-slate-300 dark:bg-slate-600"
               )}
             />
           ))}
