@@ -24,6 +24,7 @@ export function FamilyClient() {
   const { showLoading, hideLoading } = useLoading()
   const [household, setHousehold] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 
   useEffect(() => {
     fetchHousehold()
@@ -161,7 +162,7 @@ export function FamilyClient() {
       {/* Header */}
       <FamilyHeader 
         household={household}
-        onInvite={() => {}}
+        onInvite={() => setIsInviteModalOpen(true)}
       />
 
       {/* Overview Cards */}
@@ -182,6 +183,8 @@ export function FamilyClient() {
             household={household}
             onInvite={fetchHousehold}
             onCancelInvitation={handleCancelInvitation}
+            isInviteModalOpen={isInviteModalOpen}
+            setIsInviteModalOpen={setIsInviteModalOpen}
           />
 
           {/* Insights - Show on mobile, hide on desktop (shown in sidebar) */}

@@ -42,12 +42,13 @@ export function InvitesCard({
   household, 
   onInvite, 
   onCancelInvitation,
-  onResendInvitation 
+  onResendInvitation,
+  isInviteModalOpen,
+  setIsInviteModalOpen
 }) {
   const { t, localeString } = useI18n()
   const { toast } = useToast()
   const { showLoading, hideLoading } = useLoading()
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
   const [inviteEmail, setInviteEmail] = useState('')
   const [copied, setCopied] = useState(false)
   const [sending, setSending] = useState(false)
