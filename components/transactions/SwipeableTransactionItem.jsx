@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Badge } from '@/components/ui/Badge'
 import { formatCurrency, cn } from '@/lib/utils'
-import { Edit, Trash2, Target, ArrowUpCircle, ArrowDownCircle, TrendingUp } from 'lucide-react'
+import { Edit, Trash2, Target, ArrowUpCircle, ArrowDownCircle, TrendingUp, CreditCard } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 
 const SWIPE_THRESHOLD = 80
@@ -17,7 +17,7 @@ export function SwipeableTransactionItem({
   currencySymbol,
   localeString 
 }) {
-  const { isRTL } = useI18n()
+  const { isRTL, t } = useI18n()
   const [translateX, setTranslateX] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
@@ -177,12 +177,16 @@ export function SwipeableTransactionItem({
               ? 'bg-gradient-to-br from-emerald-400 to-emerald-600'
               : transaction.type === 'transfer'
               ? 'bg-gradient-to-br from-blue-400 to-blue-600'
+              : transaction.isCreditCard
+              ? 'bg-gradient-to-br from-purple-400 to-purple-600'
               : 'bg-gradient-to-br from-rose-400 to-rose-600'
           )}>
             {transaction.type === 'income' ? (
               <ArrowUpCircle className="w-5 h-5 text-white" />
             ) : transaction.type === 'transfer' ? (
               <TrendingUp className="w-5 h-5 text-white" />
+            ) : transaction.isCreditCard ? (
+              <CreditCard className="w-5 h-5 text-white" />
             ) : (
               <ArrowDownCircle className="w-5 h-5 text-white" />
             )}
@@ -203,6 +207,17 @@ export function SwipeableTransactionItem({
                 <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-400 flex-shrink-0 flex items-center gap-1">
                   <Target className="w-3 h-3" />
                   {transaction.savingsGoal.name}
+                </span>
+              )}
+              {transaction.isCreditCard && (
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 flex items-center gap-1",
+                  transaction.creditCardStatus === 'pending'
+                    ? "bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-400"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"
+                )}>
+                  <CreditCard className="w-3 h-3" />
+                  {transaction.creditCardStatus === 'pending' ? t('creditCards.statusPending') : t('creditCards.statusBilled')}
                 </span>
               )}
             </div>
