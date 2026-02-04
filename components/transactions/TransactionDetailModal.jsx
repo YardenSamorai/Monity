@@ -20,7 +20,8 @@ import {
   Trash2,
   Receipt,
   Hash,
-  Users
+  Users,
+  Scissors
 } from 'lucide-react'
 
 export function TransactionDetailModal({ 
@@ -29,6 +30,7 @@ export function TransactionDetailModal({
   transaction,
   onEdit,
   onDelete,
+  onSplit,
   currencySymbol,
   localeString
 }) {
@@ -270,6 +272,16 @@ export function TransactionDetailModal({
             <Edit className="w-4 h-4 mr-2" />
             {t('common.edit')}
           </Button>
+          {onSplit && transaction.type === 'expense' && (
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => onSplit?.(transaction)}
+            >
+              <Scissors className="w-4 h-4 mr-2" />
+              {t('split.splitTransaction')}
+            </Button>
+          )}
           <Button
             variant="destructive"
             className="flex-1"

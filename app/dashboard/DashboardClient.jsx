@@ -30,6 +30,8 @@ import {
 import { useI18n } from '@/lib/i18n-context'
 import Link from 'next/link'
 import { CreditCardVisual } from '@/components/dashboard/CreditCardVisual'
+import { SmartTips } from '@/components/ai/SmartTips'
+import { ExpenseForecast } from '@/components/ai/ExpenseForecast'
 
 // Goal icon mapping
 const GOAL_ICONS = {
@@ -736,6 +738,12 @@ export function DashboardClient({
                 </Link>
               </div>
             )}
+
+            {/* AI Smart Tips */}
+            <SmartTips />
+
+            {/* Expense Forecast */}
+            <ExpenseForecast />
 
             {/* Income CTA */}
             {!isNewUser && totalIncome === 0 && accounts.length > 0 && (

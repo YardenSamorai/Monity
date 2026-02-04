@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { SwipeableTransactionItem } from '@/components/transactions/SwipeableTransactionItem'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
+import { SplitTransactionModal } from '@/components/transactions/SplitTransactionModal'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Receipt, Plus, Search, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
@@ -35,6 +36,8 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
   const [goals, setGoals] = useState([])
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [viewingTransaction, setViewingTransaction] = useState(null)
+  const [isSplitModalOpen, setIsSplitModalOpen] = useState(false)
+  const [transactionToSplit, setTransactionToSplit] = useState(null)
   const [filtersRef] = useState({ advancedFilters: {}, filterType: 'all', includeShared: false, household: null })
 
   useEffect(() => {
@@ -356,8 +359,23 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
         transaction={viewingTransaction}
         onEdit={handleEdit}
         onDelete={handleDelete}
+        onSplit={(transaction) => {
+          setIsDetailModalOpen(false)
+          setViewingTransaction(null)
+          setTransactionToSplit(transaction)
+          setIsSplitModalOpen(true)
+        }}
         currencySymbol={currencySymbol}
         localeString={localeString}
+      />
+
+      <SplitTransactionModal
+        isOpen={isSplitModalOpen}
+        onClose={() => { setIsSplitModalOpen(false); setTransactionToSplit(null) }}
+        transaction={transactionToSplit}
+        categories={categories}
+        accounts={accounts}
+        onSuccess={handleSuccess}
       />
     </div>
   )

@@ -5,6 +5,10 @@ import { Modal } from '@/components/ui/Modal'
 import { Input, Select } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { TagSelector } from '@/components/tags/TagSelector'
+import { CategorySuggestions } from '@/components/ai/CategorySuggestions'
+import { TransactionTemplates } from '@/components/templates/TransactionTemplates'
+import { ReceiptScanner } from '@/components/receipt/ReceiptScanner'
+import { Camera } from 'lucide-react'
 import { useToast } from '@/lib/toast-context'
 import { useI18n } from '@/lib/i18n-context'
 import { cn } from '@/lib/utils'
@@ -48,6 +52,17 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
   })
   const [transactionTags, setTransactionTags] = useState([])
   const [household, setHousehold] = useState(propHousehold || cachedHousehold)
+  const [isReceiptScannerOpen, setIsReceiptScannerOpen] = useState(false)
+
+  // Handle receipt scan data
+  const handleReceiptExtracted = (data) => {
+    setFormData(prev => ({
+      ...prev,
+      amount: data.amount || prev.amount,
+      description: data.description || prev.description,
+      date: data.date ? `${data.date}T12:00` : prev.date,
+    }))
+  }
 
   // Fetch credit cards
   useEffect(() => {
@@ -233,11 +248,41 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
     { id: 'creditCard', icon: CreditCard, label: t('transactions.paymentMethods.creditCard') },
   ]
 
+  // Handle template selection
+  const handleTemplateSelect = (template) => {
+    setFormData({
+      ...formData,
+      type: template.type || 'expense',
+      amount: template.amount ? String(template.amount) : '',
+      description: template.description || '',
+      categoryId: template.categoryId || '',
+    })
+  }
+
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? t('transactions.editTransaction') : t('transactions.addTransaction')} size="md">
       <form onSubmit={handleSubmit} className="flex flex-col h-full">
         {/* Scrollable form content */}
         <div className="flex-1 overflow-y-auto space-y-3 pb-4">
+          {/* Quick Templates and Scan Receipt - only show when not editing */}
+          {!isEditing && (
+            <div className="flex items-center justify-between gap-3">
+              <TransactionTemplates
+                onSelect={handleTemplateSelect}
+                currentFormData={formData}
+                className="flex-1"
+              />
+              <button
+                type="button"
+                onClick={() => setIsReceiptScannerOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[rgb(var(--bg-tertiary))] text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--accent))]/10 hover:text-[rgb(var(--accent))] transition-colors"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                {t('receipt.scanReceipt')}
+              </button>
+            </div>
+          )}
+
           {/* Type and Amount - side by side on mobile */}
           <div className="grid grid-cols-2 gap-3">
             <Select
@@ -350,6 +395,17 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
               </Select>
             )}
 
+            {/* Smart Category Suggestions */}
+            <div className="col-span-2">
+              <CategorySuggestions
+                description={formData.description}
+                amount={formData.amount}
+                type={formData.type}
+                selectedCategoryId={formData.categoryId}
+                onSelect={(categoryId) => setFormData({ ...formData, categoryId })}
+              />
+            </div>
+
             <Select
               label={t('transactions.category')}
               value={formData.categoryId}
@@ -445,6 +501,13 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
           </Button>
         </div>
       </form>
+
+      {/* Receipt Scanner Modal */}
+      <ReceiptScanner
+        isOpen={isReceiptScannerOpen}
+        onClose={() => setIsReceiptScannerOpen(false)}
+        onExtracted={handleReceiptExtracted}
+      />
     </Modal>
   )
 }
