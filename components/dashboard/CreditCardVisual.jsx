@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { useI18n } from '@/lib/i18n-context'
 import { formatCurrency, cn } from '@/lib/utils'
 import { Plus, ChevronLeft, ChevronRight, CreditCard as CreditCardIcon, Wifi } from 'lucide-react'
-import { useRealtime, EVENTS } from '@/lib/realtime-context'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
 // Card brand names
 const CARD_BRANDS = {
@@ -27,19 +27,18 @@ export function CreditCardVisual() {
   const [cards, setCards] = useState([])
   const [loading, setLoading] = useState(true)
   const [currentIndex, setCurrentIndex] = useState(0)
-  const { subscribe } = useRealtime()
 
   // Fetch credit cards data
-  const fetchCards = useCallback(() => {
-    console.log('[CreditCardVisual] Fetching credit cards...')
-    fetch('/api/credit-cards')
-      .then(res => res.json())
-      .then(data => {
-        console.log('[CreditCardVisual] Got cards:', data.creditCards?.length, 'pending:', data.creditCards?.[0]?.pendingAmount)
-        setCards(data.creditCards || [])
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+  const fetchCards = useCallback(async () => {
+    try {
+      const res = await fetch('/api/credit-cards', { cache: 'no-store' })
+      const data = await res.json()
+      setCards(data.creditCards || [])
+    } catch (error) {
+      console.error('[CreditCardVisual] Error fetching cards:', error)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   // Initial fetch
@@ -47,45 +46,20 @@ export function CreditCardVisual() {
     fetchCards()
   }, [fetchCards])
 
-  // Subscribe to real-time updates for credit cards
-  useEffect(() => {
-    console.log('[CreditCardVisual] Setting up realtime subscriptions')
-    
-    // Listen to credit card transaction events
-    const unsubCCTransaction = subscribe(EVENTS.CREDIT_CARD_TRANSACTION, (data) => {
-      console.log('[CreditCardVisual] Received CREDIT_CARD_TRANSACTION event:', data)
-      fetchCards()
-    })
-    
-    // Listen to credit card CRUD events
-    const unsubCCCreated = subscribe(EVENTS.CREDIT_CARD_CREATED, (data) => {
-      console.log('[CreditCardVisual] Received CREDIT_CARD_CREATED event:', data)
-      fetchCards()
-    })
-    const unsubCCUpdated = subscribe(EVENTS.CREDIT_CARD_UPDATED, (data) => {
-      console.log('[CreditCardVisual] Received CREDIT_CARD_UPDATED event:', data)
-      fetchCards()
-    })
-    const unsubCCDeleted = subscribe(EVENTS.CREDIT_CARD_DELETED, (data) => {
-      console.log('[CreditCardVisual] Received CREDIT_CARD_DELETED event:', data)
-      fetchCards()
-    })
-    
-    // Listen to dashboard update (catch-all)
-    const unsubDashboard = subscribe(EVENTS.DASHBOARD_UPDATE, (data) => {
-      console.log('[CreditCardVisual] Received DASHBOARD_UPDATE event:', data)
-      fetchCards()
-    })
-
-    return () => {
-      console.log('[CreditCardVisual] Cleaning up subscriptions')
-      unsubCCTransaction()
-      unsubCCCreated()
-      unsubCCUpdated()
-      unsubCCDeleted()
-      unsubDashboard()
-    }
-  }, [subscribe, fetchCards])
+  // Real-time updates using centralized hook
+  useDataRefresh({
+    key: 'credit-card-visual',
+    fetchFn: fetchCards,
+    events: [
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.CREDIT_CARD_CREATED,
+      EVENTS.CREDIT_CARD_UPDATED,
+      EVENTS.CREDIT_CARD_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   const handlePrev = () => {
     setCurrentIndex(prev => (prev > 0 ? prev - 1 : cards.length - 1))

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { BudgetModal } from '@/components/forms/BudgetModal'
@@ -9,18 +9,50 @@ import { formatCurrency, cn } from '@/lib/utils'
 import { Target, Plus, Edit, Trash2, TrendingDown, Wallet, PiggyBank } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
-export function BudgetClient({ initialBudgets, categories, totalBudget, totalActual, month, year, currentDate }) {
+export function BudgetClient({ initialBudgets, categories, totalBudget: initialTotalBudget, totalActual: initialTotalActual, month, year, currentDate }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
   const { toast } = useToast()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [budgets, setBudgets] = useState(initialBudgets)
+  const [totalBudget, setTotalBudget] = useState(initialTotalBudget)
+  const [totalActual, setTotalActual] = useState(initialTotalActual)
   const [editingBudget, setEditingBudget] = useState(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [budgetToDelete, setBudgetToDelete] = useState(null)
 
+  const fetchBudgets = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/budgets?month=${month}&year=${year}`, { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        setBudgets(data.budgets || [])
+        setTotalBudget(data.totalBudget || 0)
+        setTotalActual(data.totalActual || 0)
+      }
+    } catch (error) {
+      console.error('Error fetching budgets:', error)
+    }
+  }, [month, year])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'budget-page',
+    fetchFn: fetchBudgets,
+    events: [
+      EVENTS.BUDGET_CREATED,
+      EVENTS.BUDGET_UPDATED,
+      EVENTS.BUDGET_DELETED,
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
+
   const handleSuccess = async () => {
-    window.location.reload()
+    await fetchBudgets()
   }
 
   const handleEdit = (budget) => {
@@ -39,6 +71,7 @@ export function BudgetClient({ initialBudgets, categories, totalBudget, totalAct
     try {
       const response = await fetch(`/api/budgets/${budgetToDelete.id}`, {
         method: 'DELETE',
+        cache: 'no-store',
       })
 
       if (!response.ok) {
@@ -48,7 +81,7 @@ export function BudgetClient({ initialBudgets, categories, totalBudget, totalAct
 
       toast.success(t('budget.deleted'), t('budget.deletedSuccess'))
       setBudgets(budgets.filter(b => b.id !== budgetToDelete.id))
-      window.location.reload()
+      await fetchBudgets()
       setBudgetToDelete(null)
       setIsDeleteDialogOpen(false)
     } catch (error) {

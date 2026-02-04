@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { 
   CreditCard as CreditCardIcon,
   Plus,
@@ -48,16 +49,19 @@ export function CreditCardDetailClient({ cardId }) {
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState('pending') // pending, billed, all
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const filterRef = useRef(filter)
 
+  // Keep filter ref updated
   useEffect(() => {
-    fetchData()
-  }, [cardId, filter])
+    filterRef.current = filter
+  }, [filter])
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
+      const currentFilter = filterRef.current
       const [cardRes, categoriesRes] = await Promise.all([
-        fetch(`/api/credit-cards/${cardId}?status=${filter === 'all' ? '' : filter}`),
-        fetch('/api/categories'),
+        fetch(`/api/credit-cards/${cardId}?status=${currentFilter === 'all' ? '' : currentFilter}`, { cache: 'no-store' }),
+        fetch('/api/categories', { cache: 'no-store' }),
       ])
 
       if (!cardRes.ok) {
@@ -75,7 +79,24 @@ export function CreditCardDetailClient({ cardId }) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [cardId, router])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData, filter])
+
+  // Real-time updates
+  useDataRefresh({
+    key: `credit-card-detail-${cardId}`,
+    fetchFn: fetchData,
+    events: [
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.CREDIT_CARD_UPDATED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   if (loading) {
     return (

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -11,6 +11,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { 
   CreditCard as CreditCardIcon,
   Plus,
@@ -35,15 +36,11 @@ export function CreditCardsClient() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingCard, setEditingCard] = useState(null)
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [cardsRes, accountsRes] = await Promise.all([
-        fetch('/api/credit-cards'),
-        fetch('/api/accounts'),
+        fetch('/api/credit-cards', { cache: 'no-store' }),
+        fetch('/api/accounts', { cache: 'no-store' }),
       ])
       
       const cardsData = await cardsRes.json()
@@ -56,7 +53,26 @@ export function CreditCardsClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'credit-cards-page',
+    fetchFn: fetchData,
+    events: [
+      EVENTS.CREDIT_CARD_CREATED,
+      EVENTS.CREDIT_CARD_UPDATED,
+      EVENTS.CREDIT_CARD_DELETED,
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   const handleDelete = async (cardId) => {
     if (!confirm(t('creditCards.confirmDelete'))) return

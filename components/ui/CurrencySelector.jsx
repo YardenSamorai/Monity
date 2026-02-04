@@ -16,7 +16,7 @@ export function CurrencySelector() {
 
   const handleCurrencyChange = (newCurrency) => {
     setSelectedCurrency(newCurrency)
-    changeCurrency(newCurrency)
+    changeCurrency(newCurrency, true) // Reload page to update all amounts
   }
 
   return (

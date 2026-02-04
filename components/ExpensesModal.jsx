@@ -10,12 +10,11 @@ import { formatCurrency } from '@/lib/utils'
 import { ArrowDownCircle, Repeat, Edit, Trash2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
-import { useRealtime, EVENTS } from '@/lib/realtime-context'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
 export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, recurringExpenseDefinitions = [], accounts = [], categories = [], onExpenseUpdated }) {
   const { t, currencySymbol, localeString } = useI18n()
   const { toast } = useToast()
-  const { subscribe } = useRealtime()
   const [editingExpense, setEditingExpense] = useState(null)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
@@ -89,7 +88,7 @@ export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, re
       const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
       const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
       
-      const response = await fetch(`/api/transactions?type=expense&startDate=${startDate}&endDate=${endDate}`)
+      const response = await fetch(`/api/transactions?type=expense&startDate=${startDate}&endDate=${endDate}`, { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setLocalExpenses(data.transactions || [])
@@ -99,31 +98,18 @@ export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, re
     }
   }, [isOpen])
 
-  // Subscribe to real-time updates
-  useEffect(() => {
-    if (!subscribe || !isOpen) return
-
-    const handleDashboardUpdate = (data) => {
-      console.log('[ExpensesModal] Received DASHBOARD_UPDATE:', data)
-      // Refresh expenses when any transaction event occurs
-      if (data?.action?.includes('transaction')) {
-        fetchExpenses()
-      }
-    }
-
-    const handleTransactionDeleted = () => {
-      console.log('[ExpensesModal] Received TRANSACTION_DELETED')
-      fetchExpenses()
-    }
-
-    const unsubDashboard = subscribe(EVENTS.DASHBOARD_UPDATE, handleDashboardUpdate)
-    const unsubDeleted = subscribe(EVENTS.TRANSACTION_DELETED, handleTransactionDeleted)
-
-    return () => {
-      unsubDashboard?.()
-      unsubDeleted?.()
-    }
-  }, [subscribe, isOpen, fetchExpenses])
+  // Real-time updates using centralized hook
+  useDataRefresh({
+    key: 'expenses-modal',
+    fetchFn: fetchExpenses,
+    events: [
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+    refreshOnFocus: false, // Modal doesn't need focus refresh
+  })
 
   const handleEdit = (expense) => {
     // Only allow editing non-recurring and non-pending expenses

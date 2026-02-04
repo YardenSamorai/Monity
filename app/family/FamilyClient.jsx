@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -8,6 +8,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
 import { Users, UserPlus } from 'lucide-react'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
 // Import family components
 import { FamilyHeader } from '@/components/family/FamilyHeader'
@@ -27,13 +28,9 @@ export function FamilyClient() {
   const [loading, setLoading] = useState(true)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
 
-  useEffect(() => {
-    fetchHousehold()
-  }, [])
-
-  const fetchHousehold = async () => {
+  const fetchHousehold = useCallback(async () => {
     try {
-      const response = await fetch('/api/households')
+      const response = await fetch('/api/households', { cache: 'no-store' })
       if (!response.ok) {
         if (response.status === 401) {
           setHousehold(null)
@@ -50,7 +47,29 @@ export function FamilyClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchHousehold()
+  }, [fetchHousehold])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'family-page',
+    fetchFn: fetchHousehold,
+    events: [
+      EVENTS.FAMILY_TRANSACTION,
+      EVENTS.MEMBER_JOINED,
+      EVENTS.MEMBER_LEFT,
+      EVENTS.MEMBER_UPDATED,
+      EVENTS.INVITE_SENT,
+      EVENTS.INVITE_ACCEPTED,
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   const handleCreateHousehold = async () => {
     showLoading()

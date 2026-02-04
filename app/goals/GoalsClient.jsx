@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { formatCurrency, cn } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
 import { Target, Plus, PiggyBank } from 'lucide-react'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
 export function GoalsClient({ initialGoals = [] }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
@@ -21,6 +22,34 @@ export function GoalsClient({ initialGoals = [] }) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [goalToDelete, setGoalToDelete] = useState(null)
   const [expandedForecastGoal, setExpandedForecastGoal] = useState(null)
+
+  const fetchGoals = useCallback(async () => {
+    try {
+      const res = await fetch('/api/goals', { cache: 'no-store' })
+      if (res.ok) {
+        const data = await res.json()
+        setGoals(data.goals || [])
+      }
+    } catch (error) {
+      console.error('Error fetching goals:', error)
+    }
+  }, [])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'goals-page',
+    fetchFn: fetchGoals,
+    events: [
+      EVENTS.GOAL_CREATED,
+      EVENTS.GOAL_UPDATED,
+      EVENTS.GOAL_DELETED,
+      EVENTS.GOAL_CONTRIBUTION,
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   // Calculate KPIs
   const activeGoals = goals.filter(g => !g.isPaused)
@@ -46,12 +75,13 @@ export function GoalsClient({ initialGoals = [] }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(goalData),
+        cache: 'no-store',
       })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to create goal')
       }
-      window.location.reload()
+      await fetchGoals()
     } catch (error) {
       console.error('Error creating goal:', error)
       throw error
@@ -64,12 +94,13 @@ export function GoalsClient({ initialGoals = [] }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount, date, note }),
+        cache: 'no-store',
       })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to add money')
       }
-      window.location.reload()
+      await fetchGoals()
     } catch (error) {
       console.error('Error adding money:', error)
       throw error
@@ -82,12 +113,13 @@ export function GoalsClient({ initialGoals = [] }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
+        cache: 'no-store',
       })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to update goal')
       }
-      window.location.reload()
+      await fetchGoals()
     } catch (error) {
       console.error('Error updating goal:', error)
       throw error
@@ -99,22 +131,23 @@ export function GoalsClient({ initialGoals = [] }) {
     try {
       const response = await fetch(`/api/goals/${goalToDelete.id}`, {
         method: 'DELETE',
+        cache: 'no-store',
       })
       if (!response.ok) {
         const error = await response.json()
         // If goal not found, just refresh to get current state
         if (response.status === 404) {
           console.log('Goal not found, refreshing...')
-          window.location.reload()
+          await fetchGoals()
           return
         }
         throw new Error(error.error || 'Failed to delete goal')
       }
-      window.location.reload()
+      await fetchGoals()
     } catch (error) {
       console.error('Error deleting goal:', error)
       // Refresh anyway to sync with server state
-      window.location.reload()
+      await fetchGoals()
     }
   }
 
@@ -125,12 +158,13 @@ export function GoalsClient({ initialGoals = [] }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isPaused: !goal.isPaused }),
+        cache: 'no-store',
       })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to update goal')
       }
-      window.location.reload()
+      await fetchGoals()
     } catch (error) {
       console.error('Error toggling pause:', error)
       throw error
@@ -144,12 +178,13 @@ export function GoalsClient({ initialGoals = [] }) {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentAmount: goal.targetAmount, isCompleted: true }),
+        cache: 'no-store',
       })
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || 'Failed to complete goal')
       }
-      window.location.reload()
+      await fetchGoals()
     } catch (error) {
       console.error('Error completing goal:', error)
       throw error

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -9,6 +9,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { 
   Search,
   Plus,
@@ -57,20 +58,41 @@ export function FamilyTransactionsClient() {
   const [groupBy, setGroupBy] = useState('day') // day, member, category
 
   // Fetch data
-  useEffect(() => {
-    Promise.all([
-      fetch('/api/households').then(res => res.json()),
-      fetch('/api/transactions?onlyShared=true').then(res => res.json()),
-      fetch('/api/categories').then(res => res.json()),
-    ])
-      .then(([householdData, transactionsData, categoriesData]) => {
-        setHousehold(householdData.household)
-        setTransactions(transactionsData.transactions || [])
-        setCategories(categoriesData.categories || [])
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
+  const fetchData = useCallback(async () => {
+    try {
+      const [householdData, transactionsData, categoriesData] = await Promise.all([
+        fetch('/api/households', { cache: 'no-store' }).then(res => res.json()),
+        fetch('/api/transactions?onlyShared=true', { cache: 'no-store' }).then(res => res.json()),
+        fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
+      ])
+      setHousehold(householdData.household)
+      setTransactions(transactionsData.transactions || [])
+      setCategories(categoriesData.categories || [])
+    } catch (error) {
+      console.error('Error fetching data:', error)
+    } finally {
+      setLoading(false)
+    }
   }, [])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'family-transactions-page',
+    fetchFn: fetchData,
+    events: [
+      EVENTS.FAMILY_TRANSACTION,
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.MEMBER_JOINED,
+      EVENTS.MEMBER_LEFT,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   // Filter transactions
   const filteredTransactions = useMemo(() => {

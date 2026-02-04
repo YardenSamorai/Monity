@@ -167,11 +167,16 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
     try {
       const response = await fetch(`/api/accounts/${accountToDelete.id}`, {
         method: 'DELETE',
+        cache: 'no-store',
       })
 
       const data = await response.json()
 
       if (!response.ok) {
+        // Close dialog first
+        setIsDeleteAccountDialogOpen(false)
+        setAccountToDelete(null)
+        
         if (data.error === 'Account is in use') {
           toast.error(t('settings.accountInUse'), t('settings.accountInUseDesc'))
         } else {

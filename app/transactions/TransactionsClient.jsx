@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/Card'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { TransactionModal } from '@/components/forms/TransactionModal'
@@ -12,6 +12,7 @@ import { Receipt, Plus, Search, ArrowUpRight, ArrowDownRight, Filter } from 'luc
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { LinkTransactionModal } from '@/components/goals/LinkTransactionModal'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
 export function TransactionsClient({ initialTransactions, accounts, categories }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
@@ -27,13 +28,15 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [transactionToDelete, setTransactionToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
   const [transactionToLink, setTransactionToLink] = useState(null)
   const [goals, setGoals] = useState([])
+  const [filtersRef] = useState({ advancedFilters: {}, filterType: 'all', includeShared: false, household: null })
 
   useEffect(() => {
-    fetch('/api/goals').then(res => res.json()).then(data => setGoals(data.goals || [])).catch(() => {})
-    fetch('/api/households').then(res => res.json()).then(data => { if (data.household) setHousehold(data.household) }).catch(() => {})
+    fetch('/api/goals', { cache: 'no-store' }).then(res => res.json()).then(data => setGoals(data.goals || [])).catch(() => {})
+    fetch('/api/households', { cache: 'no-store' }).then(res => res.json()).then(data => { if (data.household) setHousehold(data.household) }).catch(() => {})
   }, [])
 
   // Card type names mapping for display
@@ -49,20 +52,29 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
     other: 'Card',
   }
 
-  const handleSuccess = async () => {
+  // Keep refs updated for use in fetchTransactions
+  useEffect(() => {
+    filtersRef.advancedFilters = advancedFilters
+    filtersRef.filterType = filterType
+    filtersRef.includeShared = includeShared
+    filtersRef.household = household
+  }, [advancedFilters, filterType, includeShared, household, filtersRef])
+
+  const fetchTransactions = useCallback(async () => {
     const params = new URLSearchParams()
-    if (advancedFilters.startDate) params.append('startDate', advancedFilters.startDate)
-    if (advancedFilters.endDate) params.append('endDate', advancedFilters.endDate)
-    if (advancedFilters.minAmount) params.append('minAmount', advancedFilters.minAmount)
-    if (advancedFilters.maxAmount) params.append('maxAmount', advancedFilters.maxAmount)
-    if (advancedFilters.search) params.append('search', advancedFilters.search)
-    if (filterType !== 'all') params.append('type', filterType)
-    if (includeShared && household) params.append('includeShared', 'true')
+    const filters = filtersRef.advancedFilters
+    if (filters.startDate) params.append('startDate', filters.startDate)
+    if (filters.endDate) params.append('endDate', filters.endDate)
+    if (filters.minAmount) params.append('minAmount', filters.minAmount)
+    if (filters.maxAmount) params.append('maxAmount', filters.maxAmount)
+    if (filters.search) params.append('search', filters.search)
+    if (filtersRef.filterType !== 'all') params.append('type', filtersRef.filterType)
+    if (filtersRef.includeShared && filtersRef.household) params.append('includeShared', 'true')
     
-    // Fetch both regular transactions and credit card transactions
+    // Fetch both regular transactions and credit card transactions with no-store
     const [transactionsRes, creditCardsRes] = await Promise.all([
-      fetch(`/api/transactions?${params.toString()}`),
-      fetch('/api/credit-cards'),
+      fetch(`/api/transactions?${params.toString()}`, { cache: 'no-store' }),
+      fetch('/api/credit-cards', { cache: 'no-store' }),
     ])
     
     const transactionsData = await transactionsRes.json()
@@ -71,7 +83,7 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
     // Get all credit card transactions
     const allCCTransactions = []
     for (const card of (creditCardsData.creditCards || [])) {
-      const ccTxRes = await fetch(`/api/credit-cards/${card.id}/transactions`)
+      const ccTxRes = await fetch(`/api/credit-cards/${card.id}/transactions`, { cache: 'no-store' })
       const ccTxData = await ccTxRes.json()
       
       // Transform to match regular transaction format
@@ -103,6 +115,25 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
       .sort((a, b) => new Date(b.date) - new Date(a.date))
     
     setTransactions(allTransactions)
+  }, [filtersRef])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'transactions-page',
+    fetchFn: fetchTransactions,
+    events: [
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
+
+  const handleSuccess = async () => {
+    await fetchTransactions()
   }
 
   const handleEdit = (transaction) => {
@@ -117,13 +148,14 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
 
   const handleDeleteConfirm = async () => {
     if (!transactionToDelete) return
+    setIsDeleting(true)
     try {
       // Use different API for credit card transactions
       const url = transactionToDelete.isCreditCard
         ? `/api/credit-cards/${transactionToDelete.account.id}/transactions/${transactionToDelete.id}`
         : `/api/transactions/${transactionToDelete.id}`
       
-      const response = await fetch(url, { method: 'DELETE' })
+      const response = await fetch(url, { method: 'DELETE', cache: 'no-store' })
       if (!response.ok) throw new Error('Failed to delete')
       toast.success(t('transactions.deleted'))
       setTransactions(transactions.filter(t => t.id !== transactionToDelete.id))
@@ -131,6 +163,8 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
       setIsDeleteDialogOpen(false)
     } catch (error) {
       toast.error(t('transactions.deleteFailed'), error.message)
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -296,6 +330,7 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
         cancelLabel={t('common.cancel')}
         onConfirm={handleDeleteConfirm}
         variant="danger"
+        loading={isDeleting}
       />
 
       <LinkTransactionModal

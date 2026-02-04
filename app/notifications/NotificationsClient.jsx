@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
@@ -19,6 +19,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
 export function NotificationsClient() {
   const { t, localeString } = useI18n()
@@ -27,24 +28,33 @@ export function NotificationsClient() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadNotifications()
-  }, [])
-
-  const loadNotifications = async () => {
-    setLoading(true)
+  const loadNotifications = useCallback(async () => {
     try {
-      const response = await fetch('/api/notifications')
+      const response = await fetch('/api/notifications', { cache: 'no-store' })
       const data = await response.json()
       setNotifications(data.notifications || [])
       setUnreadCount(data.unreadCount || 0)
     } catch (error) {
       console.error('Error loading notifications:', error)
-      toast.error(t('notifications.loadFailed'), 'Failed to load notifications')
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    loadNotifications()
+  }, [loadNotifications])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'notifications-page',
+    fetchFn: loadNotifications,
+    events: [
+      EVENTS.NOTIFICATION_CREATED,
+      EVENTS.NOTIFICATION_READ,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   const markAsRead = async (notificationIds) => {
     try {

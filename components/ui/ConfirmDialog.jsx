@@ -18,23 +18,26 @@ export function ConfirmDialog({
 }) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="sm">
-      <div className="space-y-4">
-        <div className="flex items-start gap-3">
+      <div className="space-y-6 pt-2">
+        {/* Warning icon and message - centered layout */}
+        <div className="flex flex-col items-center text-center gap-3">
           {variant === 'danger' && (
-            <div className="w-10 h-10 rounded-lg bg-negative-subtle flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-negative" />
+            <div className="w-12 h-12 rounded-full bg-negative-subtle flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-6 h-6 text-negative" />
             </div>
           )}
-          <p className="text-[rgb(var(--text-secondary))] text-sm pt-2">
+          <p className="text-[rgb(var(--text-secondary))] text-base">
             {message}
           </p>
         </div>
         
-        <div className="flex gap-3 justify-end pt-2">
+        {/* Buttons - larger and more prominent */}
+        <div className="flex flex-col-reverse sm:flex-row gap-3 pt-2">
           <Button
             variant="ghost"
             onClick={onClose}
             disabled={loading}
+            className="flex-1 h-12 text-base"
           >
             {cancelLabel}
           </Button>
@@ -42,6 +45,7 @@ export function ConfirmDialog({
             variant={variant === 'danger' ? 'destructive' : 'primary'}
             onClick={onConfirm}
             loading={loading}
+            className="flex-1 h-12 text-base font-semibold"
           >
             {confirmLabel}
           </Button>
