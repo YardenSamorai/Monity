@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { RecurringIncomeModal } from '@/components/forms/RecurringIncomeModal'
 import { ExpensesModal } from '@/components/ExpensesModal'
@@ -83,6 +83,39 @@ export function DashboardClient({
   }, [router])
   
   useDashboardRefresh(handleRealtimeUpdate)
+
+  // Refresh when page becomes visible (returning from other pages/tabs)
+  const lastRefreshRef = useRef(Date.now())
+  
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Only refresh if more than 5 seconds have passed since last refresh
+        const now = Date.now()
+        if (now - lastRefreshRef.current > 5000) {
+          lastRefreshRef.current = now
+          router.refresh()
+        }
+      }
+    }
+
+    // Also refresh on focus (e.g., switching tabs)
+    const handleFocus = () => {
+      const now = Date.now()
+      if (now - lastRefreshRef.current > 5000) {
+        lastRefreshRef.current = now
+        router.refresh()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [router])
 
   const getAccountIcon = (type) => {
     const iconClass = "w-5 h-5"
