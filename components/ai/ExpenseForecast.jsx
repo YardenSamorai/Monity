@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { cn } from '@/lib/utils'
+import { cn, formatCurrency } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
 import { 
   TrendingUp, 
@@ -14,7 +14,7 @@ import {
 import { Card } from '@/components/ui/Card'
 
 export function ExpenseForecast({ className }) {
-  const { t, currencySymbol, formatCurrency, localeString } = useI18n()
+  const { t, currencySymbol, localeString } = useI18n()
   const [forecast, setForecast] = useState([])
   const [loading, setLoading] = useState(true)
   const [isExpanded, setIsExpanded] = useState(true)
