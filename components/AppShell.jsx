@@ -162,11 +162,11 @@ export default function AppShell({ children }) {
               <Image 
                 src="/MonityLogo.svg" 
                 alt="Monity" 
-                width={40} 
-                height={40} 
-                className="rounded-lg"
+                width={42} 
+                height={42} 
+                className="rounded-xl"
               />
-              <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
+              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">Monity</span>
             </Link>
           </div>
 
@@ -250,11 +250,11 @@ export default function AppShell({ children }) {
             <Image 
               src="/MonityLogo.svg" 
               alt="Monity" 
-              width={32} 
-              height={32} 
-              className="rounded-lg"
+              width={36} 
+              height={36} 
+              className="rounded-xl"
             />
-            <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
+            <span className="text-lg font-bold text-[rgb(var(--text-primary))]">Monity</span>
           </Link>
 
           <div className="flex items-center">
@@ -286,11 +286,11 @@ export default function AppShell({ children }) {
               <Image 
                 src="/MonityLogo.svg" 
                 alt="Monity" 
-                width={32} 
-                height={32} 
-                className="rounded-lg"
+                width={36} 
+                height={36} 
+                className="rounded-xl"
               />
-              <span className="text-lg font-semibold text-[rgb(var(--text-primary))]">Monity</span>
+              <span className="text-lg font-bold text-[rgb(var(--text-primary))]">Monity</span>
             </Link>
             <button
               onClick={() => setMobileMenuOpen(false)}

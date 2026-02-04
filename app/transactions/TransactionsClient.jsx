@@ -7,6 +7,7 @@ import { TransactionModal } from '@/components/forms/TransactionModal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { AdvancedFilters } from '@/components/filters/AdvancedFilters'
 import { SwipeableTransactionItem } from '@/components/transactions/SwipeableTransactionItem'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { cn, formatCurrency } from '@/lib/utils'
 import { Receipt, Plus, Search, ArrowUpRight, ArrowDownRight, Filter } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
@@ -32,6 +33,8 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false)
   const [transactionToLink, setTransactionToLink] = useState(null)
   const [goals, setGoals] = useState([])
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [viewingTransaction, setViewingTransaction] = useState(null)
   const [filtersRef] = useState({ advancedFilters: {}, filterType: 'all', includeShared: false, household: null })
 
   useEffect(() => {
@@ -144,6 +147,11 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
   const handleDelete = (transaction) => {
     setTransactionToDelete(transaction)
     setIsDeleteDialogOpen(true)
+  }
+
+  const handleView = (transaction) => {
+    setViewingTransaction(transaction)
+    setIsDetailModalOpen(true)
   }
 
   const handleDeleteConfirm = async () => {
@@ -273,6 +281,7 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
                       transaction={transaction}
                       onEdit={handleEdit}
                       onDelete={handleDelete}
+                      onView={handleView}
                       onLinkGoal={() => { setTransactionToLink(transaction); setIsLinkModalOpen(true); }}
                       currencySymbol={currencySymbol}
                       localeString={localeString}
@@ -339,6 +348,16 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
         transaction={transactionToLink}
         goals={goals}
         onSuccess={handleSuccess}
+      />
+
+      <TransactionDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => { setIsDetailModalOpen(false); setViewingTransaction(null) }}
+        transaction={viewingTransaction}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        currencySymbol={currencySymbol}
+        localeString={localeString}
       />
     </div>
   )

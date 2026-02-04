@@ -14,6 +14,7 @@ export function SwipeableTransactionItem({
   onEdit, 
   onDelete,
   onLinkGoal,
+  onView,
   currencySymbol,
   localeString 
 }) {
@@ -22,6 +23,7 @@ export function SwipeableTransactionItem({
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const itemRef = useRef(null)
+  const tapHandledRef = useRef(false) // Prevent double-trigger on mobile
 
   useEffect(() => {
     setTranslateX(0)
@@ -58,24 +60,48 @@ export function SwipeableTransactionItem({
   }
 
   const handleTouchStart = (e) => {
-    e.preventDefault()
+    tapHandledRef.current = false
     handleStart(e.touches[0].clientX)
   }
 
   const handleTouchMove = (e) => {
     if (!isDragging) return
-    e.preventDefault()
+    // Only prevent default if actually swiping (moved more than 5px)
+    if (Math.abs(e.touches[0].clientX - startX) > 5) {
+      e.preventDefault()
+    }
     handleMove(e.touches[0].clientX)
   }
 
-  const handleTouchEnd = (e) => {
-    e.preventDefault()
+  const handleTouchEnd = () => {
+    // If barely moved, treat as tap (open details)
+    if (Math.abs(translateX) < 10) {
+      setIsDragging(false)
+      setTranslateX(0)
+      tapHandledRef.current = true
+      onView?.(transaction)
+      return
+    }
     handleEnd()
   }
 
   const handleMouseDown = (e) => {
     e.preventDefault()
+    tapHandledRef.current = false
     handleStart(e.clientX)
+  }
+
+  // Handle click to view transaction details (only if not swiping) - for desktop
+  const handleClick = () => {
+    // Prevent double-trigger if already handled by touch
+    if (tapHandledRef.current) {
+      tapHandledRef.current = false
+      return
+    }
+    // This is mainly for desktop - mobile uses handleTouchEnd
+    if (Math.abs(translateX) < 10 && !isDragging) {
+      onView?.(transaction)
+    }
   }
 
   useEffect(() => {
@@ -168,8 +194,9 @@ export function SwipeableTransactionItem({
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         onMouseDown={handleMouseDown}
+        onClick={handleClick}
       >
-        <div className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
+        <div className="flex items-center gap-4 p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer" style={{ direction: isRTL ? 'rtl' : 'ltr' }}>
           {/* Transaction Type Icon */}
           <div className={cn(
             'w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0',

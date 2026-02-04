@@ -49,6 +49,8 @@ export function DashboardClient({
   totalIncome, 
   totalExpenses, 
   netCashFlow,
+  pendingCreditCardAmount = 0,
+  projectedBalance,
   accounts,
   recentTransactions,
   currentDate,
@@ -139,6 +141,34 @@ export function DashboardClient({
                   year: 'numeric' 
                 })}
               </p>
+              
+              {/* Projected Balance - Only show if there are pending CC charges */}
+              {pendingCreditCardAmount > 0 && (
+                <div className="mt-4 pt-3 border-t border-[rgb(var(--border-secondary))]">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className="w-4 h-4 text-[rgb(var(--text-tertiary))]" />
+                      <span className="text-xs text-[rgb(var(--text-tertiary))]">
+                        {t('dashboard.projectedBalance')}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p 
+                        className={cn(
+                          "text-lg font-semibold tabular-nums",
+                          projectedBalance >= 0 ? "text-[rgb(var(--text-secondary))]" : "text-negative"
+                        )}
+                        dir="ltr"
+                      >
+                        {formatCurrency(projectedBalance, { locale: localeString, symbol: currencySymbol })}
+                      </p>
+                      <p className="text-[10px] text-[rgb(var(--text-tertiary))]">
+                        {t('dashboard.afterCreditCard', { amount: formatCurrency(pendingCreditCardAmount, { locale: localeString, symbol: currencySymbol }) })}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Secondary Stats Row */}

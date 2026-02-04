@@ -102,7 +102,7 @@ const getDashboardData = unstable_cache(
       }),
       prisma.transaction.findMany({
         where: { userId },
-        take: 10, // Get more to merge with CC transactions
+        take: 15, // Get more to merge with CC transactions
         orderBy: { date: 'desc' },
         select: {
           id: true,
@@ -178,7 +178,7 @@ const getDashboardData = unstable_cache(
       // Recent credit card transactions (for "recent transactions" widget)
       prisma.creditCardTransaction.findMany({
         where: { userId },
-        take: 10,
+        take: 15,
         orderBy: { date: 'desc' },
         select: {
           id: true,
@@ -308,6 +308,14 @@ export default async function DashboardPage() {
   const netCashFlow = totalIncomeWithRecurring - totalExpensesWithRecurring
   const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0)
   
+  // Calculate pending credit card charges (not yet deducted from bank account)
+  const pendingCreditCardAmount = (creditCardTransactions || [])
+    .filter(cc => cc.status === 'pending')
+    .reduce((sum, cc) => sum + Number(cc.amount), 0)
+  
+  // Projected balance after credit card charges
+  const projectedBalance = totalBalance - pendingCreditCardAmount
+  
   // Calculate last month expenses for comparison
   const lastMonthExpenses = lastMonthTransactions
     .filter(t => t.type === 'expense')
@@ -394,7 +402,7 @@ export default async function DashboardPage() {
 
   const allRecentTransactions = [...recentTransactions, ...recentCCTransformed]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 5)
+    .slice(0, 10)
 
   return (
     <AppShell>
@@ -403,6 +411,8 @@ export default async function DashboardPage() {
         totalIncome={totalIncomeWithRecurring}
         totalExpenses={totalExpensesWithRecurring}
         netCashFlow={netCashFlow}
+        pendingCreditCardAmount={pendingCreditCardAmount}
+        projectedBalance={projectedBalance}
         accounts={serializePrismaData(accounts)}
         recentTransactions={serializePrismaData(allRecentTransactions)}
         currentDate={now.toISOString()}
