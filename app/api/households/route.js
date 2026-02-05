@@ -128,6 +128,7 @@ export async function POST(request) {
     }
 
     const name = body?.name || `${user.name || 'Family'}'s Household`
+    const icon = body?.icon || '👨‍👩‍👧‍👦'
 
     // Generate unique invite token
     const inviteToken = randomBytes(32).toString('hex')
@@ -136,6 +137,7 @@ export async function POST(request) {
     const household = await prisma.household.create({
       data: {
         name,
+        icon,
         inviteToken,
         createdByUserId: user.id,
         members: {

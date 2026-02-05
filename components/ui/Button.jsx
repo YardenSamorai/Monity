@@ -21,6 +21,7 @@ export const Button = forwardRef(function Button(
     secondary: 'bg-[rgb(var(--bg-tertiary))] text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--border-primary))]',
     ghost: 'bg-transparent text-[rgb(var(--text-secondary))] hover:bg-[rgb(var(--bg-tertiary))] hover:text-[rgb(var(--text-primary))]',
     destructive: 'bg-[rgb(var(--negative))] text-white hover:opacity-90',
+    danger: 'bg-red-600 text-white hover:bg-red-700',
     success: 'bg-[rgb(var(--positive))] text-white hover:opacity-90',
     outline: 'bg-transparent border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]',
   }

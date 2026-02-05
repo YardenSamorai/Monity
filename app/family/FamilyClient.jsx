@@ -19,6 +19,8 @@ import { InsightsCard } from '@/components/family/InsightsCard'
 import { RolesCard } from '@/components/family/RolesCard'
 import { ActionsCard } from '@/components/family/ActionsCard'
 import { TransactionsCard } from '@/components/family/TransactionsCard'
+import { CreateFamilyModal } from '@/components/family/CreateFamilyModal'
+import { FamilySettingsCard } from '@/components/family/FamilySettingsCard'
 
 export function FamilyClient() {
   const { t } = useI18n()
@@ -27,6 +29,7 @@ export function FamilyClient() {
   const [household, setHousehold] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
 
   const fetchHousehold = useCallback(async () => {
     try {
@@ -71,13 +74,13 @@ export function FamilyClient() {
     ],
   })
 
-  const handleCreateHousehold = async () => {
+  const handleCreateHousehold = async ({ name, icon }) => {
     showLoading()
     try {
       const response = await fetch('/api/households', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: t('family.household') }),
+        body: JSON.stringify({ name, icon }),
       })
 
       if (!response.ok) {
@@ -90,9 +93,14 @@ export function FamilyClient() {
       toast.success(t('family.created'), t('family.createdSuccess'))
     } catch (error) {
       toast.error(t('family.createFailed'), error.message)
+      throw error // Re-throw so modal knows it failed
     } finally {
       hideLoading()
     }
+  }
+
+  const handleDeleteHousehold = () => {
+    setHousehold(null)
   }
 
   const handleLeaveHousehold = async () => {
@@ -149,26 +157,35 @@ export function FamilyClient() {
   // No household - Empty state
   if (!household) {
     return (
-      <div className="min-h-[80vh] flex items-center justify-center p-4">
-        <Card className="w-full max-w-md p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
-            <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">
-            {t('family.welcome')}
-          </h1>
-          <p className="text-[rgb(var(--text-secondary))] mb-6">
-            {t('family.welcomeDescription')}
-          </p>
-          <Button onClick={handleCreateHousehold} className="w-full h-12">
-            <UserPlus className="w-5 h-5 me-2" />
-            {t('family.createHousehold')}
-          </Button>
-          <p className="text-xs text-[rgb(var(--text-tertiary))] mt-4">
-            {t('family.createHouseholdHint')}
-          </p>
-        </Card>
-      </div>
+      <>
+        <div className="min-h-[80vh] flex items-center justify-center p-4">
+          <Card className="w-full max-w-md p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+              <Users className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-[rgb(var(--text-primary))] mb-2">
+              {t('family.welcome')}
+            </h1>
+            <p className="text-[rgb(var(--text-secondary))] mb-6">
+              {t('family.welcomeDescription')}
+            </p>
+            <Button onClick={() => setIsCreateModalOpen(true)} className="w-full h-12">
+              <UserPlus className="w-5 h-5 me-2" />
+              {t('family.createHousehold')}
+            </Button>
+            <p className="text-xs text-[rgb(var(--text-tertiary))] mt-4">
+              {t('family.createHouseholdHint')}
+            </p>
+          </Card>
+        </div>
+
+        {/* Create Family Modal */}
+        <CreateFamilyModal
+          isOpen={isCreateModalOpen}
+          onClose={() => setIsCreateModalOpen(false)}
+          onCreate={handleCreateHousehold}
+        />
+      </>
     )
   }
 
@@ -224,6 +241,16 @@ export function FamilyClient() {
           {/* Roles & Permissions */}
           <RolesCard />
 
+          {/* Family Settings - Owner only */}
+          {isOwner && (
+            <FamilySettingsCard
+              household={household}
+              onUpdate={fetchHousehold}
+              onDelete={handleDeleteHousehold}
+              isOwner={isOwner}
+            />
+          )}
+
           {/* Quick Actions */}
           <ActionsCard 
             household={household}
@@ -232,9 +259,20 @@ export function FamilyClient() {
           />
         </div>
 
-        {/* Mobile-only: Roles & Actions */}
+        {/* Mobile-only: Roles, Settings & Actions */}
         <div className="lg:hidden space-y-6">
           <RolesCard />
+          
+          {/* Family Settings - Owner only */}
+          {isOwner && (
+            <FamilySettingsCard
+              household={household}
+              onUpdate={fetchHousehold}
+              onDelete={handleDeleteHousehold}
+              isOwner={isOwner}
+            />
+          )}
+          
           <ActionsCard 
             household={household}
             onLeave={handleLeaveHousehold}
