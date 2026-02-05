@@ -16,8 +16,8 @@ export default async function QuickAddPage() {
     redirect('/sign-in')
   }
 
-  // Fetch user's accounts, categories, and recent transactions for suggestions
-  const [accounts, categories, recentTransactions] = await Promise.all([
+  // Fetch user's accounts, categories, credit cards, household and recent transactions for suggestions
+  const [accounts, categories, creditCards, household, recentTransactions] = await Promise.all([
     prisma.account.findMany({
       where: { userId: user.id, isActive: true },
       select: { id: true, name: true, type: true, currency: true },
@@ -30,6 +30,15 @@ export default async function QuickAddPage() {
       },
       select: { id: true, name: true, icon: true, color: true },
       orderBy: { name: 'asc' },
+    }),
+    prisma.creditCard.findMany({
+      where: { userId: user.id },
+      select: { id: true, name: true, lastFourDigits: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.householdMember.findFirst({
+      where: { userId: user.id },
+      include: { household: true },
     }),
     prisma.transaction.findMany({
       where: { userId: user.id, type: 'expense' },
@@ -84,6 +93,8 @@ export default async function QuickAddPage() {
         <QuickAddClient
           accounts={JSON.parse(JSON.stringify(accounts))}
           categories={JSON.parse(JSON.stringify(categories))}
+          creditCards={JSON.parse(JSON.stringify(creditCards))}
+          household={household?.household ? JSON.parse(JSON.stringify(household.household)) : null}
           recentAmounts={recentAmounts}
           recentMerchants={JSON.parse(JSON.stringify(recentMerchants))}
           defaultAccountId={defaultAccount?.id || null}

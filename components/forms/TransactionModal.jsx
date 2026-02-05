@@ -163,6 +163,8 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
             description: formData.description,
             categoryId: formData.categoryId || null,
             date: new Date(formData.date).toISOString(),
+            isShared: formData.isShared && household ? true : false,
+            householdId: formData.isShared && household ? household.id : null,
           }),
         })
 
@@ -436,8 +438,8 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
             placeholder={t('transactions.notesPlaceholder')}
           />
 
-          {/* Shared toggle - only show if user has household and not credit card */}
-          {household && formData.paymentMethod !== 'creditCard' && (
+          {/* Shared toggle - show if user has household (for both regular and credit card transactions) */}
+          {household && (
             <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[rgb(var(--bg-tertiary))]">
               <div className="flex-1 min-w-0">
                 <label className="block text-sm font-medium text-[rgb(var(--text-primary))]">

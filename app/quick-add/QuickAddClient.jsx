@@ -3,14 +3,29 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
-import { X, Check, ChevronDown, Search, Plus } from 'lucide-react'
+import { X, Check, ChevronDown, Search, Plus, Building2, Banknote, CreditCard, Users } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { cn } from '@/lib/utils'
 
+// Card type names mapping
+const CARD_TYPE_NAMES = {
+  visa: 'Visa',
+  mastercard: 'Mastercard',
+  amex: 'American Express',
+  diners: 'Diners Club',
+  discover: 'Discover',
+  isracard: 'Isracard',
+  cal: 'Cal - כאל',
+  max: 'Max - לאומי קארד',
+  other: 'Other',
+}
+
 export default function QuickAddClient({
   accounts,
   categories,
+  creditCards = [],
+  household = null,
   recentAmounts,
   recentMerchants,
   defaultAccountId,
@@ -26,7 +41,10 @@ export default function QuickAddClient({
   const [amount, setAmount] = useState('')
   const [merchant, setMerchant] = useState('')
   const [categoryId, setCategoryId] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('account') // 'account', 'cash', 'creditCard'
   const [accountId, setAccountId] = useState(defaultAccountId)
+  const [creditCardId, setCreditCardId] = useState(creditCards[0]?.id || '')
+  const [isShared, setIsShared] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
   const [showCategoryPicker, setShowCategoryPicker] = useState(false)
@@ -116,8 +134,13 @@ export default function QuickAddClient({
       return
     }
 
-    if (!accountId) {
+    if (paymentMethod !== 'creditCard' && !accountId) {
       toast.error(t('quickAdd.selectAccount'))
+      return
+    }
+
+    if (paymentMethod === 'creditCard' && !creditCardId) {
+      toast.error(t('quickAdd.selectCreditCard'))
       return
     }
 
@@ -125,18 +148,39 @@ export default function QuickAddClient({
     setSavedAmount(amount)
     
     try {
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'expense',
-          amount: Number(amount),
-          description: merchant || t('quickAdd.expense'),
-          categoryId: categoryId || null,
-          accountId,
-          date: new Date().toISOString(),
-        }),
-      })
+      let response
+
+      if (paymentMethod === 'creditCard') {
+        // Credit card transaction
+        response = await fetch(`/api/credit-cards/${creditCardId}/transactions`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: Number(amount),
+            description: merchant || t('quickAdd.expense'),
+            categoryId: categoryId || null,
+            date: new Date().toISOString(),
+            isShared: isShared && household ? true : false,
+            householdId: isShared && household ? household.id : null,
+          }),
+        })
+      } else {
+        // Regular bank/cash transaction
+        response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'expense',
+            amount: Number(amount),
+            description: merchant || t('quickAdd.expense'),
+            categoryId: categoryId || null,
+            accountId,
+            date: new Date().toISOString(),
+            isShared: isShared && household ? true : false,
+            householdId: isShared && household ? household.id : null,
+          }),
+        })
+      }
 
       if (!response.ok) {
         throw new Error('Failed to save')
@@ -155,6 +199,7 @@ export default function QuickAddClient({
         setAmount('')
         setMerchant('')
         setCategoryId('')
+        setIsShared(false)
         setSavedAmount('')
         amountInputRef.current?.focus()
       }, 1500)
@@ -326,6 +371,98 @@ export default function QuickAddClient({
           )}
         </div>
 
+        {/* Payment Method Selector */}
+        <div>
+          <label className="text-sm font-medium text-[rgb(var(--text-secondary))] mb-2 block">
+            {t('transactions.paymentMethod')}
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'account', icon: Building2, label: t('transactions.paymentMethods.account') },
+              { id: 'cash', icon: Banknote, label: t('transactions.paymentMethods.cash') },
+              { id: 'creditCard', icon: CreditCard, label: t('transactions.paymentMethods.creditCard') },
+            ].map(method => {
+              const Icon = method.icon
+              const isSelected = paymentMethod === method.id
+              const isDisabled = method.id === 'creditCard' && creditCards.length === 0
+              
+              return (
+                <button
+                  key={method.id}
+                  type="button"
+                  disabled={isDisabled}
+                  onClick={() => setPaymentMethod(method.id)}
+                  className={cn(
+                    "flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all active:scale-95 touch-target",
+                    isSelected
+                      ? "border-[rgb(var(--accent))] bg-[rgb(var(--accent))]/10"
+                      : "border-[rgb(var(--border-primary))] hover:border-[rgb(var(--text-tertiary))] active:bg-[rgb(var(--bg-tertiary))]",
+                    isDisabled && "opacity-50 cursor-not-allowed"
+                  )}
+                >
+                  <Icon className={cn(
+                    "w-5 h-5",
+                    isSelected ? "text-[rgb(var(--accent))]" : "text-[rgb(var(--text-tertiary))]"
+                  )} />
+                  <span className={cn(
+                    "text-xs font-medium",
+                    isSelected ? "text-[rgb(var(--accent))]" : "text-[rgb(var(--text-secondary))]"
+                  )}>
+                    {method.label}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+          {creditCards.length === 0 && (
+            <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1.5">
+              {t('transactions.noCreditCards')}
+            </p>
+          )}
+        </div>
+
+        {/* Credit Card Selector (if credit card payment method) */}
+        {paymentMethod === 'creditCard' && creditCards.length > 0 && (
+          <div>
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))] mb-2 block">
+              {t('creditCards.selectCard')}
+            </label>
+            <select
+              value={creditCardId || ''}
+              onChange={(e) => setCreditCardId(e.target.value)}
+              className="w-full px-4 py-3.5 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] text-base appearance-none"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%239ca3af%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")', backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25rem' }}
+            >
+              {creditCards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {CARD_TYPE_NAMES[card.name] || card.name} •••• {card.lastFourDigits}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Account Selector (if account or cash payment method) */}
+        {paymentMethod !== 'creditCard' && accounts.length > 1 && (
+          <div>
+            <label className="text-sm font-medium text-[rgb(var(--text-secondary))] mb-2 block">
+              {t('quickAdd.account')}
+            </label>
+            <select
+              value={accountId || ''}
+              onChange={(e) => setAccountId(e.target.value)}
+              className="w-full px-4 py-3.5 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] text-base appearance-none"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%239ca3af%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")', backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25rem' }}
+            >
+              {accounts.map((acc) => (
+                <option key={acc.id} value={acc.id}>
+                  {acc.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Category Selector */}
         <div>
           <label className="text-sm font-medium text-[rgb(var(--text-secondary))] mb-2 block">
@@ -349,24 +486,35 @@ export default function QuickAddClient({
           </button>
         </div>
 
-        {/* Account Selector (if multiple accounts) */}
-        {accounts.length > 1 && (
-          <div>
-            <label className="text-sm font-medium text-[rgb(var(--text-secondary))] mb-2 block">
-              {t('quickAdd.account')}
-            </label>
-            <select
-              value={accountId || ''}
-              onChange={(e) => setAccountId(e.target.value)}
-              className="w-full px-4 py-3.5 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] text-[rgb(var(--text-primary))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] text-base appearance-none"
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%239ca3af%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")', backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.25rem' }}
+        {/* Shared Toggle (if user has household) */}
+        {household && (
+          <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))]">
+            <div className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-[rgb(var(--text-tertiary))]" />
+              <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
+                {t('transactions.shared')}
+              </span>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={isShared}
+              onClick={() => setIsShared(!isShared)}
+              className={cn(
+                'relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[rgb(var(--accent))] focus:ring-offset-2 flex-shrink-0',
+                isShared
+                  ? 'bg-[rgb(var(--accent))]'
+                  : 'bg-[rgb(var(--text-tertiary))]/30'
+              )}
+              dir="ltr"
             >
-              {accounts.map((acc) => (
-                <option key={acc.id} value={acc.id}>
-                  {acc.name}
-                </option>
-              ))}
-            </select>
+              <span
+                className={cn(
+                  'absolute h-5 w-5 rounded-full bg-white shadow-md transition-all duration-200',
+                  isShared ? 'left-6' : 'left-1'
+                )}
+              />
+            </button>
           </div>
         )}
       </div>
