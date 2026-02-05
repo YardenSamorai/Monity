@@ -7,6 +7,7 @@ import { X, Check, ChevronDown, Search, Plus, Building2, Banknote, CreditCard, U
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { cn } from '@/lib/utils'
+import { CategorySuggestions } from '@/components/ai/CategorySuggestions'
 
 // Card type names mapping
 const CARD_TYPE_NAMES = {
@@ -462,6 +463,21 @@ export default function QuickAddClient({
             </select>
           </div>
         )}
+
+        {/* AI Category Suggestions */}
+        <CategorySuggestions
+          description={merchant}
+          amount={amount}
+          type="expense"
+          selectedCategoryId={categoryId}
+          onSelect={(id) => {
+            setCategoryId(id)
+            // Haptic feedback
+            if ('vibrate' in navigator) {
+              navigator.vibrate(10)
+            }
+          }}
+        />
 
         {/* Category Selector */}
         <div>
