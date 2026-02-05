@@ -13,17 +13,22 @@ export async function POST(request) {
 
     const { description, amount, type } = await request.json()
 
-    if (!description && !amount) {
+    // Allow amount-only searches (amount > 0 even without description)
+    if (!description && (!amount || Number(amount) <= 0)) {
       return NextResponse.json({ suggestions: [] })
     }
+
+    console.log('[suggest-category] Input:', { description, amount, type })
 
     const suggestions = await suggestCategory(
       prisma,
       user.id,
       description || '',
-      amount || 0,
+      Number(amount) || 0,
       type || 'expense'
     )
+
+    console.log('[suggest-category] Found:', suggestions.length, 'suggestions')
 
     return NextResponse.json({ suggestions })
   } catch (error) {
