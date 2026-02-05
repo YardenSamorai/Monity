@@ -17,7 +17,7 @@ export async function GET() {
     // Get anomalies
     const anomalies = await detectAnomalies(prisma, user.id)
 
-    // Transform into user-friendly tips
+    // Transform into user-friendly tips with translation keys
     const tips = []
 
     // Add savings recommendations as tips
@@ -37,8 +37,15 @@ export async function GET() {
         id: `rec-${rec.categoryId}-${rec.type}`,
         type: tipType,
         icon,
-        title: getTipTitle(rec.type),
-        message: rec.message,
+        // Use translation keys instead of hardcoded strings
+        titleKey: getTipTitleKey(rec.type),
+        messageKey: getTipMessageKey(rec.type),
+        // Pass data for interpolation
+        messageData: {
+          amount: Math.round(rec.monthlyAvg || 0),
+          categoryName: rec.categoryName,
+          percentage: rec.overBudgetPercentage || 0,
+        },
         category: rec.categoryName,
         potentialSavings: rec.potentialSavings,
         actionType: rec.type,
@@ -53,8 +60,12 @@ export async function GET() {
           id: `anomaly-${anomaly.transactionId}`,
           type: 'warning',
           icon: '🔍',
-          title: 'Unusual Transaction',
-          message: `Found an unusually large transaction: ${anomaly.description} - ${anomaly.amount}`,
+          titleKey: 'ai.unusualTransaction',
+          messageKey: 'ai.unusualTransactionMessage',
+          messageData: {
+            description: anomaly.description,
+            amount: Math.round(anomaly.amount),
+          },
           category: anomaly.category,
           transactionId: anomaly.transactionId,
           priority: anomaly.severity,
@@ -64,8 +75,13 @@ export async function GET() {
           id: `anomaly-${anomaly.date}`,
           type: 'info',
           icon: '📊',
-          title: 'High Spending Day',
-          message: `On ${anomaly.date}, you spent ${Math.round(anomaly.amount)} - ${Math.round(anomaly.difference)} more than usual`,
+          titleKey: 'ai.highSpendingDay',
+          messageKey: 'ai.highSpendingDayMessage',
+          messageData: {
+            date: anomaly.date,
+            amount: Math.round(anomaly.amount),
+            difference: Math.round(anomaly.difference),
+          },
           priority: anomaly.severity,
         })
       }
@@ -89,12 +105,22 @@ export async function GET() {
   }
 }
 
-function getTipTitle(type) {
-  const titles = {
-    high_spending: 'High Spending Alert',
-    many_small: 'Small Expenses Add Up',
-    unusual_spike: 'Unusual Spending Spike',
-    over_budget: 'Over Budget',
+function getTipTitleKey(type) {
+  const keys = {
+    high_spending: 'ai.highSpendingAlert',
+    many_small: 'ai.smallExpensesAddUp',
+    unusual_spike: 'ai.unusualSpike',
+    over_budget: 'ai.overBudget',
   }
-  return titles[type] || 'Tip'
+  return keys[type] || 'ai.tip'
+}
+
+function getTipMessageKey(type) {
+  const keys = {
+    high_spending: 'ai.highSpendingMessage',
+    many_small: 'ai.smallExpensesMessage',
+    unusual_spike: 'ai.unusualSpikeMessage',
+    over_budget: 'ai.overBudgetMessage',
+  }
+  return keys[type] || 'ai.tipMessage'
 }

@@ -5,11 +5,8 @@ import { cn, formatCurrency } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
 import { 
   Lightbulb, 
-  AlertTriangle, 
-  TrendingDown, 
   ChevronRight,
   X,
-  Sparkles,
   PiggyBank
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
@@ -54,6 +51,26 @@ export function SmartTips({ className }) {
     const newDismissed = [...dismissedTips, tipId]
     setDismissedTips(newDismissed)
     localStorage.setItem('monity_dismissed_tips', JSON.stringify(newDismissed))
+  }
+
+  // Get translated message with interpolation
+  const getTranslatedMessage = (tip) => {
+    if (!tip.messageKey) return tip.message || ''
+    
+    let message = t(tip.messageKey)
+    if (tip.messageData) {
+      // Replace placeholders with actual values
+      Object.entries(tip.messageData).forEach(([key, value]) => {
+        // Format currency values
+        if (key === 'amount' || key === 'difference') {
+          const formatted = formatCurrency(value, { locale: localeString, symbol: currencySymbol })
+          message = message.replace(`{${key}}`, formatted)
+        } else {
+          message = message.replace(`{${key}}`, value)
+        }
+      })
+    }
+    return message
   }
 
   const visibleTips = tips.filter(tip => !dismissedTips.includes(tip.id))
@@ -155,10 +172,10 @@ export function SmartTips({ className }) {
                   <span className="text-xl flex-shrink-0">{tip.icon}</span>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-medium text-sm text-[rgb(var(--text-primary))] mb-0.5">
-                      {tip.title}
+                      {tip.titleKey ? t(tip.titleKey) : tip.title}
                     </h4>
                     <p className="text-xs text-[rgb(var(--text-secondary))] line-clamp-2">
-                      {tip.message}
+                      {getTranslatedMessage(tip)}
                     </p>
                     
                     {tip.potentialSavings > 0 && (

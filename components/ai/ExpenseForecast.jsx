@@ -9,13 +9,14 @@ import {
   Minus,
   ChevronRight,
   Calendar,
-  BarChart3
+  BarChart3,
+  AlertCircle
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
 export function ExpenseForecast({ className }) {
-  const { t, currencySymbol, localeString } = useI18n()
-  const [forecast, setForecast] = useState([])
+  const { t, currencySymbol, localeString, locale } = useI18n()
+  const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isExpanded, setIsExpanded] = useState(true)
 
@@ -27,8 +28,8 @@ export function ExpenseForecast({ className }) {
     try {
       const response = await fetch('/api/ai/expense-forecast?months=3')
       if (response.ok) {
-        const data = await response.json()
-        setForecast(data.forecast || [])
+        const result = await response.json()
+        setData(result)
       }
     } catch (error) {
       console.error('Error fetching forecast:', error)
@@ -59,6 +60,12 @@ export function ExpenseForecast({ className }) {
     }
   }
 
+  // Get month name based on locale
+  const getMonthName = (month) => {
+    const isHebrew = locale === 'he'
+    return isHebrew ? month.monthName : month.monthNameEn
+  }
+
   if (loading) {
     return (
       <Card className={cn("p-4", className)}>
@@ -75,12 +82,70 @@ export function ExpenseForecast({ className }) {
     )
   }
 
-  if (forecast.length === 0) {
+  if (!data || !data.forecast || data.forecast.length === 0) {
     return null
   }
 
+  // Not enough data - show message
+  if (!data.hasEnoughData) {
+    return (
+      <Card className={cn("p-4", className)}>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+              <BarChart3 className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+                {t('ai.expenseForecast')}
+              </h3>
+              <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                {t('insights.nextMonths')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Not enough data message */}
+        <div className="flex flex-col items-center justify-center py-6 text-center">
+          <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center mb-3">
+            <AlertCircle className="w-6 h-6 text-amber-500" />
+          </div>
+          <h4 className="font-medium text-[rgb(var(--text-primary))] mb-1">
+            {t('ai.needMoreData')}
+          </h4>
+          <p className="text-sm text-[rgb(var(--text-tertiary))] max-w-xs">
+            {t('ai.needMoreDataDescription', {
+              current: data.currentTransactions || 0,
+              needed: data.minTransactionsNeeded || 10,
+              months: data.minMonthsNeeded || 2,
+            })}
+          </p>
+          
+          {/* Show current month only */}
+          {data.forecast[0] && (
+            <div className="mt-4 w-full p-3 bg-[rgb(var(--bg-tertiary))] rounded-lg">
+              <div className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-[rgb(var(--accent))]" />
+                  <span className="font-medium text-[rgb(var(--accent))]">
+                    {getMonthName(data.forecast[0])} ({t('common.current')})
+                  </span>
+                </div>
+                <span className="font-semibold text-[rgb(var(--text-primary))] tabular-nums">
+                  {formatCurrency(data.forecast[0].total, { locale: localeString, symbol: currencySymbol })}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      </Card>
+    )
+  }
+
   // Find max amount for bar scaling
-  const maxAmount = Math.max(...forecast.map(f => f.total))
+  const maxAmount = Math.max(...data.forecast.map(f => f.total))
 
   return (
     <Card className={cn("p-4", className)}>
@@ -113,7 +178,7 @@ export function ExpenseForecast({ className }) {
       {/* Forecast Chart */}
       {isExpanded && (
         <div className="space-y-3">
-          {forecast.map((month, index) => {
+          {data.forecast.map((month, index) => {
             const percentage = maxAmount > 0 ? (month.total / maxAmount) * 100 : 0
             
             return (
@@ -127,9 +192,9 @@ export function ExpenseForecast({ className }) {
                         ? "text-[rgb(var(--accent))]" 
                         : "text-[rgb(var(--text-secondary))]"
                     )}>
-                      {month.monthName}
+                      {getMonthName(month)}
                       {month.isCurrent && (
-                        <span className="text-xs ml-1">({t('common.current')})</span>
+                        <span className="text-xs ms-1">({t('common.current')})</span>
                       )}
                     </span>
                   </div>
@@ -137,7 +202,7 @@ export function ExpenseForecast({ className }) {
                     <span className="font-semibold text-[rgb(var(--text-primary))] tabular-nums">
                       {formatCurrency(month.total, { locale: localeString, symbol: currencySymbol })}
                     </span>
-                    {month.trend && getTrendIcon(month.trend)}
+                    {!month.isCurrent && month.trend && getTrendIcon(month.trend)}
                   </div>
                 </div>
                 
@@ -158,20 +223,36 @@ export function ExpenseForecast({ className }) {
                   />
                 </div>
 
+                {/* Confidence indicator for forecast months */}
+                {!month.isCurrent && month.confidence && (
+                  <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                    {t('ai.forecastConfidence')}: {Math.round(month.confidence * 100)}%
+                  </p>
+                )}
+
                 {/* Trend info */}
-                {month.trend && month.trendAmount && (
+                {!month.isCurrent && month.trend && month.trendAmount !== 0 && (
                   <p className={cn(
                     "text-xs",
                     getTrendColor(month.trend)
                   )}>
-                    {month.trend === 'increasing' && `+${formatCurrency(month.trendAmount, { locale: localeString, symbol: currencySymbol })} ${t('insights.expectedIncrease')}`}
-                    {month.trend === 'decreasing' && `${formatCurrency(month.trendAmount, { locale: localeString, symbol: currencySymbol })} ${t('insights.expectedDecrease')}`}
+                    {month.trend === 'increasing' && `+${formatCurrency(Math.abs(month.trendAmount), { locale: localeString, symbol: currencySymbol })} ${t('insights.expectedIncrease')}`}
+                    {month.trend === 'decreasing' && `-${formatCurrency(Math.abs(month.trendAmount), { locale: localeString, symbol: currencySymbol })} ${t('insights.expectedDecrease')}`}
                     {month.trend === 'stable' && t('insights.stable')}
                   </p>
                 )}
               </div>
             )
           })}
+
+          {/* Historical info */}
+          {data.historicalAverage > 0 && (
+            <div className="pt-3 mt-3 border-t border-[rgb(var(--border-primary))]">
+              <p className="text-xs text-[rgb(var(--text-tertiary))]">
+                {t('ai.basedOnHistory', { months: data.dataMonths || 0 })} • {t('ai.historicalAverage')}: {formatCurrency(data.historicalAverage, { locale: localeString, symbol: currencySymbol })}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </Card>
