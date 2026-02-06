@@ -9,10 +9,10 @@ const createTransactionSchema = z.object({
   amount: z.number().positive(),
   description: z.string().min(1),
   date: z.string().transform((str) => new Date(str)),
-  categoryId: z.string().optional(),
-  notes: z.string().optional(),
+  categoryId: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
   isShared: z.boolean().optional(),
-  householdId: z.string().optional(),
+  householdId: z.string().nullable().optional(),
 })
 
 // GET /api/credit-cards/[id]/transactions - Get transactions for a card
@@ -127,10 +127,10 @@ export async function POST(request, { params }) {
         amount: validated.amount,
         description: validated.description,
         date: validated.date,
-        categoryId: validated.categoryId,
-        notes: validated.notes,
+        categoryId: validated.categoryId || null,
+        notes: validated.notes || null,
         isShared: validated.isShared || false,
-        householdId: validated.householdId || card.householdId,
+        householdId: validated.householdId || card.householdId || null,
         status: 'pending',
       },
       include: {
