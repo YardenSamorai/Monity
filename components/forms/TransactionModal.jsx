@@ -210,7 +210,7 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
         }
       }
       
-      onSuccess?.()
+      await onSuccess?.()
       onClose()
       
       // Reset form
