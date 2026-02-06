@@ -153,8 +153,30 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
     setLoading(true)
 
     try {
-      // Credit card transaction
-      if (formData.paymentMethod === 'creditCard' && formData.creditCardId) {
+      // Editing a credit card transaction
+      if (isEditing && editingTransaction?.isCreditCard) {
+        const cardId = editingTransaction.account?.id
+        const response = await fetch(`/api/credit-cards/${cardId}/transactions/${editingTransaction.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: parseFloat(formData.amount),
+            description: formData.description,
+            categoryId: formData.categoryId || null,
+            date: new Date(formData.date).toISOString(),
+            notes: formData.notes || null,
+          }),
+        })
+
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || 'Failed to update credit card transaction')
+        }
+
+        toast.success(t('transactions.updated'), t('transactions.updatedSuccess'))
+      }
+      // Creating a new credit card transaction
+      else if (formData.paymentMethod === 'creditCard' && formData.creditCardId) {
         const response = await fetch(`/api/credit-cards/${formData.creditCardId}/transactions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -175,7 +197,7 @@ export function TransactionModal({ isOpen, onClose, accounts, categories, onSucc
 
         toast.success(t('transactions.created'), t('creditCards.transactionAdded'))
       } else {
-        // Regular bank/cash transaction
+        // Regular bank/cash transaction (create or edit)
         const url = isEditing 
           ? `/api/transactions/${editingTransaction.id}`
           : '/api/transactions'
