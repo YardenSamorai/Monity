@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import QuickAddClient from './QuickAddClient'
@@ -90,16 +91,18 @@ export default async function QuickAddPage() {
   return (
     <I18nProvider>
       <ToastProvider>
-        <QuickAddClient
-          accounts={JSON.parse(JSON.stringify(accounts))}
-          categories={JSON.parse(JSON.stringify(categories))}
-          creditCards={JSON.parse(JSON.stringify(creditCards))}
-          household={household?.household ? JSON.parse(JSON.stringify(household.household)) : null}
-          recentAmounts={recentAmounts}
-          recentMerchants={JSON.parse(JSON.stringify(recentMerchants))}
-          defaultAccountId={defaultAccount?.id || null}
-          currency={defaultAccount?.currency || 'ILS'}
-        />
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[rgb(var(--accent))]" /></div>}>
+          <QuickAddClient
+            accounts={JSON.parse(JSON.stringify(accounts))}
+            categories={JSON.parse(JSON.stringify(categories))}
+            creditCards={JSON.parse(JSON.stringify(creditCards))}
+            household={household?.household ? JSON.parse(JSON.stringify(household.household)) : null}
+            recentAmounts={recentAmounts}
+            recentMerchants={JSON.parse(JSON.stringify(recentMerchants))}
+            defaultAccountId={defaultAccount?.id || null}
+            currency={defaultAccount?.currency || 'ILS'}
+          />
+        </Suspense>
       </ToastProvider>
     </I18nProvider>
   )

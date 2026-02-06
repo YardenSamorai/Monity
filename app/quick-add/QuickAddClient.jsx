@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { X, Check, ChevronDown, Search, Plus, Building2, Banknote, CreditCard, Users } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
@@ -33,18 +33,31 @@ export default function QuickAddClient({
   currency,
 }) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { t, isRTL, currencySymbol } = useI18n()
   const { toast } = useToast()
   const amountInputRef = useRef(null)
   const formRef = useRef(null)
+  const autoSubmitTriggered = useRef(false)
 
-  // Form state
-  const [amount, setAmount] = useState('')
-  const [merchant, setMerchant] = useState('')
+  // Read URL query params (for Apple Wallet / Shortcuts automation)
+  const urlAmount = searchParams.get('amount') || ''
+  const urlName = searchParams.get('name') || ''
+  const urlPayment = searchParams.get('payment') || '' // 'credit', 'cash', 'account'
+  const urlCardId = searchParams.get('cardId') || ''
+  const urlAutoSubmit = searchParams.get('auto') === 'true'
+
+  // Form state - initialize from URL params if available
+  const [amount, setAmount] = useState(urlAmount)
+  const [merchant, setMerchant] = useState(urlName)
   const [categoryId, setCategoryId] = useState('')
-  const [paymentMethod, setPaymentMethod] = useState('account') // 'account', 'cash', 'creditCard'
+  const [paymentMethod, setPaymentMethod] = useState(
+    urlPayment === 'credit' ? 'creditCard' : 
+    urlPayment === 'cash' ? 'cash' : 
+    (creditCards.length > 0 && urlAmount && !urlPayment) ? 'creditCard' : 'account'
+  )
   const [accountId, setAccountId] = useState(defaultAccountId)
-  const [creditCardId, setCreditCardId] = useState(creditCards[0]?.id || '')
+  const [creditCardId, setCreditCardId] = useState(urlCardId || creditCards[0]?.id || '')
   const [isShared, setIsShared] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
@@ -83,6 +96,18 @@ export default function QuickAddClient({
     document.addEventListener('touchmove', preventPullToRefresh, { passive: false })
     return () => document.removeEventListener('touchmove', preventPullToRefresh)
   }, [])
+
+  // Auto-submit if URL has auto=true (for full automation from Shortcuts)
+  useEffect(() => {
+    if (urlAutoSubmit && urlAmount && !autoSubmitTriggered.current) {
+      autoSubmitTriggered.current = true
+      // Small delay to let the UI render and category suggestions load
+      const timer = setTimeout(() => {
+        handleSave()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [urlAutoSubmit, urlAmount]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fuzzy search for merchants
   useEffect(() => {
