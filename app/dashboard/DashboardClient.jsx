@@ -7,7 +7,7 @@ import { ExpensesModal } from '@/components/ExpensesModal'
 import { AccountModal } from '@/components/forms/AccountModal'
 import { TransactionModal } from '@/components/forms/TransactionModal'
 import { formatCurrency, cn } from '@/lib/utils'
-import { useDashboardRefresh, useDataRefresh, EVENTS } from '@/lib/realtime-context'
+import { useDashboardRefresh, useDataRefresh, useRealtime, EVENTS } from '@/lib/realtime-context'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -157,6 +157,116 @@ export function DashboardClient({
       EVENTS.DASHBOARD_UPDATE,
     ],
   })
+
+  // Optimistic updates - update UI immediately without waiting for fetch
+  const { subscribe } = useRealtime()
+  
+  useEffect(() => {
+    // Listen for transaction deletion - remove immediately
+    const unsubscribeDeleted = subscribe(EVENTS.TRANSACTION_DELETED, (data) => {
+      const deletedId = data?.id || data?.transactionId
+      if (deletedId) {
+        setLocalRecentTransactions(prev => 
+          prev.filter(tx => tx.id !== deletedId)
+        )
+      }
+    })
+
+    // Listen for credit card transaction deletion
+    const unsubscribeCCDeleted = subscribe(EVENTS.CREDIT_CARD_TRANSACTION_DELETED, (data) => {
+      const deletedId = data?.id || data?.transactionId
+      if (deletedId) {
+        setLocalRecentTransactions(prev => 
+          prev.filter(tx => tx.id !== deletedId)
+        )
+      }
+    })
+
+    // Listen for transaction creation - add immediately
+    const unsubscribeCreated = subscribe(EVENTS.TRANSACTION_CREATED, (data) => {
+      if (data?.transaction) {
+        const newTx = data.transaction
+        setLocalRecentTransactions(prev => {
+          // Check if already exists
+          if (prev.some(tx => tx.id === newTx.id)) {
+            return prev
+          }
+          // Add to beginning and keep only 10 most recent
+          return [newTx, ...prev]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 10)
+        })
+      }
+    })
+
+    // Listen for credit card transaction creation
+    const unsubscribeCCCreated = subscribe(EVENTS.CREDIT_CARD_TRANSACTION, (data) => {
+      if (data?.transaction) {
+        const newTx = {
+          ...data.transaction,
+          isCreditCard: true,
+          creditCardStatus: data.transaction.status,
+          account: {
+            id: data.cardId || data.transaction.creditCardId,
+            name: `${data.cardName || 'Credit Card'} •••• ${data.lastFourDigits || '****'}`,
+            type: 'credit',
+          },
+        }
+        setLocalRecentTransactions(prev => {
+          // Check if already exists
+          if (prev.some(tx => tx.id === newTx.id)) {
+            return prev
+          }
+          // Add to beginning and keep only 10 most recent
+          return [newTx, ...prev]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 10)
+        })
+      }
+    })
+
+    // Listen for transaction update - update immediately
+    const unsubscribeUpdated = subscribe(EVENTS.TRANSACTION_UPDATED, (data) => {
+      if (data?.transaction) {
+        const updatedTx = data.transaction
+        setLocalRecentTransactions(prev =>
+          prev.map(tx => tx.id === updatedTx.id ? updatedTx : tx)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 10)
+        )
+      }
+    })
+
+    // Listen for credit card transaction update
+    const unsubscribeCCUpdated = subscribe(EVENTS.CREDIT_CARD_TRANSACTION_UPDATED, (data) => {
+      if (data?.transaction) {
+        const updatedTx = {
+          ...data.transaction,
+          isCreditCard: true,
+          creditCardStatus: data.transaction.status,
+          account: {
+            id: data.cardId || data.transaction.creditCardId,
+            name: `${data.cardName || 'Credit Card'} •••• ${data.lastFourDigits || '****'}`,
+            type: 'credit',
+          },
+        }
+        setLocalRecentTransactions(prev =>
+          prev.map(tx => tx.id === updatedTx.id ? updatedTx : tx)
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 10)
+        )
+      }
+    })
+
+    return () => {
+      unsubscribeDeleted()
+      unsubscribeCCDeleted()
+      unsubscribeCreated()
+      unsubscribeCCCreated()
+      unsubscribeUpdated()
+      unsubscribeCCUpdated()
+    }
+  }, [subscribe])
 
   // Auto-refresh dashboard on real-time updates
   const handleRealtimeUpdate = useCallback(() => {
