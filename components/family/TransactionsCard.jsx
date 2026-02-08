@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { useI18n } from '@/lib/i18n-context'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { 
   ArrowUpRight, 
   ArrowDownRight, 
@@ -40,15 +41,87 @@ export function TransactionsCard({ household }) {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const fetchTransactions = useCallback(async () => {
+    try {
+      // Fetch regular shared transactions
+      const [transactionsRes, creditCardsRes] = await Promise.all([
+        fetch('/api/transactions?onlyShared=true&limit=10', { cache: 'no-store' }),
+        fetch('/api/credit-cards', { cache: 'no-store' }),
+      ])
+      
+      const transactionsData = await transactionsRes.json()
+      const creditCardsData = await creditCardsRes.json()
+      
+      // Fetch shared credit card transactions
+      const allCCTransactions = []
+      for (const card of (creditCardsData.creditCards || [])) {
+        try {
+          const ccTxRes = await fetch(`/api/credit-cards/${card.id}/transactions?status=pending`, { cache: 'no-store' })
+          const ccTxData = await ccTxRes.json()
+          
+          // Filter only shared transactions
+          const sharedCCTransactions = (ccTxData.transactions || [])
+            .filter(tx => tx.isShared && tx.householdId === household?.id)
+            .map(tx => ({
+              id: tx.id,
+              type: 'expense',
+              amount: tx.amount,
+              description: tx.description,
+              date: tx.date,
+              notes: tx.notes,
+              isShared: true,
+              isCreditCard: true,
+              creditCardStatus: tx.status,
+              userId: tx.userId,
+              account: {
+                id: card.id,
+                name: `${card.name} •••• ${card.lastFourDigits}`,
+                type: 'credit',
+              },
+              category: tx.category,
+            }))
+          
+          allCCTransactions.push(...sharedCCTransactions)
+        } catch (error) {
+          console.error(`Error fetching transactions for card ${card.id}:`, error)
+        }
+      }
+      
+      // Merge and sort all transactions by date
+      const allTransactions = [
+        ...(transactionsData.transactions || []),
+        ...allCCTransactions,
+      ]
+        .sort((a, b) => new Date(b.date) - new Date(a.date))
+        .slice(0, 5) // Take top 5 most recent
+      
+      setTransactions(allTransactions)
+    } catch (error) {
+      console.error('Error fetching family transactions:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [household?.id])
+
   useEffect(() => {
-    fetch('/api/transactions?onlyShared=true&limit=5')
-      .then(res => res.json())
-      .then(data => {
-        setTransactions(data.transactions || [])
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+    fetchTransactions()
+  }, [fetchTransactions])
+
+  // Real-time updates for family transactions
+  useDataRefresh({
+    key: 'family-transactions-card',
+    fetchFn: fetchTransactions,
+    events: [
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.FAMILY_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   // Find member name by userId
   const getMemberName = (userId) => {
