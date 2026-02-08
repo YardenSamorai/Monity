@@ -543,7 +543,7 @@ function RecurringTransactionModal({
         {/* Category */}
         <div>
           <label className="text-sm font-medium text-[rgb(var(--text-secondary))] mb-2 block">
-            {t('transactions.category')} ({t('common.optional')})
+            {`${t('transactions.category')} (${t('common.optional')})`}
           </label>
           <select
             value={formData.categoryId}
@@ -576,7 +576,7 @@ function RecurringTransactionModal({
         {/* End Date (optional) */}
         {formType === 'expense' && (
           <Input
-            label={t('family.endDate')} + ' (' + t('common.optional') + ')'
+            label={`${t('family.endDate')} (${t('common.optional')})`}
             type="date"
             value={formData.endDate}
             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
