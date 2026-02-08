@@ -50,7 +50,9 @@ export function InsightsClient() {
 
       setSavings(savingsData.recommendations || [])
       setAnomalies(anomaliesData.anomalies || [])
-      setForecast(forecastData.forecast || [])
+      // forecastExpenses returns { hasEnoughData, forecast: [...] }
+      const forecastResult = forecastData.forecast || {}
+      setForecast(Array.isArray(forecastResult) ? forecastResult : (forecastResult.forecast || []))
     } catch (error) {
       console.error('Error loading insights:', error)
       toast.error(t('common.error'))
