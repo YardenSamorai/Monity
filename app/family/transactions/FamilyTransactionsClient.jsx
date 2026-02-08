@@ -24,6 +24,8 @@ import {
   Receipt,
   ChevronDown,
   ChevronUp,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react'
 import { TransactionRow as FamilyTransactionRow } from '@/components/family/TransactionRow'
 
