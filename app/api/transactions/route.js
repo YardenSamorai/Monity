@@ -31,10 +31,11 @@ export async function GET(request) {
     // Check if user wants to see shared transactions
     const includeShared = searchParams.get('includeShared') === 'true'
     const onlyShared = searchParams.get('onlyShared') === 'true'
+    const householdIdParam = searchParams.get('householdId')
     
     // Get user's household if exists
-    let householdId = null
-    if (includeShared || onlyShared) {
+    let householdId = householdIdParam || null
+    if (!householdId && (includeShared || onlyShared)) {
       const member = await prisma.householdMember.findFirst({
         where: { userId: user.id },
         select: { householdId: true },
@@ -42,6 +43,19 @@ export async function GET(request) {
       if (member) {
         householdId = member.householdId
       }
+    }
+    
+    // If onlyShared is true but no householdId, return empty
+    if (onlyShared && !householdId) {
+      return NextResponse.json({
+        transactions: [],
+        pagination: {
+          page: 1,
+          limit,
+          total: 0,
+          totalPages: 0,
+        },
+      })
     }
 
     // Build base filters

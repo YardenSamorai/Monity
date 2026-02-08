@@ -13,8 +13,30 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const householdId = searchParams.get('householdId')
+    const onlyShared = searchParams.get('onlyShared') === 'true'
+
+    let where = { userId: user.id }
+    
+    if (onlyShared && householdId) {
+      // Verify user is member of household
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId },
+      })
+      if (member) {
+        where = {
+          householdId,
+          isShared: true,
+        }
+      }
+    } else if (!onlyShared) {
+      // Only personal goals (not shared)
+      where.isShared = false
+    }
+
     const goals = await prisma.savingsGoal.findMany({
-      where: { userId: user.id },
+      where,
       orderBy: { createdAt: 'desc' },
       include: {
         contributions: {
@@ -46,6 +68,8 @@ const createGoalSchema = z.object({
   isRecurring: z.boolean().default(false),
   recurringPeriod: z.enum(['monthly', 'yearly']).nullable().optional(),
   currency: z.string().default('USD'),
+  householdId: z.string().nullable().optional(),
+  isShared: z.boolean().default(false),
 })
 
 export async function POST(request) {
@@ -57,6 +81,17 @@ export async function POST(request) {
 
     const body = await request.json()
     const validated = createGoalSchema.parse(body)
+
+    // Verify household if shared
+    let householdId = null
+    if (validated.isShared && validated.householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId: validated.householdId },
+      })
+      if (member) {
+        householdId = validated.householdId
+      }
+    }
 
     // Create goal
     const goal = await prisma.savingsGoal.create({
@@ -75,6 +110,8 @@ export async function POST(request) {
         currency: validated.currency || 'USD',
         isPaused: false,
         isCompleted: false,
+        householdId: householdId,
+        isShared: householdId ? true : false,
       },
     })
 

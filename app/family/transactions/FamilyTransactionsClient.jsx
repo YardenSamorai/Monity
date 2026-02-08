@@ -73,22 +73,35 @@ export function FamilyTransactionsClient() {
   // Fetch data
   const fetchData = useCallback(async () => {
     try {
-      const [householdData, transactionsData, categoriesData, accountsData] = await Promise.all([
-        fetch('/api/households', { cache: 'no-store' }).then(res => res.json()),
-        fetch('/api/transactions?onlyShared=true', { cache: 'no-store' }).then(res => res.json()),
+      // First get household to ensure we have householdId
+      const householdRes = await fetch('/api/households', { cache: 'no-store' })
+      const householdData = await householdRes.json()
+      const household = householdData.household
+      
+      setHousehold(household)
+      
+      // Only fetch transactions if we have a household
+      let transactionsData = { transactions: [] }
+      if (household?.id) {
+        const transactionsRes = await fetch(`/api/transactions?onlyShared=true&householdId=${household.id}`, { cache: 'no-store' })
+        transactionsData = await transactionsRes.json()
+      }
+      
+      const [categoriesData, accountsData] = await Promise.all([
         fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
         fetch('/api/accounts', { cache: 'no-store' }).then(res => res.json()),
       ])
-      setHousehold(householdData.household)
+      
       setTransactions(transactionsData.transactions || [])
       setCategories(categoriesData.categories || [])
       setAccounts(accountsData.accounts || [])
     } catch (error) {
       console.error('Error fetching data:', error)
+      toast.error(t('familyTransactions.loadFailed'), error.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     fetchData()

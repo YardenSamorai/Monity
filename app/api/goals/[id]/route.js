@@ -29,9 +29,23 @@ export async function PUT(request, { params }) {
     const body = await request.json()
     const validated = updateGoalSchema.parse(body)
 
-    // Check if goal exists and belongs to user
+    // Check if goal exists and belongs to user or is shared family goal
     const goal = await prisma.savingsGoal.findFirst({
-      where: { id, userId: user.id },
+      where: {
+        id,
+        OR: [
+          { userId: user.id },
+          {
+            isShared: true,
+            householdId: {
+              in: (await prisma.householdMember.findMany({
+                where: { userId: user.id },
+                select: { householdId: true },
+              })).map(m => m.householdId),
+            },
+          },
+        ],
+      },
     })
 
     if (!goal) {
@@ -92,9 +106,24 @@ export async function DELETE(request, { params }) {
 
     const { id } = await params
 
-    // Check if goal exists and belongs to user
+    // Check if goal exists and belongs to user or is shared family goal
+    const userHouseholds = await prisma.householdMember.findMany({
+      where: { userId: user.id },
+      select: { householdId: true },
+    })
+    const householdIds = userHouseholds.map(m => m.householdId)
+
     const goal = await prisma.savingsGoal.findFirst({
-      where: { id, userId: user.id },
+      where: {
+        id,
+        OR: [
+          { userId: user.id },
+          {
+            isShared: true,
+            householdId: { in: householdIds },
+          },
+        ],
+      },
     })
 
     if (!goal) {

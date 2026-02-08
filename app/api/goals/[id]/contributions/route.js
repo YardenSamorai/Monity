@@ -24,9 +24,24 @@ export async function POST(request, { params }) {
     const body = await request.json()
     const validated = createContributionSchema.parse(body)
 
-    // Check if goal exists and belongs to user
+    // Check if goal exists and belongs to user or is shared family goal
+    const userHouseholds = await prisma.householdMember.findMany({
+      where: { userId: user.id },
+      select: { householdId: true },
+    })
+    const householdIds = userHouseholds.map(m => m.householdId)
+
     const goal = await prisma.savingsGoal.findFirst({
-      where: { id, userId: user.id },
+      where: {
+        id,
+        OR: [
+          { userId: user.id },
+          {
+            isShared: true,
+            householdId: { in: householdIds },
+          },
+        ],
+      },
     })
 
     if (!goal) {
@@ -73,6 +88,9 @@ export async function POST(request, { params }) {
           notes: validated.note || null,
           status: 'pending',
           savingsGoalId: id,
+          // If goal is shared, make transaction shared too
+          isShared: goal.isShared,
+          householdId: goal.householdId,
         },
       })
     } else if (validated.paymentMethod === 'account' && validated.sourceId) {
@@ -88,6 +106,9 @@ export async function POST(request, { params }) {
           date: new Date(validated.date),
           notes: validated.note || null,
           savingsGoalId: id,
+          // If goal is shared, make transaction shared too
+          isShared: goal.isShared,
+          householdId: goal.householdId,
         },
       })
     }
