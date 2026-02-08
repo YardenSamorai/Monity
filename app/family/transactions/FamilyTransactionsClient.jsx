@@ -18,8 +18,6 @@ import {
   Plus,
   Download,
   Filter,
-  TrendingUp,
-  TrendingDown,
   Wallet,
   Receipt,
   ChevronDown,
@@ -27,7 +25,7 @@ import {
   ArrowUpRight,
   ArrowDownRight,
 } from 'lucide-react'
-import { TransactionRow as FamilyTransactionRow } from '@/components/family/TransactionRow'
+import { SwipeableTransactionItem } from '@/components/transactions/SwipeableTransactionItem'
 
 export function FamilyTransactionsClient() {
   const { t, currencySymbol, localeString } = useI18n()
@@ -689,19 +687,16 @@ function TransactionGroup({ label, transactions, total, household, currencySymbo
 
       {/* Transactions */}
       {isExpanded && (
-        <div className="divide-y divide-[rgb(var(--border-primary))]">
+        <div className="divide-y divide-[rgb(var(--border-secondary))]">
           {transactions.map((transaction) => (
-            <FamilyTransactionRow
+            <SwipeableTransactionItem
               key={transaction.id}
               transaction={transaction}
-              household={household}
-              currencySymbol={currencySymbol}
-              localeString={localeString}
-              variant="detailed"
-              showActions={true}
               onEdit={onEdit}
               onDelete={onDelete}
               onView={onView}
+              currencySymbol={currencySymbol}
+              localeString={localeString}
             />
           ))}
         </div>
