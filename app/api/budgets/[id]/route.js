@@ -19,10 +19,20 @@ export async function PUT(request, { params }) {
     // Validate only the fields that can be updated
     const validated = createBudgetSchema.partial().parse(body)
 
+    // Support shared budgets
+    const userHouseholds = await prisma.householdMember.findMany({
+      where: { userId: user.id },
+      select: { householdId: true },
+    })
+    const householdIds = userHouseholds.map(m => m.householdId)
+
     const budget = await prisma.budget.findFirst({
       where: { 
         id,
-        userId: user.id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
       },
     })
 
@@ -78,10 +88,20 @@ export async function DELETE(request, { params }) {
 
     const { id } = await params
 
+    // Support shared budgets
+    const userHouseholds = await prisma.householdMember.findMany({
+      where: { userId: user.id },
+      select: { householdId: true },
+    })
+    const householdIds = userHouseholds.map(m => m.householdId)
+
     const budget = await prisma.budget.findFirst({
       where: { 
         id,
-        userId: user.id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
       },
     })
 

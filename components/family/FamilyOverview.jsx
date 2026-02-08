@@ -16,13 +16,16 @@ export function FamilyOverview({ household }) {
   const fetchStats = useCallback(async () => {
     try {
       const now = new Date()
-      const start = new Date(now.getFullYear(), now.getMonth(), 1)
-      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      const currentMonth = now.getMonth() + 1
+      const currentYear = now.getFullYear()
+      const start = new Date(currentYear, currentMonth - 1, 1)
+      const end = new Date(currentYear, currentMonth, 0)
 
-      // Fetch regular shared transactions
-      const [transactionsRes, creditCardsRes] = await Promise.all([
+      // Fetch regular shared transactions + budgets
+      const [transactionsRes, creditCardsRes, budgetsRes] = await Promise.all([
         fetch(`/api/transactions?onlyShared=true&startDate=${start.toISOString()}&endDate=${end.toISOString()}`, { cache: 'no-store' }),
         fetch('/api/credit-cards', { cache: 'no-store' }),
+        fetch(`/api/budgets?onlyShared=true&month=${currentMonth}&year=${currentYear}`, { cache: 'no-store' }),
       ])
       
       const transactionsData = await transactionsRes.json()
@@ -69,11 +72,17 @@ export function FamilyOverview({ household }) {
       const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0)
       const totalIncome = income.reduce((sum, t) => sum + Number(t.amount), 0)
       
+      const budgetsData = await budgetsRes.json()
+      const familyBudgets = budgetsData.budgets || []
+      const overallBudget = familyBudgets.find(b => !b.categoryId)
+      const budgetAmount = overallBudget ? Number(overallBudget.amount) : 0
+
       setStats({
         totalExpenses,
         totalIncome,
         netBalance: totalIncome - totalExpenses,
         transactionCount: allTransactions.length,
+        budgetAmount,
       })
     } catch (error) {
       console.error('Error fetching family stats:', error)
@@ -102,9 +111,12 @@ export function FamilyOverview({ household }) {
     ],
   })
 
+  // Use actual family budget if set, otherwise fallback to household income
+  const budgetAmount = stats?.budgetAmount || 0
   const totalHouseholdIncome = household.totalHouseholdIncome || 0
-  const budgetUsed = totalHouseholdIncome > 0 && stats 
-    ? Math.min(Math.round((stats.totalExpenses / totalHouseholdIncome) * 100), 100)
+  const budgetBase = budgetAmount > 0 ? budgetAmount : totalHouseholdIncome
+  const budgetUsed = budgetBase > 0 && stats 
+    ? Math.min(Math.round((stats.totalExpenses / budgetBase) * 100), 100)
     : 0
 
   if (loading) {

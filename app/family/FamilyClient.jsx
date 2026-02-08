@@ -23,6 +23,7 @@ import { CreateFamilyModal } from '@/components/family/CreateFamilyModal'
 import { FamilySettingsCard } from '@/components/family/FamilySettingsCard'
 import { RecurringTransactionsCard } from '@/components/family/RecurringTransactionsCard'
 import { FamilyGoalsCard } from '@/components/family/FamilyGoalsCard'
+import { FamilyBudgetCard } from '@/components/family/FamilyBudgetCard'
 
 export function FamilyClient() {
   const { t } = useI18n()
@@ -209,6 +210,9 @@ export function FamilyClient() {
 
       {/* Recent Transactions */}
       <TransactionsCard household={household} />
+
+      {/* Family Budget */}
+      <FamilyBudgetCard household={household} />
 
       {/* Recurring Transactions */}
       <RecurringTransactionsCard household={household} />

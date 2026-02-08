@@ -17,7 +17,24 @@ export async function GET(request) {
     const month = searchParams.get('month')
     const year = searchParams.get('year')
     
-    const where = { userId: user.id }
+    const onlyShared = searchParams.get('onlyShared') === 'true'
+    const householdIdParam = searchParams.get('householdId')
+    
+    let where = { userId: user.id }
+    
+    if (onlyShared) {
+      let householdId = householdIdParam
+      if (!householdId) {
+        const member = await prisma.householdMember.findFirst({
+          where: { userId: user.id },
+          select: { householdId: true },
+        })
+        householdId = member?.householdId
+      }
+      if (householdId) {
+        where = { householdId, isShared: true }
+      }
+    }
     
     if (month) where.month = parseInt(month)
     if (year) where.year = parseInt(year)
@@ -54,15 +71,25 @@ export async function POST(request) {
     const body = await request.json()
     const validated = createBudgetSchema.parse(body)
     
+    // Handle shared/family budgets
+    let householdId = null
+    if (body.isShared && body.householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId: body.householdId },
+      })
+      if (member) {
+        householdId = body.householdId
+      }
+    }
+    
     // Check if budget already exists
-    const existing = await prisma.budget.findUnique({
+    const existing = await prisma.budget.findFirst({
       where: {
-        userId_categoryId_month_year: {
-          userId: user.id,
-          categoryId: validated.categoryId || null,
-          month: validated.month,
-          year: validated.year,
-        },
+        userId: user.id,
+        categoryId: validated.categoryId || null,
+        month: validated.month,
+        year: validated.year,
+        ...(householdId ? { householdId, isShared: true } : { isShared: false }),
       },
     })
     
@@ -89,6 +116,8 @@ export async function POST(request) {
         month: validated.month,
         year: validated.year,
         amount: validated.amount,
+        householdId,
+        isShared: !!householdId,
       },
       include: {
         category: true,
