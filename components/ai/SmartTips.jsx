@@ -3,11 +3,17 @@
 import { useState, useEffect } from 'react'
 import { cn, formatCurrency } from '@/lib/utils'
 import { useI18n } from '@/lib/i18n-context'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { 
   Lightbulb, 
   ChevronRight,
   X,
-  PiggyBank
+  PiggyBank,
+  TrendingUp,
+  TrendingDown,
+  Shield,
+  Target,
+  Sparkles,
 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 
@@ -19,23 +25,16 @@ export function SmartTips({ className }) {
   const [isExpanded, setIsExpanded] = useState(true)
 
   useEffect(() => {
-    // Load dismissed tips from localStorage
     const saved = localStorage.getItem('monity_dismissed_tips')
     if (saved) {
-      try {
-        setDismissedTips(JSON.parse(saved))
-      } catch {
-        setDismissedTips([])
-      }
+      try { setDismissedTips(JSON.parse(saved)) } catch { setDismissedTips([]) }
     }
-
-    // Fetch tips
     fetchTips()
   }, [])
 
   const fetchTips = async () => {
     try {
-      const response = await fetch('/api/ai/smart-tips')
+      const response = await fetch('/api/ai/smart-tips', { cache: 'no-store' })
       if (response.ok) {
         const data = await response.json()
         setTips(data.tips || [])
@@ -47,22 +46,29 @@ export function SmartTips({ className }) {
     }
   }
 
+  // Real-time updates
+  useDataRefresh({
+    key: 'smart-tips',
+    fetchFn: fetchTips,
+    events: [
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
+
   const dismissTip = (tipId) => {
     const newDismissed = [...dismissedTips, tipId]
     setDismissedTips(newDismissed)
     localStorage.setItem('monity_dismissed_tips', JSON.stringify(newDismissed))
   }
 
-  // Get translated message with interpolation
   const getTranslatedMessage = (tip) => {
     if (!tip.messageKey) return tip.message || ''
-    
     let message = t(tip.messageKey)
     if (tip.messageData) {
-      // Replace placeholders with actual values
       Object.entries(tip.messageData).forEach(([key, value]) => {
-        // Format currency values
-        if (key === 'amount' || key === 'difference') {
+        if (['amount', 'budget', 'overAmount', 'remaining', 'dailyLimit', 'currentAmount', 'prevAmount', 'savedAmount', 'expected', 'actual', 'extra', 'suggestedBudget', 'projected', 'prevMonth', 'dailyAvg', 'excess', 'expenses', 'income', 'monthlyNeeded'].includes(key)) {
           const formatted = formatCurrency(value, { locale: localeString, symbol: currencySymbol })
           message = message.replace(`{${key}}`, formatted)
         } else {
@@ -73,27 +79,50 @@ export function SmartTips({ className }) {
     return message
   }
 
+  const getTranslatedTitle = (tip) => {
+    if (!tip.titleKey) return tip.title || ''
+    return t(tip.titleKey)
+  }
+
   const visibleTips = tips.filter(tip => !dismissedTips.includes(tip.id))
 
-  const getTypeStyles = (type) => {
+  const getTypeConfig = (type) => {
     switch (type) {
       case 'danger':
         return {
-          bg: 'bg-red-500/10',
-          border: 'border-red-500/30',
-          icon: 'text-red-500',
+          bg: 'bg-rose-50 dark:bg-rose-950/30',
+          border: 'border-rose-200 dark:border-rose-800/50',
+          iconBg: 'bg-rose-100 dark:bg-rose-900/40',
+          iconColor: 'text-rose-600 dark:text-rose-400',
+          titleColor: 'text-rose-700 dark:text-rose-400',
+          StatusIcon: Shield,
         }
       case 'warning':
         return {
-          bg: 'bg-amber-500/10',
-          border: 'border-amber-500/30',
-          icon: 'text-amber-500',
+          bg: 'bg-amber-50 dark:bg-amber-950/30',
+          border: 'border-amber-200 dark:border-amber-800/50',
+          iconBg: 'bg-amber-100 dark:bg-amber-900/40',
+          iconColor: 'text-amber-600 dark:text-amber-400',
+          titleColor: 'text-amber-700 dark:text-amber-400',
+          StatusIcon: TrendingUp,
+        }
+      case 'success':
+        return {
+          bg: 'bg-emerald-50 dark:bg-emerald-950/30',
+          border: 'border-emerald-200 dark:border-emerald-800/50',
+          iconBg: 'bg-emerald-100 dark:bg-emerald-900/40',
+          iconColor: 'text-emerald-600 dark:text-emerald-400',
+          titleColor: 'text-emerald-700 dark:text-emerald-400',
+          StatusIcon: TrendingDown,
         }
       default:
         return {
-          bg: 'bg-[rgb(var(--accent))]/10',
-          border: 'border-[rgb(var(--accent))]/30',
-          icon: 'text-[rgb(var(--accent))]',
+          bg: 'bg-blue-50 dark:bg-blue-950/30',
+          border: 'border-blue-200 dark:border-blue-800/50',
+          iconBg: 'bg-blue-100 dark:bg-blue-900/40',
+          iconColor: 'text-blue-600 dark:text-blue-400',
+          titleColor: 'text-blue-700 dark:text-blue-400',
+          StatusIcon: Lightbulb,
         }
     }
   }
@@ -106,83 +135,80 @@ export function SmartTips({ className }) {
           <div className="h-5 w-32 bg-[rgb(var(--bg-tertiary))] rounded animate-pulse" />
         </div>
         <div className="space-y-2">
-          <div className="h-16 bg-[rgb(var(--bg-tertiary))] rounded-lg animate-pulse" />
-          <div className="h-16 bg-[rgb(var(--bg-tertiary))] rounded-lg animate-pulse" />
+          <div className="h-20 bg-[rgb(var(--bg-tertiary))] rounded-xl animate-pulse" />
+          <div className="h-20 bg-[rgb(var(--bg-tertiary))] rounded-xl animate-pulse" />
         </div>
       </Card>
     )
   }
 
-  if (visibleTips.length === 0) {
-    return null
-  }
+  if (visibleTips.length === 0) return null
 
   return (
-    <Card className={cn("p-4", className)}>
+    <Card className={cn("overflow-hidden", className)} padding={false}>
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center">
-            <Lightbulb className="w-4 h-4 text-white" />
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center justify-between p-4 hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-sm">
+            <Sparkles className="w-4.5 h-4.5 text-white" />
           </div>
-          <div>
-            <h3 className="font-semibold text-[rgb(var(--text-primary))]">
+          <div className="text-start">
+            <h3 className="font-semibold text-sm text-[rgb(var(--text-primary))]">
               {t('ai.smartTips')}
             </h3>
-            <p className="text-xs text-[rgb(var(--text-tertiary))]">
-              {t('insights.basedOnSpending')}
+            <p className="text-[11px] text-[rgb(var(--text-tertiary))]">
+              {visibleTips.length} {t('ai.insightsAvailable')}
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-secondary))]"
-        >
-          <ChevronRight className={cn(
-            "w-5 h-5 transition-transform",
-            isExpanded && "rotate-90"
-          )} />
-        </button>
-      </div>
+        <ChevronRight className={cn(
+          "w-5 h-5 text-[rgb(var(--text-tertiary))] transition-transform",
+          isExpanded && "rotate-90"
+        )} />
+      </button>
 
       {/* Tips List */}
       {isExpanded && (
-        <div className="space-y-2">
+        <div className="px-4 pb-4 space-y-2.5">
           {visibleTips.map((tip) => {
-            const styles = getTypeStyles(tip.type)
+            const config = getTypeConfig(tip.type)
             
             return (
               <div
                 key={tip.id}
                 className={cn(
-                  "relative p-3 rounded-xl border transition-all",
-                  styles.bg,
-                  styles.border,
-                  "hover:shadow-sm"
+                  "relative p-3.5 rounded-xl border transition-all",
+                  config.bg,
+                  config.border,
                 )}
               >
                 <button
                   onClick={() => dismissTip(tip.id)}
-                  className="absolute top-2 right-2 p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+                  className="absolute top-2.5 end-2.5 p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
                 >
                   <X className="w-3.5 h-3.5 text-[rgb(var(--text-tertiary))]" />
                 </button>
 
-                <div className="flex gap-3 pr-6">
-                  <span className="text-xl flex-shrink-0">{tip.icon}</span>
+                <div className="flex gap-3 pe-6">
+                  <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0", config.iconBg)}>
+                    <span className="text-lg">{tip.icon}</span>
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-sm text-[rgb(var(--text-primary))] mb-0.5">
-                      {tip.titleKey ? t(tip.titleKey) : tip.title}
+                    <h4 className={cn("font-semibold text-sm mb-1", config.titleColor)}>
+                      {getTranslatedTitle(tip)}
                     </h4>
-                    <p className="text-xs text-[rgb(var(--text-secondary))] line-clamp-2">
+                    <p className="text-xs text-[rgb(var(--text-secondary))] leading-relaxed">
                       {getTranslatedMessage(tip)}
                     </p>
                     
                     {tip.potentialSavings > 0 && (
-                      <div className="flex items-center gap-1 mt-2">
-                        <PiggyBank className="w-3.5 h-3.5 text-emerald-500" />
-                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                          {t('insights.potentialSavings')}: {formatCurrency(tip.potentialSavings, { locale: localeString, symbol: currencySymbol })}
+                      <div className="flex items-center gap-1.5 mt-2 px-2 py-1 rounded-lg bg-emerald-100/50 dark:bg-emerald-900/20 w-fit">
+                        <PiggyBank className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                        <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">
+                          {t('ai.savePotential')}: {formatCurrency(tip.potentialSavings, { locale: localeString, symbol: currencySymbol })}
                         </span>
                       </div>
                     )}
