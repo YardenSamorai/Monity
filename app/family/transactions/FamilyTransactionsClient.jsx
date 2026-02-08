@@ -24,17 +24,8 @@ import {
   Receipt,
   ChevronDown,
   ChevronUp,
-  MoreVertical,
-  Edit2,
-  Trash2,
-  History,
-  Calendar,
-  User,
-  Tag,
-  X,
-  ArrowUpRight,
-  ArrowDownRight
 } from 'lucide-react'
+import { TransactionRow as FamilyTransactionRow } from '@/components/family/TransactionRow'
 
 export function FamilyTransactionsClient() {
   const { t, currencySymbol, localeString } = useI18n()
@@ -73,35 +64,67 @@ export function FamilyTransactionsClient() {
   // Fetch data
   const fetchData = useCallback(async () => {
     try {
-      // First get household to ensure we have householdId
-      const householdRes = await fetch('/api/households', { cache: 'no-store' })
-      const householdData = await householdRes.json()
-      const household = householdData.household
-      
-      setHousehold(household)
-      
-      // Only fetch transactions if we have a household
-      let transactionsData = { transactions: [] }
-      if (household?.id) {
-        const transactionsRes = await fetch(`/api/transactions?onlyShared=true&householdId=${household.id}`, { cache: 'no-store' })
-        transactionsData = await transactionsRes.json()
-      }
-      
-      const [categoriesData, accountsData] = await Promise.all([
+      // Fetch everything in parallel
+      const [householdData, transactionsData, categoriesData, accountsData, creditCardsData] = await Promise.all([
+        fetch('/api/households', { cache: 'no-store' }).then(res => res.json()),
+        fetch('/api/transactions?onlyShared=true', { cache: 'no-store' }).then(res => res.json()),
         fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
         fetch('/api/accounts', { cache: 'no-store' }).then(res => res.json()),
+        fetch('/api/credit-cards', { cache: 'no-store' }).then(res => res.json()),
       ])
+
+      const hh = householdData.household
+      setHousehold(hh)
       
-      setTransactions(transactionsData.transactions || [])
+      // Also fetch shared credit card transactions
+      const allCCTransactions = []
+      for (const card of (creditCardsData.creditCards || [])) {
+        try {
+          const ccTxRes = await fetch(`/api/credit-cards/${card.id}/transactions?status=pending`, { cache: 'no-store' })
+          const ccTxData = await ccTxRes.json()
+          
+          const sharedCCTransactions = (ccTxData.transactions || [])
+            .filter(tx => tx.isShared && tx.householdId === hh?.id)
+            .map(tx => ({
+              id: tx.id,
+              type: 'expense',
+              amount: tx.amount,
+              description: tx.description,
+              date: tx.date,
+              notes: tx.notes,
+              isShared: true,
+              isCreditCard: true,
+              creditCardStatus: tx.status,
+              userId: tx.userId,
+              account: {
+                id: card.id,
+                name: `${card.name} •••• ${card.lastFourDigits}`,
+                type: 'credit',
+              },
+              category: tx.category,
+            }))
+          
+          allCCTransactions.push(...sharedCCTransactions)
+        } catch (error) {
+          console.error(`Error fetching CC transactions for card ${card.id}:`, error)
+        }
+      }
+      
+      // Merge regular shared transactions + shared CC transactions
+      const allTransactions = [
+        ...(transactionsData.transactions || []),
+        ...allCCTransactions,
+      ].sort((a, b) => new Date(b.date) - new Date(a.date))
+      
+      setTransactions(allTransactions)
       setCategories(categoriesData.categories || [])
       setAccounts(accountsData.accounts || [])
     } catch (error) {
       console.error('Error fetching data:', error)
-      toast.error(t('familyTransactions.loadFailed'), error.message)
     } finally {
       setLoading(false)
     }
-  }, [toast])
+  }, [])
 
   useEffect(() => {
     fetchData()
@@ -556,6 +579,9 @@ export function FamilyTransactionsClient() {
               household={household}
               currencySymbol={currencySymbol}
               localeString={localeString}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={handleView}
             />
           ))}
         </div>
@@ -626,7 +652,7 @@ function SummaryCard({ label, value, icon: Icon, iconBg, iconColor, valueColor, 
 }
 
 // Transaction Group Component
-function TransactionGroup({ label, transactions, total, household, currencySymbol, localeString }) {
+function TransactionGroup({ label, transactions, total, household, currencySymbol, localeString, onEdit, onDelete, onView }) {
   const { t } = useI18n()
   const [isExpanded, setIsExpanded] = useState(true)
 
@@ -663,181 +689,21 @@ function TransactionGroup({ label, transactions, total, household, currencySymbo
       {isExpanded && (
         <div className="divide-y divide-[rgb(var(--border-primary))]">
           {transactions.map((transaction) => (
-            <TransactionRow
+            <FamilyTransactionRow
               key={transaction.id}
               transaction={transaction}
               household={household}
               currencySymbol={currencySymbol}
               localeString={localeString}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onView={handleView}
+              variant="detailed"
+              showActions={true}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onView={onView}
             />
           ))}
         </div>
       )}
     </Card>
-  )
-}
-
-// Transaction Row Component
-function TransactionRow({ transaction, household, currencySymbol, localeString, onEdit, onDelete, onView }) {
-  const { t } = useI18n()
-  const [showMenu, setShowMenu] = useState(false)
-  
-  const member = household?.members?.find(m => m.userId === transaction.userId)
-  const isIncome = transaction.type === 'income'
-
-  const getAvatarColor = (id) => {
-    const colors = [
-      'bg-blue-500',
-      'bg-emerald-500',
-      'bg-purple-500',
-      'bg-rose-500',
-      'bg-amber-500',
-    ]
-    return colors[(id || '').charCodeAt(0) % colors.length]
-  }
-
-  const getInitials = (name, email) => {
-    if (name) return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    if (email) return email[0].toUpperCase()
-    return '?'
-  }
-
-  return (
-    <div 
-      className="flex items-center gap-3 p-4 hover:bg-[rgb(var(--bg-tertiary))] transition-colors cursor-pointer"
-      onClick={() => onView?.(transaction)}
-    >
-      {/* Category Icon */}
-      <div 
-        className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-        style={{ 
-          backgroundColor: transaction.category?.color ? `${transaction.category.color}20` : 'rgb(var(--bg-tertiary))',
-          color: transaction.category?.color || 'rgb(var(--text-tertiary))'
-        }}
-      >
-        <Tag className="w-5 h-5" />
-      </div>
-
-      {/* Details */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-[rgb(var(--text-primary))] truncate">
-          {transaction.description}
-        </p>
-        <div className="flex items-center gap-2 mt-1">
-          {/* Member */}
-          <div className="flex items-center gap-1">
-            <div className={cn(
-              "w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-medium",
-              getAvatarColor(member?.id || transaction.userId)
-            )}>
-              {getInitials(member?.name, member?.email)}
-            </div>
-            <span className="text-xs text-[rgb(var(--text-tertiary))]">
-              {member?.name || member?.email?.split('@')[0] || t('family.unknownMember')}
-            </span>
-          </div>
-          
-          {/* Category Badge */}
-          {transaction.category && (
-            <span 
-              className="text-xs px-2 py-0.5 rounded-full"
-              style={{ 
-                backgroundColor: `${transaction.category.color}20`,
-                color: transaction.category.color
-              }}
-            >
-              {transaction.category.name}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Date & Amount */}
-      <div className="text-end">
-        <p className={cn(
-          "font-semibold",
-          isIncome ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
-        )}>
-          {isIncome ? '+' : '-'}
-          {formatCurrency(transaction.amount, { locale: localeString, symbol: currencySymbol })}
-        </p>
-        <p className="text-xs text-[rgb(var(--text-tertiary))] mt-0.5">
-          {new Date(transaction.date).toLocaleDateString(localeString, {
-            month: 'short',
-            day: 'numeric',
-          })}
-        </p>
-      </div>
-
-      {/* Type Badge */}
-      <span className={cn(
-        "text-xs px-2 py-1 rounded-full font-medium hidden sm:inline-flex",
-        isIncome 
-          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
-          : "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
-      )}>
-        {isIncome ? t('transactions.income') : t('transactions.expense')}
-      </span>
-
-      {/* Actions Menu */}
-      <div className="relative" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={(e) => {
-            e.stopPropagation()
-            setShowMenu(!showMenu)
-          }}
-          className="p-2 text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] rounded-lg transition-colors"
-        >
-          <MoreVertical className="w-5 h-5" />
-        </button>
-
-        {showMenu && (
-          <>
-            <div 
-              className="fixed inset-0 z-10" 
-              onClick={() => setShowMenu(false)}
-            />
-            <div className="absolute end-0 top-full mt-1 z-20 w-40 bg-[rgb(var(--bg-secondary))] rounded-xl border border-[rgb(var(--border-primary))] shadow-lg overflow-hidden">
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowMenu(false)
-                  onEdit?.(transaction)
-                }}
-                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
-              >
-                <Edit2 className="w-4 h-4" />
-                {t('common.edit')}
-              </button>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowMenu(false)
-                  onView?.(transaction)
-                }}
-                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
-              >
-                <History className="w-4 h-4" />
-                {t('common.viewDetails')}
-              </button>
-              <button 
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setShowMenu(false)
-                  onDelete?.(transaction)
-                }}
-                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-                {t('common.delete')}
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
   )
 }

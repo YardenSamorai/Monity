@@ -4,37 +4,9 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { useI18n } from '@/lib/i18n-context'
-import { formatCurrency, cn } from '@/lib/utils'
 import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
-import { 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Receipt, 
-  ArrowRight,
-  ShoppingBag,
-  Utensils,
-  Car,
-  Home,
-  Zap,
-  Heart,
-  Plane,
-  GraduationCap,
-  Briefcase,
-  MoreHorizontal
-} from 'lucide-react'
-
-// Category icons mapping
-const categoryIcons = {
-  shopping: ShoppingBag,
-  food: Utensils,
-  transport: Car,
-  housing: Home,
-  utilities: Zap,
-  health: Heart,
-  travel: Plane,
-  education: GraduationCap,
-  work: Briefcase,
-}
+import { Receipt, ArrowRight } from 'lucide-react'
+import { TransactionRow } from './TransactionRow'
 
 export function TransactionsCard({ household }) {
   const { t, currencySymbol, localeString } = useI18n()
@@ -123,47 +95,6 @@ export function TransactionsCard({ household }) {
     ],
   })
 
-  // Find member name by userId
-  const getMemberName = (userId) => {
-    const member = household?.members?.find(m => m.userId === userId)
-    return member?.name || member?.email?.split('@')[0] || t('family.unknownMember')
-  }
-
-  // Get member avatar initials
-  const getMemberInitials = (userId) => {
-    const name = getMemberName(userId)
-    return name.charAt(0).toUpperCase()
-  }
-
-  // Get member avatar color
-  const getMemberColor = (userId) => {
-    const colors = [
-      'bg-blue-500',
-      'bg-emerald-500',
-      'bg-purple-500',
-      'bg-amber-500',
-      'bg-rose-500',
-      'bg-cyan-500',
-    ]
-    const index = household?.members?.findIndex(m => m.userId === userId) || 0
-    return colors[index % colors.length]
-  }
-
-  // Format date
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    const now = new Date()
-    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24))
-    
-    if (diffDays === 0) return t('common.today') || 'היום'
-    if (diffDays === 1) return t('common.yesterday') || 'אתמול'
-    if (diffDays < 7) return `${diffDays} ${t('common.days')}`
-    
-    return date.toLocaleDateString(localeString, { 
-      day: 'numeric',
-      month: 'short'
-    })
-  }
 
   if (loading) {
     return (
@@ -218,84 +149,21 @@ export function TransactionsCard({ household }) {
         </div>
       ) : (
         <div className="space-y-1">
-          {transactions.map((transaction, index) => {
-            const isExpense = transaction.type === 'expense'
-            const CategoryIcon = transaction.category?.icon 
-              ? categoryIcons[transaction.category.icon] || Receipt
-              : Receipt
-            
-            return (
-              <div 
-                key={transaction.id}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl transition-colors",
-                  "hover:bg-[rgb(var(--bg-tertiary))]"
-                )}
-              >
-                {/* Member Avatar */}
-                <div className="relative">
-                  <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center text-white font-medium text-sm",
-                    getMemberColor(transaction.userId)
-                  )}>
-                    {getMemberInitials(transaction.userId)}
-                  </div>
-                  {/* Transaction type indicator */}
-                  <div className={cn(
-                    "absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full flex items-center justify-center",
-                    isExpense 
-                      ? "bg-rose-100 dark:bg-rose-900/50" 
-                      : "bg-emerald-100 dark:bg-emerald-900/50"
-                  )}>
-                    {isExpense ? (
-                      <ArrowDownRight className="w-2.5 h-2.5 text-rose-600 dark:text-rose-400" />
-                    ) : (
-                      <ArrowUpRight className="w-2.5 h-2.5 text-emerald-600 dark:text-emerald-400" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Transaction Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium text-sm text-[rgb(var(--text-primary))] truncate">
-                      {transaction.description}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[rgb(var(--text-tertiary))]">
-                    <span>{getMemberName(transaction.userId)}</span>
-                    <span>•</span>
-                    <span>{formatDate(transaction.date)}</span>
-                    {transaction.category && (
-                      <>
-                        <span>•</span>
-                        <span 
-                          className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-                          style={{ 
-                            backgroundColor: `${transaction.category.color}20`,
-                            color: transaction.category.color
-                          }}
-                        >
-                          {transaction.category.name}
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Amount */}
-                <div className={cn(
-                  "text-sm font-semibold whitespace-nowrap",
-                  isExpense 
-                    ? "text-rose-600 dark:text-rose-400" 
-                    : "text-emerald-600 dark:text-emerald-400"
-                )}>
-                  {isExpense ? '-' : '+'}
-                  {formatCurrency(transaction.amount, { locale: localeString, symbol: currencySymbol })}
-                </div>
-              </div>
-            )
-          })}
+          {transactions.map((transaction) => (
+            <TransactionRow
+              key={transaction.id}
+              transaction={transaction}
+              household={household}
+              currencySymbol={currencySymbol}
+              localeString={localeString}
+              variant="simple"
+              showActions={false}
+              onView={(tx) => {
+                // Navigate to transactions page - could be enhanced to scroll to specific transaction
+                window.location.href = '/family/transactions'
+              }}
+            />
+          ))}
         </div>
       )}
 
