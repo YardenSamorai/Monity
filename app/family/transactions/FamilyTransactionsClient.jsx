@@ -5,6 +5,9 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { TransactionModal } from '@/components/forms/TransactionModal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
@@ -42,7 +45,17 @@ export function FamilyTransactionsClient() {
   const [household, setHousehold] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [categories, setCategories] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
+  
+  // Modal states
+  const [editingTransaction, setEditingTransaction] = useState(null)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [transactionToDelete, setTransactionToDelete] = useState(null)
+  const [isDeleting, setIsDeleting] = useState(false)
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [viewingTransaction, setViewingTransaction] = useState(null)
   
   // Filter state
   const [searchQuery, setSearchQuery] = useState('')
@@ -60,14 +73,16 @@ export function FamilyTransactionsClient() {
   // Fetch data
   const fetchData = useCallback(async () => {
     try {
-      const [householdData, transactionsData, categoriesData] = await Promise.all([
+      const [householdData, transactionsData, categoriesData, accountsData] = await Promise.all([
         fetch('/api/households', { cache: 'no-store' }).then(res => res.json()),
         fetch('/api/transactions?onlyShared=true', { cache: 'no-store' }).then(res => res.json()),
         fetch('/api/categories', { cache: 'no-store' }).then(res => res.json()),
+        fetch('/api/accounts', { cache: 'no-store' }).then(res => res.json()),
       ])
       setHousehold(householdData.household)
       setTransactions(transactionsData.transactions || [])
       setCategories(categoriesData.categories || [])
+      setAccounts(accountsData.accounts || [])
     } catch (error) {
       console.error('Error fetching data:', error)
     } finally {
@@ -204,6 +219,54 @@ export function FamilyTransactionsClient() {
   }
 
   const hasActiveFilters = searchQuery || selectedMember || selectedCategory || selectedType || dateFrom || dateTo || onlyMyTransactions
+
+  // Handle edit
+  const handleEdit = (transaction) => {
+    setEditingTransaction(transaction)
+    setIsEditModalOpen(true)
+  }
+
+  // Handle delete
+  const handleDelete = (transaction) => {
+    setTransactionToDelete(transaction)
+    setIsDeleteDialogOpen(true)
+  }
+
+  // Handle view details
+  const handleView = (transaction) => {
+    setViewingTransaction(transaction)
+    setIsDetailModalOpen(true)
+  }
+
+  // Handle delete confirm
+  const handleDeleteConfirm = async () => {
+    if (!transactionToDelete) return
+    setIsDeleting(true)
+    try {
+      const response = await fetch(`/api/transactions/${transactionToDelete.id}`, {
+        method: 'DELETE',
+        cache: 'no-store',
+      })
+      
+      if (!response.ok) {
+        throw new Error('Failed to delete')
+      }
+      
+      toast.success(t('transactions.deleted'))
+      setTransactions(transactions.filter(t => t.id !== transactionToDelete.id))
+      setTransactionToDelete(null)
+      setIsDeleteDialogOpen(false)
+    } catch (error) {
+      toast.error(t('transactions.deleteFailed'), error.message)
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  // Handle success after edit
+  const handleSuccess = async () => {
+    await fetchData()
+  }
 
   if (loading) {
     return (
@@ -484,6 +547,50 @@ export function FamilyTransactionsClient() {
           ))}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <TransactionModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false)
+          setEditingTransaction(null)
+        }}
+        accounts={accounts}
+        categories={categories}
+        household={household}
+        editingTransaction={editingTransaction}
+        onSuccess={handleSuccess}
+      />
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={isDeleteDialogOpen}
+        onClose={() => {
+          setIsDeleteDialogOpen(false)
+          setTransactionToDelete(null)
+        }}
+        title={t('transactions.deleteTransaction')}
+        message={t('transactions.deleteConfirm')}
+        confirmLabel={t('common.delete')}
+        cancelLabel={t('common.cancel')}
+        onConfirm={handleDeleteConfirm}
+        variant="danger"
+        isLoading={isDeleting}
+      />
+
+      {/* Detail Modal */}
+      <TransactionDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => {
+          setIsDetailModalOpen(false)
+          setViewingTransaction(null)
+        }}
+        transaction={viewingTransaction}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        currencySymbol={currencySymbol}
+        localeString={localeString}
+      />
     </div>
   )
 }
@@ -549,6 +656,9 @@ function TransactionGroup({ label, transactions, total, household, currencySymbo
               household={household}
               currencySymbol={currencySymbol}
               localeString={localeString}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={handleView}
             />
           ))}
         </div>
@@ -558,7 +668,7 @@ function TransactionGroup({ label, transactions, total, household, currencySymbo
 }
 
 // Transaction Row Component
-function TransactionRow({ transaction, household, currencySymbol, localeString }) {
+function TransactionRow({ transaction, household, currencySymbol, localeString, onEdit, onDelete, onView }) {
   const { t } = useI18n()
   const [showMenu, setShowMenu] = useState(false)
   
@@ -583,7 +693,10 @@ function TransactionRow({ transaction, household, currencySymbol, localeString }
   }
 
   return (
-    <div className="flex items-center gap-3 p-4 hover:bg-[rgb(var(--bg-tertiary))] transition-colors">
+    <div 
+      className="flex items-center gap-3 p-4 hover:bg-[rgb(var(--bg-tertiary))] transition-colors cursor-pointer"
+      onClick={() => onView?.(transaction)}
+    >
       {/* Category Icon */}
       <div 
         className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
@@ -657,9 +770,12 @@ function TransactionRow({ transaction, household, currencySymbol, localeString }
       </span>
 
       {/* Actions Menu */}
-      <div className="relative">
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
         <button
-          onClick={() => setShowMenu(!showMenu)}
+          onClick={(e) => {
+            e.stopPropagation()
+            setShowMenu(!showMenu)
+          }}
           className="p-2 text-[rgb(var(--text-tertiary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] rounded-lg transition-colors"
         >
           <MoreVertical className="w-5 h-5" />
@@ -672,15 +788,36 @@ function TransactionRow({ transaction, household, currencySymbol, localeString }
               onClick={() => setShowMenu(false)}
             />
             <div className="absolute end-0 top-full mt-1 z-20 w-40 bg-[rgb(var(--bg-secondary))] rounded-xl border border-[rgb(var(--border-primary))] shadow-lg overflow-hidden">
-              <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowMenu(false)
+                  onEdit?.(transaction)
+                }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+              >
                 <Edit2 className="w-4 h-4" />
                 {t('common.edit')}
               </button>
-              <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowMenu(false)
+                  onView?.(transaction)
+                }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))] transition-colors"
+              >
                 <History className="w-4 h-4" />
-                {t('familyTransactions.history')}
+                {t('common.viewDetails')}
               </button>
-              <button className="w-full flex items-center gap-2 px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors">
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setShowMenu(false)
+                  onDelete?.(transaction)
+                }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 transition-colors"
+              >
                 <Trash2 className="w-4 h-4" />
                 {t('common.delete')}
               </button>

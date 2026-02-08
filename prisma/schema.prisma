@@ -298,16 +298,21 @@ model RecurringIncome {
   isActive     Boolean       @default(true)
   nextRunDate  DateTime
   lastRunDate  DateTime?
+  householdId  String?
+  isShared     Boolean       @default(false)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category     Category?     @relation(fields: [categoryId], references: [id])
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household    Household?    @relation(fields: [householdId], references: [id], onDelete: SetNull)
   transactions Transaction[]
 
   @@index([userId])
   @@index([userId, isActive])
   @@index([nextRunDate])
+  @@index([householdId])
+  @@index([householdId, isShared])
 }
 
 model RecurringTransaction {
@@ -323,11 +328,14 @@ model RecurringTransaction {
   nextRunDate  DateTime
   lastRunDate  DateTime?
   endDate      DateTime?
+  householdId  String?
+  isShared     Boolean       @default(false)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category     Category?     @relation(fields: [categoryId], references: [id])
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  household    Household?    @relation(fields: [householdId], references: [id], onDelete: SetNull)
   transactions Transaction[]
 
   @@index([userId])
@@ -335,6 +343,8 @@ model RecurringTransaction {
   @@index([userId, type])
   @@index([nextRunDate])
   @@index([endDate])
+  @@index([householdId])
+  @@index([householdId, isShared])
 }
 
 model AuditLog {
@@ -368,6 +378,8 @@ model Household {
   savingsGoals      SavingsGoal[]
   creditCards       CreditCard[]
   creditCardTransactions CreditCardTransaction[]
+  recurringIncomes  RecurringIncome[]
+  recurringTransactions RecurringTransaction[]
 
   @@index([createdByUserId])
   @@index([inviteToken])

@@ -12,8 +12,25 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { searchParams } = new URL(request.url)
+    const householdId = searchParams.get('householdId')
+
+    const where = { userId: user.id }
+    if (householdId) {
+      // Verify user is member of household
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId },
+      })
+      if (member) {
+        where.householdId = householdId
+        where.isShared = true
+      }
+    } else {
+      where.isShared = false
+    }
+
     const recurringIncomes = await prisma.recurringIncome.findMany({
-      where: { userId: user.id },
+      where,
       include: {
         account: true,
         category: true,
@@ -40,7 +57,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { amount, description, accountId, categoryId, dayOfMonth } = body
+    const { amount, description, accountId, categoryId, dayOfMonth, householdId, isShared } = body
 
     // Validate
     if (!amount || !description || !accountId || !dayOfMonth) {
@@ -69,6 +86,17 @@ export async function POST(request) {
       )
     }
 
+    // Verify household if shared
+    let verifiedHouseholdId = null
+    if (isShared && householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId },
+      })
+      if (member) {
+        verifiedHouseholdId = householdId
+      }
+    }
+
     // Calculate next run date
     const now = new Date()
     const currentMonthDate = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
@@ -95,6 +123,8 @@ export async function POST(request) {
         description,
         dayOfMonth,
         nextRunDate,
+        householdId: verifiedHouseholdId,
+        isShared: verifiedHouseholdId ? true : false,
       },
       include: {
         account: true,
@@ -117,6 +147,8 @@ export async function POST(request) {
             date: currentMonthDate, // Use the day of month, not today
             notes: `Automatic recurring income`,
             recurringIncomeId: recurringIncome.id,
+            householdId: verifiedHouseholdId,
+            isShared: verifiedHouseholdId ? true : false,
           },
         })
 

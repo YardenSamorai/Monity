@@ -98,6 +98,8 @@ export async function POST(request) {
             date: now,
             notes: `Automatic recurring ${recurring.type}`,
             recurringTransactionId: recurring.id,
+            householdId: recurring.householdId,
+            isShared: recurring.isShared,
           },
         })
 

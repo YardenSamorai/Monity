@@ -14,10 +14,23 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url)
     const type = searchParams.get('type') // 'income' or 'expense' or null for all
+    const householdId = searchParams.get('householdId')
 
     const where = { userId: user.id }
     if (type) {
       where.type = type
+    }
+    if (householdId) {
+      // Verify user is member of household
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId },
+      })
+      if (member) {
+        where.householdId = householdId
+        where.isShared = true
+      }
+    } else {
+      where.isShared = false
     }
 
     const recurringTransactions = await prisma.recurringTransaction.findMany({
@@ -48,7 +61,7 @@ export async function POST(request) {
     }
 
     const body = await request.json()
-    const { type, amount, description, accountId, categoryId, dayOfMonth, endDate } = body
+    const { type, amount, description, accountId, categoryId, dayOfMonth, endDate, householdId, isShared } = body
 
     // Validate
     if (!type || !amount || !description || !accountId || !dayOfMonth) {
@@ -82,6 +95,17 @@ export async function POST(request) {
         { error: 'Account not found' },
         { status: 404 }
       )
+    }
+
+    // Verify household if shared
+    let verifiedHouseholdId = null
+    if (isShared && householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId },
+      })
+      if (member) {
+        verifiedHouseholdId = householdId
+      }
     }
 
     // Calculate next run date
@@ -120,6 +144,8 @@ export async function POST(request) {
         dayOfMonth,
         nextRunDate,
         endDate: endDate ? new Date(endDate) : null,
+        householdId: verifiedHouseholdId,
+        isShared: verifiedHouseholdId ? true : false,
       },
       include: {
         account: true,
@@ -177,6 +203,8 @@ export async function POST(request) {
               date: transactionDate,
               notes: `Automatic recurring ${type}`,
               recurringTransactionId: recurringTransaction.id,
+              householdId: verifiedHouseholdId,
+              isShared: verifiedHouseholdId ? true : false,
             },
           })
 

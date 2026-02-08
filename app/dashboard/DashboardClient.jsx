@@ -7,7 +7,7 @@ import { ExpensesModal } from '@/components/ExpensesModal'
 import { AccountModal } from '@/components/forms/AccountModal'
 import { TransactionModal } from '@/components/forms/TransactionModal'
 import { formatCurrency, cn } from '@/lib/utils'
-import { useDashboardRefresh } from '@/lib/realtime-context'
+import { useDashboardRefresh, useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -79,6 +79,84 @@ export function DashboardClient({
   const [isExpensesModalOpen, setIsExpensesModalOpen] = useState(false)
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false)
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+  
+  // Local state for recent transactions to enable real-time updates
+  const [localRecentTransactions, setLocalRecentTransactions] = useState(recentTransactions)
+
+  // Update local state when prop changes
+  useEffect(() => {
+    setLocalRecentTransactions(recentTransactions)
+  }, [recentTransactions])
+
+  // Fetch recent transactions for real-time updates
+  const fetchRecentTransactions = useCallback(async () => {
+    try {
+      // Fetch recent transactions (both regular and credit card)
+      const response = await fetch('/api/transactions?limit=15', { cache: 'no-store' })
+      if (response.ok) {
+        const data = await response.json()
+        const regularTransactions = (data.transactions || []).slice(0, 15)
+        
+        // Also fetch credit card transactions
+        const creditCardsRes = await fetch('/api/credit-cards', { cache: 'no-store' })
+        if (creditCardsRes.ok) {
+          const creditCardsData = await creditCardsRes.json()
+          const creditCards = creditCardsData.creditCards || []
+          
+          // Get recent credit card transactions from all cards
+          const ccTransactionsPromises = creditCards.map(card =>
+            fetch(`/api/credit-cards/${card.id}/transactions?limit=15`, { cache: 'no-store' })
+              .then(res => res.ok ? res.json() : { transactions: [] })
+              .then(data => (data.transactions || []).map(cc => ({
+                id: cc.id,
+                type: 'expense',
+                amount: cc.amount,
+                description: cc.description,
+                date: cc.date,
+                isCreditCard: true,
+                creditCardStatus: cc.status,
+                account: {
+                  id: cc.creditCard?.id || card.id,
+                  name: `${cc.creditCard?.name || card.name} •••• ${cc.creditCard?.lastFourDigits || card.lastFourDigits || '****'}`,
+                  type: 'credit',
+                },
+                category: cc.category,
+              })))
+              .catch(() => [])
+          )
+          
+          const allCCTxs = (await Promise.all(ccTransactionsPromises)).flat()
+          
+          // Merge and sort
+          const allTransactions = [...regularTransactions, ...allCCTxs]
+            .sort((a, b) => new Date(b.date) - new Date(a.date))
+            .slice(0, 10)
+          
+          setLocalRecentTransactions(allTransactions)
+        } else {
+          // If credit cards fetch fails, just use regular transactions
+          setLocalRecentTransactions(regularTransactions.slice(0, 10))
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching recent transactions:', error)
+    }
+  }, [])
+
+  // Real-time updates for recent transactions
+  useDataRefresh({
+    key: 'dashboard-recent-transactions',
+    fetchFn: fetchRecentTransactions,
+    events: [
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   // Auto-refresh dashboard on real-time updates
   const handleRealtimeUpdate = useCallback(() => {
@@ -130,8 +208,8 @@ export function DashboardClient({
     }
   }
 
-  const isNewUser = accounts.length === 0 && recentTransactions.length === 0
-  const hasNoTransactions = recentTransactions.length === 0
+  const isNewUser = accounts.length === 0 && localRecentTransactions.length === 0
+  const hasNoTransactions = localRecentTransactions.length === 0
 
   // Calculate month comparison
   const monthDifference = lastMonthExpenses > 0 
@@ -575,7 +653,7 @@ export function DashboardClient({
                   {t('dashboard.recentTransactions')}
                 </h2>
               </div>
-              {recentTransactions.length > 0 && (
+              {localRecentTransactions.length > 0 && (
                 <Link 
                   href="/transactions" 
                   className="text-xs text-[rgb(var(--accent))] hover:underline flex items-center gap-0.5"
@@ -605,13 +683,13 @@ export function DashboardClient({
               </div>
             ) : (
               <div>
-                {recentTransactions.slice(0, 6).map((transaction, index) => (
+                {localRecentTransactions.slice(0, 6).map((transaction, index) => (
                   <Link
                     key={transaction.id}
                     href="/transactions"
                     className={cn(
                       "flex items-center gap-3 px-4 py-2.5 hover:bg-[rgb(var(--bg-tertiary))] transition-colors",
-                      index !== Math.min(recentTransactions.length - 1, 5) && "border-b border-[rgb(var(--border-secondary))]"
+                      index !== Math.min(localRecentTransactions.length - 1, 5) && "border-b border-[rgb(var(--border-secondary))]"
                     )}
                   >
                     <div className={cn(

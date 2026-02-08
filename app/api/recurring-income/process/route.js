@@ -43,6 +43,8 @@ export async function POST(request) {
             date: now,
             notes: `Automatic recurring income`,
             recurringIncomeId: income.id,
+            householdId: income.householdId,
+            isShared: income.isShared,
           },
         })
 

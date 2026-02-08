@@ -21,6 +21,7 @@ import { ActionsCard } from '@/components/family/ActionsCard'
 import { TransactionsCard } from '@/components/family/TransactionsCard'
 import { CreateFamilyModal } from '@/components/family/CreateFamilyModal'
 import { FamilySettingsCard } from '@/components/family/FamilySettingsCard'
+import { RecurringTransactionsCard } from '@/components/family/RecurringTransactionsCard'
 
 export function FamilyClient() {
   const { t } = useI18n()
@@ -207,6 +208,9 @@ export function FamilyClient() {
 
       {/* Recent Transactions */}
       <TransactionsCard household={household} />
+
+      {/* Recurring Transactions */}
+      <RecurringTransactionsCard household={household} />
 
       {/* Main Content - 2 Column on Desktop */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
