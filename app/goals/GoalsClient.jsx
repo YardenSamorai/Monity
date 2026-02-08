@@ -13,7 +13,7 @@ import { useI18n } from '@/lib/i18n-context'
 import { Target, Plus, PiggyBank } from 'lucide-react'
 import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
-export function GoalsClient({ initialGoals = [] }) {
+export function GoalsClient({ initialGoals = [], accounts = [], creditCards = [] }) {
   const { t, currencySymbol, localeString, isRTL } = useI18n()
   const [goals, setGoals] = useState(initialGoals)
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -88,12 +88,18 @@ export function GoalsClient({ initialGoals = [] }) {
     }
   }
 
-  const handleAddMoney = async (goalId, amount, date, note) => {
+  const handleAddMoney = async (goalId, amount, date, note, paymentMethod, sourceId) => {
     try {
       const response = await fetch(`/api/goals/${goalId}/contributions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, date, note }),
+        body: JSON.stringify({ 
+          amount, 
+          date, 
+          note,
+          paymentMethod,
+          sourceId, // accountId or creditCardId
+        }),
         cache: 'no-store',
       })
       if (!response.ok) {
@@ -314,6 +320,8 @@ export function GoalsClient({ initialGoals = [] }) {
           onClose={() => { setIsAddMoneyModalOpen(false); setSelectedGoal(null) }}
           goal={selectedGoal}
           onAdd={handleAddMoney}
+          accounts={accounts}
+          creditCards={creditCards}
         />
       )}
 

@@ -30,6 +30,7 @@ import {
 import { useI18n } from '@/lib/i18n-context'
 import Link from 'next/link'
 import { CreditCardVisual } from '@/components/dashboard/CreditCardVisual'
+import { FamilyCard } from '@/components/dashboard/FamilyCard'
 import { SmartTips } from '@/components/ai/SmartTips'
 import { ExpenseForecast } from '@/components/ai/ExpenseForecast'
 
@@ -677,6 +678,9 @@ export function DashboardClient({
           <aside className="col-span-12 lg:col-span-4 space-y-4">
             {/* Credit Card Visual */}
             <CreditCardVisual />
+
+            {/* Family Card */}
+            <FamilyCard />
 
             {/* Goals Card */}
             {goals.length > 0 && (

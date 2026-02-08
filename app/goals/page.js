@@ -45,7 +45,19 @@ export default async function GoalsPage() {
     redirect('/sign-in')
   }
 
-  const goals = await getGoalsData(user.id)
+  const [goals, accounts, creditCards] = await Promise.all([
+    getGoalsData(user.id),
+    prisma.account.findMany({
+      where: { userId: user.id, isActive: true },
+      select: { id: true, name: true, type: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+    prisma.creditCard.findMany({
+      where: { userId: user.id, isActive: true },
+      select: { id: true, name: true, lastFourDigits: true },
+      orderBy: { createdAt: 'asc' },
+    }),
+  ])
 
   // Helper to safely convert date to string
   const formatDate = (date) => {
@@ -77,7 +89,11 @@ export default async function GoalsPage() {
 
   return (
     <AppShell>
-      <GoalsClient initialGoals={transformedGoals} />
+      <GoalsClient 
+        initialGoals={transformedGoals}
+        accounts={JSON.parse(JSON.stringify(accounts))}
+        creditCards={JSON.parse(JSON.stringify(creditCards))}
+      />
     </AppShell>
   )
 }

@@ -3,12 +3,14 @@ import { revalidateTag } from 'next/cache'
 import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
-import { notifyGoalChange } from '@/lib/pusher'
+import { notifyGoalChange, notifyDashboardUpdate, notifyTransactionChange } from '@/lib/pusher'
 
 const createContributionSchema = z.object({
   amount: z.number().positive('Amount must be positive'),
   date: z.string(),
   note: z.string().optional(),
+  paymentMethod: z.enum(['account', 'cash', 'creditCard']).optional().default('account'),
+  sourceId: z.string().optional(), // accountId or creditCardId
 })
 
 export async function POST(request, { params }) {
@@ -54,15 +56,60 @@ export async function POST(request, { params }) {
       },
     })
 
+    // Create transaction based on payment method
+    let transaction = null
+    const transactionDescription = `Contribution to ${goal.name}`
+    
+    if (validated.paymentMethod === 'creditCard' && validated.sourceId) {
+      // Credit card transaction
+      transaction = await prisma.creditCardTransaction.create({
+        data: {
+          creditCardId: validated.sourceId,
+          userId: user.id,
+          amount: validated.amount,
+          description: transactionDescription,
+          categoryId: null,
+          date: new Date(validated.date),
+          notes: validated.note || null,
+          status: 'pending',
+          savingsGoalId: id,
+        },
+      })
+    } else if (validated.paymentMethod === 'account' && validated.sourceId) {
+      // Regular bank transaction
+      transaction = await prisma.transaction.create({
+        data: {
+          userId: user.id,
+          type: 'expense', // Savings contribution is an expense
+          amount: validated.amount,
+          description: transactionDescription,
+          accountId: validated.sourceId,
+          categoryId: null,
+          date: new Date(validated.date),
+          notes: validated.note || null,
+          savingsGoalId: id,
+        },
+      })
+    }
+    // For 'cash', we don't create a transaction (cash is not tracked)
+
     // Revalidate cache and notify
     revalidateTag('goals')
     revalidateTag('dashboard')
+    revalidateTag('transactions')
     notifyGoalChange(user.clerkUserId, 'contribution', { 
       ...updatedGoal, 
       amount: validated.amount 
     }).catch((err) => console.error('Pusher error:', err))
+    
+    if (transaction) {
+      notifyDashboardUpdate(user.clerkUserId, { action: 'transaction_created' }).catch((err) => console.error('Pusher error:', err))
+      if (validated.paymentMethod === 'account') {
+        notifyTransactionChange(user.clerkUserId, 'created', transaction, null).catch((err) => console.error('Pusher error:', err))
+      }
+    }
 
-    return NextResponse.json({ contribution })
+    return NextResponse.json({ contribution, transaction })
   } catch (error) {
     if (error.name === 'ZodError') {
       return NextResponse.json(
