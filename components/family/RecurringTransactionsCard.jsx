@@ -84,6 +84,15 @@ export function RecurringTransactionsCard({ household }) {
     events: [
       EVENTS.DASHBOARD_UPDATE,
       EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.FAMILY_TRANSACTION,
+      EVENTS.RECURRING_INCOME_CREATED,
+      EVENTS.RECURRING_INCOME_UPDATED,
+      EVENTS.RECURRING_INCOME_DELETED,
+      EVENTS.RECURRING_TRANSACTION_CREATED,
+      EVENTS.RECURRING_TRANSACTION_UPDATED,
+      EVENTS.RECURRING_TRANSACTION_DELETED,
     ],
   })
 
@@ -399,7 +408,10 @@ function RecurringTransactionModal({
           ? `/api/recurring-transactions/${editingItem.id}`
           : '/api/recurring-transactions'
 
-      const method = editingItem ? 'PATCH' : 'POST'
+      // Use PUT for recurring-income (it uses PUT, not PATCH)
+      const method = editingItem 
+        ? (formType === 'income' ? 'PUT' : 'PATCH')
+        : 'POST'
 
       const response = await fetch(endpoint, {
         method,

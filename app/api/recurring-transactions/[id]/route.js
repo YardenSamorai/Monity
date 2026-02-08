@@ -14,7 +14,7 @@ export async function PUT(request, { params }) {
 
     const { id } = await params
     const body = await request.json()
-    const { type, amount, description, accountId, categoryId, dayOfMonth, endDate, isActive } = body
+    const { type, amount, description, accountId, categoryId, dayOfMonth, endDate, isActive, householdId, isShared } = body
 
     // Validate
     if (type && type !== 'income' && type !== 'expense') {
@@ -40,6 +40,21 @@ export async function PUT(request, { params }) {
         { error: 'Recurring transaction not found' },
         { status: 404 }
       )
+    }
+
+    // Verify household if shared
+    let verifiedHouseholdId = existing.householdId
+    if (isShared !== undefined && householdId !== undefined) {
+      if (isShared && householdId) {
+        const member = await prisma.householdMember.findFirst({
+          where: { userId: user.id, householdId },
+        })
+        if (member) {
+          verifiedHouseholdId = householdId
+        }
+      } else if (!isShared) {
+        verifiedHouseholdId = null
+      }
     }
 
     // Verify account belongs to user if changed
@@ -90,6 +105,10 @@ export async function PUT(request, { params }) {
     }
     if (endDate !== undefined) updateData.endDate = endDate ? new Date(endDate) : null
     if (isActive !== undefined) updateData.isActive = isActive
+    if (householdId !== undefined && isShared !== undefined) {
+      updateData.householdId = verifiedHouseholdId
+      updateData.isShared = verifiedHouseholdId ? true : false
+    }
 
     const recurringTransaction = await prisma.recurringTransaction.update({
       where: { id },

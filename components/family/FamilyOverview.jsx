@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { useI18n } from '@/lib/i18n-context'
 import { formatCurrency, cn } from '@/lib/utils'
+import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 import { TrendingUp, TrendingDown, Wallet, PieChart, ArrowRight } from 'lucide-react'
 
 export function FamilyOverview({ household }) {
@@ -12,30 +13,94 @@ export function FamilyOverview({ household }) {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const now = new Date()
-    const start = new Date(now.getFullYear(), now.getMonth(), 1)
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+  const fetchStats = useCallback(async () => {
+    try {
+      const now = new Date()
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
 
-    fetch(`/api/transactions?onlyShared=true&startDate=${start.toISOString()}&endDate=${end.toISOString()}`)
-      .then(res => res.json())
-      .then(data => {
-        const transactions = data.transactions || []
-        const expenses = transactions.filter(t => t.type === 'expense')
-        const income = transactions.filter(t => t.type === 'income')
-        const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0)
-        const totalIncome = income.reduce((sum, t) => sum + Number(t.amount), 0)
-        
-        setStats({
-          totalExpenses,
-          totalIncome,
-          netBalance: totalIncome - totalExpenses,
-          transactionCount: transactions.length,
-        })
+      // Fetch regular shared transactions
+      const [transactionsRes, creditCardsRes] = await Promise.all([
+        fetch(`/api/transactions?onlyShared=true&startDate=${start.toISOString()}&endDate=${end.toISOString()}`, { cache: 'no-store' }),
+        fetch('/api/credit-cards', { cache: 'no-store' }),
+      ])
+      
+      const transactionsData = await transactionsRes.json()
+      const creditCardsData = await creditCardsRes.json()
+      
+      const regularTransactions = transactionsData.transactions || []
+      
+      // Fetch shared credit card transactions (both pending and billed for current month)
+      const allCCTransactions = []
+      for (const card of (creditCardsData.creditCards || [])) {
+        try {
+          // Fetch all transactions for the card (not just pending)
+          const ccTxRes = await fetch(`/api/credit-cards/${card.id}/transactions`, { cache: 'no-store' })
+          const ccTxData = await ccTxRes.json()
+          
+          // Filter only shared transactions for current month
+          const sharedCCTransactions = (ccTxData.transactions || [])
+            .filter(tx => {
+              const txDate = new Date(tx.date)
+              return tx.isShared && 
+                     tx.householdId === household?.id && 
+                     txDate >= start && 
+                     txDate <= end
+            })
+            .map(tx => ({
+              id: tx.id,
+              type: 'expense',
+              amount: tx.amount,
+              description: tx.description,
+              date: tx.date,
+            }))
+          
+          allCCTransactions.push(...sharedCCTransactions)
+        } catch (error) {
+          console.error(`Error fetching transactions for card ${card.id}:`, error)
+        }
+      }
+      
+      // Merge all transactions
+      const allTransactions = [...regularTransactions, ...allCCTransactions]
+      
+      const expenses = allTransactions.filter(t => t.type === 'expense')
+      const income = allTransactions.filter(t => t.type === 'income')
+      const totalExpenses = expenses.reduce((sum, t) => sum + Number(t.amount), 0)
+      const totalIncome = income.reduce((sum, t) => sum + Number(t.amount), 0)
+      
+      setStats({
+        totalExpenses,
+        totalIncome,
+        netBalance: totalIncome - totalExpenses,
+        transactionCount: allTransactions.length,
       })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [])
+    } catch (error) {
+      console.error('Error fetching family stats:', error)
+    } finally {
+      setLoading(false)
+    }
+  }, [household?.id])
+
+  useEffect(() => {
+    fetchStats()
+  }, [fetchStats])
+
+  // Real-time updates
+  useDataRefresh({
+    key: 'family-overview',
+    fetchFn: fetchStats,
+    events: [
+      EVENTS.TRANSACTION_CREATED,
+      EVENTS.TRANSACTION_UPDATED,
+      EVENTS.TRANSACTION_DELETED,
+      EVENTS.FAMILY_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION,
+      EVENTS.CREDIT_CARD_TRANSACTION_UPDATED,
+      EVENTS.CREDIT_CARD_TRANSACTION_DELETED,
+      EVENTS.DASHBOARD_UPDATE,
+    ],
+  })
 
   const totalHouseholdIncome = household.totalHouseholdIncome || 0
   const budgetUsed = totalHouseholdIncome > 0 && stats 

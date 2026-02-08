@@ -14,7 +14,7 @@ export async function PUT(request, { params }) {
 
     const { id } = await params
     const body = await request.json()
-    const { amount, description, accountId, categoryId, dayOfMonth } = body
+    const { amount, description, accountId, categoryId, dayOfMonth, householdId, isShared } = body
 
     // Validate
     if (!amount || !description || !accountId || !dayOfMonth) {
@@ -54,6 +54,19 @@ export async function PUT(request, { params }) {
       )
     }
 
+    // Verify household if shared
+    let verifiedHouseholdId = existing.householdId
+    if (isShared && householdId) {
+      const member = await prisma.householdMember.findFirst({
+        where: { userId: user.id, householdId },
+      })
+      if (member) {
+        verifiedHouseholdId = householdId
+      }
+    } else if (!isShared) {
+      verifiedHouseholdId = null
+    }
+
     // Calculate next run date if day of month changed
     let nextRunDate = existing.nextRunDate
     if (dayOfMonth !== existing.dayOfMonth) {
@@ -77,6 +90,8 @@ export async function PUT(request, { params }) {
         categoryId: categoryId || null,
         dayOfMonth,
         nextRunDate,
+        householdId: verifiedHouseholdId,
+        isShared: verifiedHouseholdId ? true : false,
       },
       include: {
         account: true,
