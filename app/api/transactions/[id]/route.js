@@ -5,6 +5,15 @@ import { prisma } from '@/lib/prisma'
 import { updateTransactionSchema } from '@/lib/validations'
 import { notifyTransactionChange, notifyDashboardUpdate } from '@/lib/pusher'
 
+// Helper: get household IDs for a user
+async function getUserHouseholdIds(userId) {
+  const memberships = await prisma.householdMember.findMany({
+    where: { userId },
+    select: { householdId: true },
+  })
+  return memberships.map(m => m.householdId)
+}
+
 // GET /api/transactions/[id] - Get single transaction
 export async function GET(request, { params }) {
   try {
@@ -14,9 +23,16 @@ export async function GET(request, { params }) {
     }
     
     const { id } = await params
+    const householdIds = await getUserHouseholdIds(user.id)
     
     const transaction = await prisma.transaction.findFirst({
-      where: { id, userId: user.id },
+      where: {
+        id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
+      },
       include: {
         account: true,
         category: true,
@@ -50,8 +66,16 @@ export async function PATCH(request, { params }) {
 
     const { id } = await params
 
+    const householdIds = await getUserHouseholdIds(user.id)
+    
     const existing = await prisma.transaction.findFirst({
-      where: { id, userId: user.id },
+      where: {
+        id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
+      },
     })
     
     if (!existing) {
@@ -198,8 +222,16 @@ export async function DELETE(request, { params }) {
 
     const { id } = await params
 
+    const householdIds = await getUserHouseholdIds(user.id)
+    
     const transaction = await prisma.transaction.findFirst({
-      where: { id, userId: user.id },
+      where: {
+        id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
+      },
       include: {
         account: true,
       },
