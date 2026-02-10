@@ -75,7 +75,9 @@ export function TransactionsClient({ initialTransactions, accounts, categories }
     if (filters.maxAmount) params.append('maxAmount', filters.maxAmount)
     if (filters.search) params.append('search', filters.search)
     if (filtersRef.filterType !== 'all') params.append('type', filtersRef.filterType)
-    if (filtersRef.includeShared && filtersRef.household) params.append('includeShared', 'true')
+    // Always include shared transactions if user is in a household
+    // This ensures shared transactions appear in both personal and family pages
+    if (filtersRef.household) params.append('includeShared', 'true')
     
     // Fetch both regular transactions and credit card transactions with no-store
     const [transactionsRes, creditCardsRes] = await Promise.all([

@@ -24,12 +24,22 @@ export async function DELETE(request, { params }) {
       )
     }
 
+    // Get user's household IDs for shared transactions
+    const householdIds = await prisma.householdMember.findMany({
+      where: { userId: user.id },
+      select: { householdId: true },
+    }).then(members => members.map(m => m.householdId))
+
     // Verify transaction exists and belongs to this card
+    // Allow deletion if: user owns the transaction OR it's a shared transaction in user's household
     const transaction = await prisma.creditCardTransaction.findFirst({
       where: { 
         id: txId, 
         creditCardId: id,
-        userId: user.id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
       },
     })
 
@@ -85,12 +95,22 @@ export async function PATCH(request, { params }) {
       )
     }
 
+    // Get user's household IDs for shared transactions
+    const householdIds = await prisma.householdMember.findMany({
+      where: { userId: user.id },
+      select: { householdId: true },
+    }).then(members => members.map(m => m.householdId))
+
     // Verify transaction exists
+    // Allow editing if: user owns the transaction OR it's a shared transaction in user's household
     const transaction = await prisma.creditCardTransaction.findFirst({
       where: { 
         id: txId, 
         creditCardId: id,
-        userId: user.id,
+        OR: [
+          { userId: user.id },
+          { isShared: true, householdId: { in: householdIds } },
+        ],
       },
     })
 

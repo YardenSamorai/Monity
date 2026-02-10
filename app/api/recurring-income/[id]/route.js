@@ -55,6 +55,8 @@ export async function PUT(request, { params }) {
     }
 
     // Verify household if shared
+    // IMPORTANT: Personal recurring incomes must have householdId = null and isShared = false
+    // Family recurring incomes must have householdId != null and isShared = true
     let verifiedHouseholdId = existing.householdId
     if (isShared && householdId) {
       const member = await prisma.householdMember.findFirst({
@@ -62,8 +64,12 @@ export async function PUT(request, { params }) {
       })
       if (member) {
         verifiedHouseholdId = householdId
+      } else {
+        // User is not a member, keep as personal (null)
+        verifiedHouseholdId = null
       }
     } else if (!isShared) {
+      // Explicitly set to null for personal incomes
       verifiedHouseholdId = null
     }
 

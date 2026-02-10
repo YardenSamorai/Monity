@@ -94,6 +94,7 @@ export function FamilyTransactionsClient() {
               notes: tx.notes,
               isShared: true,
               isCreditCard: true,
+              creditCardId: card.id, // Store credit card ID for deletion
               creditCardStatus: tx.status,
               userId: tx.userId,
               account: {
@@ -279,13 +280,26 @@ export function FamilyTransactionsClient() {
     if (!transactionToDelete) return
     setIsDeleting(true)
     try {
-      const response = await fetch(`/api/transactions/${transactionToDelete.id}`, {
-        method: 'DELETE',
-        cache: 'no-store',
-      })
+      let response
+      
+      // Check if this is a credit card transaction
+      if (transactionToDelete.isCreditCard && transactionToDelete.creditCardId) {
+        // Delete credit card transaction
+        response = await fetch(`/api/credit-cards/${transactionToDelete.creditCardId}/transactions/${transactionToDelete.id}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+        })
+      } else {
+        // Delete regular transaction
+        response = await fetch(`/api/transactions/${transactionToDelete.id}`, {
+          method: 'DELETE',
+          cache: 'no-store',
+        })
+      }
       
       if (!response.ok) {
-        throw new Error('Failed to delete')
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to delete')
       }
       
       toast.success(t('transactions.deleted'))
@@ -293,6 +307,7 @@ export function FamilyTransactionsClient() {
       setTransactionToDelete(null)
       setIsDeleteDialogOpen(false)
     } catch (error) {
+      console.error('Delete error:', error)
       toast.error(t('transactions.deleteFailed'), error.message)
     } finally {
       setIsDeleting(false)

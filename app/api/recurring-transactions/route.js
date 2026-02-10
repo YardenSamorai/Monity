@@ -26,10 +26,16 @@ export async function GET(request) {
         where: { userId: user.id, householdId },
       })
       if (member) {
+        // Family recurring transactions: must have householdId AND isShared = true
         where.householdId = householdId
         where.isShared = true
+      } else {
+        // User is not a member, return empty
+        return NextResponse.json({ recurringTransactions: [] })
       }
     } else {
+      // Personal recurring transactions: must have householdId IS NULL AND isShared = false
+      where.householdId = null
       where.isShared = false
     }
 
@@ -98,6 +104,8 @@ export async function POST(request) {
     }
 
     // Verify household if shared
+    // IMPORTANT: Personal recurring transactions must have householdId = null and isShared = false
+    // Family recurring transactions must have householdId != null and isShared = true
     let verifiedHouseholdId = null
     if (isShared && householdId) {
       const member = await prisma.householdMember.findFirst({
@@ -106,6 +114,10 @@ export async function POST(request) {
       if (member) {
         verifiedHouseholdId = householdId
       }
+      // If user is not a member, verifiedHouseholdId stays null (will create personal transaction)
+    } else if (!isShared) {
+      // Explicitly set to null for personal transactions
+      verifiedHouseholdId = null
     }
 
     // Calculate next run date

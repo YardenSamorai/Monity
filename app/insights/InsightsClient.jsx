@@ -129,6 +129,42 @@ export function InsightsClient() {
     }
   }
 
+  // Build message based on recommendation type
+  const getRecommendationMessage = (rec) => {
+    const amount = formatCurrency(rec.monthlySpending || 0, { locale: localeString, symbol: currencySymbol })
+    const category = rec.categoryName || t('transactions.uncategorized')
+    
+    switch (rec.type) {
+      case 'over_budget': {
+        const budget = formatCurrency(rec.budgetAmount || 0, { locale: localeString, symbol: currencySymbol })
+        return t('insights.overBudgetDetail', { amount, category, budget, percent: rec.overBudgetPercentage })
+      }
+      case 'approaching_budget': {
+        const remaining = formatCurrency(rec.remaining || 0, { locale: localeString, symbol: currencySymbol })
+        const dailyLimit = formatCurrency(rec.dailyLimit || 0, { locale: localeString, symbol: currencySymbol })
+        return t('insights.approachingBudgetDetail', { category, percent: rec.percentUsed, remaining, days: rec.daysLeft, dailyLimit })
+      }
+      case 'spending_increase': {
+        const prev = formatCurrency(rec.prevMonthSpending || 0, { locale: localeString, symbol: currencySymbol })
+        return t('insights.spendingIncreaseDetail', { category, amount, prev, percent: rec.increase })
+      }
+      case 'many_small': {
+        const avg = formatCurrency(rec.avgPerTransaction || 0, { locale: localeString, symbol: currencySymbol })
+        return t('insights.manySmallDetail', { category, count: rec.transactionCount, amount, avg })
+      }
+      case 'recurring_exceeded': {
+        const expected = formatCurrency(rec.expectedAmount || 0, { locale: localeString, symbol: currencySymbol })
+        const extra = formatCurrency(rec.extraAmount || 0, { locale: localeString, symbol: currencySymbol })
+        return t('insights.recurringExceededDetail', { category, amount, expected, extra })
+      }
+      case 'high_spending':
+      default: {
+        const count = rec.transactionCount || 0
+        return t('insights.highSpendingDetail', { amount, category, count })
+      }
+    }
+  }
+
   // Calculate totals for the summary
   const totalPotentialSavings = savings.reduce((sum, s) => sum + (s.potentialSavings || 0), 0)
   const highPriorityCount = savings.filter(s => s.priority === 'high').length
@@ -251,7 +287,7 @@ export function InsightsClient() {
                 return (
                   <div key={index} className="p-4 hover:bg-[rgb(var(--bg-tertiary))] transition-colors">
                     <div className="flex items-start gap-3">
-                      <div className={cn("px-2 py-1 rounded-lg text-xs font-medium", styles.bg, styles.text)}>
+                      <div className={cn("px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap", styles.bg, styles.text)}>
                         {getPriorityLabel(rec.priority)}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -259,19 +295,26 @@ export function InsightsClient() {
                           {rec.categoryName || t('transactions.uncategorized')}
                         </p>
                         <p className="text-sm text-[rgb(var(--text-secondary))]">
-                          {t('insights.spendingMessage', {
-                            amount: formatCurrency(rec.monthlySpending || 0, { locale: localeString, symbol: currencySymbol }),
-                            category: rec.categoryName || t('transactions.uncategorized')
-                          })}
+                          {getRecommendationMessage(rec)}
                         </p>
+                        {/* Show month-over-month change */}
+                        {rec.increase != null && rec.increase !== 0 && (
+                          <p className={cn("text-xs mt-1 font-medium",
+                            rec.increase > 0 ? "text-rose-500" : "text-emerald-500"
+                          )}>
+                            {rec.increase > 0 ? '↑' : '↓'} {Math.abs(rec.increase)}% {t('insights.vsLastMonth')}
+                          </p>
+                        )}
                       </div>
                       <div className="text-end flex-shrink-0">
-                        <p className="font-bold text-emerald-600 dark:text-emerald-400" dir="ltr">
-                          {formatCurrency(rec.potentialSavings, { locale: localeString, symbol: currencySymbol })}
+                        <p className="font-bold text-[rgb(var(--text-primary))]" dir="ltr">
+                          {formatCurrency(rec.monthlySpending || 0, { locale: localeString, symbol: currencySymbol })}
                         </p>
-                        <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                          {t('insights.potentialSavings')}
-                        </p>
+                        {rec.potentialSavings > 0 && (
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5" dir="ltr">
+                            {t('insights.save')} {formatCurrency(rec.potentialSavings, { locale: localeString, symbol: currencySymbol })}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
