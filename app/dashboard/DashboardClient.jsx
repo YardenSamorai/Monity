@@ -629,46 +629,73 @@ export function DashboardClient({
               )}
 
               {/* 2️⃣ Month vs Last Month */}
-              {hasLastMonthData && (
-                <div className="col-span-12 sm:col-span-6 bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-xl p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={cn(
-                      "w-8 h-8 rounded-lg flex items-center justify-center",
-                      isSpendingMore ? "bg-negative-subtle" : "bg-positive-subtle"
-                    )}>
-                      {isSpendingMore 
-                        ? <TrendingUp className="w-4 h-4 text-negative" />
-                        : <TrendingDown className="w-4 h-4 text-positive" />
-                      }
+              {hasLastMonthData && (() => {
+                const maxAmount = Math.max(totalExpenses, lastMonthExpenses, 1)
+                const thisMonthPercent = Math.round((totalExpenses / maxAmount) * 100)
+                const lastMonthPercent = Math.round((lastMonthExpenses / maxAmount) * 100)
+
+                return (
+                  <div className="col-span-12 sm:col-span-6 bg-[rgb(var(--bg-secondary))] border border-[rgb(var(--border-primary))] rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "w-8 h-8 rounded-lg flex items-center justify-center",
+                          isSpendingMore ? "bg-negative-subtle" : "bg-positive-subtle"
+                        )}>
+                          {isSpendingMore 
+                            ? <TrendingUp className="w-4 h-4 text-negative" />
+                            : <TrendingDown className="w-4 h-4 text-positive" />
+                          }
+                        </div>
+                        <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
+                          {t('insights.monthComparison')}
+                        </span>
+                      </div>
+                      <span className={cn(
+                        "text-lg font-bold tabular-nums",
+                        isSpendingMore ? "text-negative" : "text-positive"
+                      )}>
+                        {isSpendingMore ? '+' : ''}{monthDifference.toFixed(0)}%
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-[rgb(var(--text-primary))]">
-                      {t('insights.monthComparison') || 'vs Last Month'}
-                    </span>
+                    
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[rgb(var(--text-secondary))]">{t('insights.thisMonth')}</span>
+                          <span className="font-medium text-[rgb(var(--text-primary))] tabular-nums" dir="ltr">
+                            {formatCurrency(totalExpenses, { locale: localeString, symbol: currencySymbol })}
+                          </span>
+                        </div>
+                        <div className="h-2.5 bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden">
+                          <div 
+                            className={cn(
+                              "h-full rounded-full transition-all",
+                              isSpendingMore ? "bg-rose-500" : "bg-blue-500"
+                            )}
+                            style={{ width: `${thisMonthPercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-[rgb(var(--text-tertiary))]">{t('insights.lastMonth')}</span>
+                          <span className="font-medium text-[rgb(var(--text-tertiary))] tabular-nums" dir="ltr">
+                            {formatCurrency(lastMonthExpenses, { locale: localeString, symbol: currencySymbol })}
+                          </span>
+                        </div>
+                        <div className="h-2.5 bg-[rgb(var(--bg-tertiary))] rounded-full overflow-hidden">
+                          <div 
+                            className="h-full rounded-full bg-slate-300 dark:bg-slate-600 transition-all"
+                            style={{ width: `${lastMonthPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="flex items-baseline gap-2 mb-2">
-                    <span className={cn(
-                      "text-2xl font-bold tabular-nums",
-                      isSpendingMore ? "text-negative" : "text-positive"
-                    )}>
-                      {isSpendingMore ? '+' : ''}{monthDifference.toFixed(0)}%
-                    </span>
-                    <span className="text-xs text-[rgb(var(--text-tertiary))]">
-                      {isSpendingMore 
-                        ? (t('insights.spentMore') || 'spent more')
-                        : (t('insights.spentLess') || 'spent less')
-                      }
-                    </span>
-                  </div>
-                  
-                  <div className="text-xs text-[rgb(var(--text-tertiary))]">
-                    <span dir="ltr">{currencySymbol}{totalExpenses.toLocaleString()}</span>
-                    {' vs '}
-                    <span dir="ltr">{currencySymbol}{lastMonthExpenses.toLocaleString()}</span>
-                    {' ' + (t('insights.lastMonth') || 'last month')}
-                  </div>
-                </div>
-              )}
+                )
+              })()}
 
               {/* 3️⃣ Over Budget Alerts */}
               {budgetAlerts.length > 0 && (
