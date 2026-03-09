@@ -60,6 +60,49 @@ export async function PUT(request, { params }) {
   }
 }
 
+// PATCH /api/accounts/[id] - Update account balance only
+export async function PATCH(request, { params }) {
+  try {
+    const user = await getOrCreateUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const { id } = await params
+    const body = await request.json()
+    const newBalance = parseFloat(body.balance)
+
+    if (isNaN(newBalance)) {
+      return NextResponse.json({ error: 'Invalid balance value' }, { status: 400 })
+    }
+
+    const account = await prisma.account.findFirst({
+      where: { id, userId: user.id },
+    })
+
+    if (!account) {
+      return NextResponse.json({ error: 'Account not found' }, { status: 404 })
+    }
+
+    const updated = await prisma.account.update({
+      where: { id },
+      data: { balance: newBalance },
+    })
+
+    revalidateTag('accounts')
+    revalidateTag('dashboard')
+    notifyAccountChange(user.clerkUserId, 'updated', updated).catch((err) => console.error('Pusher error:', err))
+
+    return NextResponse.json({ account: updated })
+  } catch (error) {
+    console.error('Error updating account balance:', error)
+    return NextResponse.json(
+      { error: 'Failed to update balance' },
+      { status: 500 }
+    )
+  }
+}
+
 // DELETE /api/accounts/[id] - Delete account
 export async function DELETE(request, { params }) {
   try {

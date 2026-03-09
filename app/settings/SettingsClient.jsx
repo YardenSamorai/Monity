@@ -17,7 +17,9 @@ import { LanguageSelector } from '@/components/ui/LanguageSelector'
 import { CurrencySelector } from '@/components/ui/CurrencySelector'
 import { Tabs, TabPanel } from '@/components/ui/Tabs'
 import { formatCurrency } from '@/lib/utils'
-import { Wallet, Tag, Key, Repeat, ArrowDownCircle, ArrowUpCircle, Globe, Settings as SettingsIcon, Edit, Trash2, Eye, EyeOff, Copy } from 'lucide-react'
+import { Wallet, Tag, Key, Repeat, ArrowDownCircle, ArrowUpCircle, Globe, Settings as SettingsIcon, Edit, Trash2, Eye, EyeOff, Copy, RefreshCw } from 'lucide-react'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
 import { useToast } from '@/lib/toast-context'
 import { useLoading } from '@/lib/loading-context'
 import { useI18n } from '@/lib/i18n-context'
@@ -57,6 +59,9 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
   const [editingAccount, setEditingAccount] = useState(null)
   const [accountToDelete, setAccountToDelete] = useState(null)
   const [isDeleteAccountDialogOpen, setIsDeleteAccountDialogOpen] = useState(false)
+  const [balanceAdjustAccount, setBalanceAdjustAccount] = useState(null)
+  const [balanceAdjustValue, setBalanceAdjustValue] = useState('')
+  const [savingBalance, setSavingBalance] = useState(false)
 
   // Sync tab with URL
   useEffect(() => {
@@ -76,6 +81,39 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
     const response = await fetch('/api/accounts')
     const data = await response.json()
     setAccounts(data.accounts)
+  }
+
+  const handleBalanceAdjust = async () => {
+    if (!balanceAdjustAccount) return
+    const newBalance = parseFloat(balanceAdjustValue)
+    if (isNaN(newBalance)) {
+      toast.error(t('settings.invalidBalance'))
+      return
+    }
+
+    setSavingBalance(true)
+    try {
+      const response = await fetch(`/api/accounts/${balanceAdjustAccount.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ balance: newBalance }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Failed to update balance')
+      }
+
+      toast.success(t('settings.balanceUpdated'), t('settings.balanceUpdatedDesc'))
+      await handleAccountSuccess()
+      setBalanceAdjustAccount(null)
+      setBalanceAdjustValue('')
+    } catch (error) {
+      console.error('Error updating balance:', error)
+      toast.error(t('settings.balanceUpdateFailed'), error.message)
+    } finally {
+      setSavingBalance(false)
+    }
   }
 
   const handleCategorySuccess = async () => {
@@ -699,9 +737,18 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
                     
                     {/* Balance & Actions */}
                     <div className="flex items-center justify-between sm:justify-end gap-3">
-                      <div className="font-semibold text-light-text-primary dark:text-dark-text-primary" dir="ltr">
+                      <button
+                        onClick={() => {
+                          setBalanceAdjustAccount(account)
+                          setBalanceAdjustValue(String(Number(account.balance)))
+                        }}
+                        className="font-semibold text-light-text-primary dark:text-dark-text-primary hover:text-[rgb(var(--color-primary))] transition-colors cursor-pointer flex items-center gap-1.5 group"
+                        dir="ltr"
+                        title={t('settings.adjustBalance')}
+                      >
                         {formatCurrency(Number(account.balance), { locale: localeString, symbol: account.currency === 'ILS' ? '₪' : '$' })}
-                      </div>
+                        <Edit className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity" />
+                      </button>
                       <div className="flex items-center gap-1">
                         <Button
                           size="sm"
@@ -1152,6 +1199,57 @@ export function SettingsClient({ initialAccounts, initialCategories, initialToke
           </Card>
         </div>
       </TabPanel>
+
+      {/* Balance Adjustment Modal */}
+      <Modal
+        isOpen={!!balanceAdjustAccount}
+        onClose={() => {
+          setBalanceAdjustAccount(null)
+          setBalanceAdjustValue('')
+        }}
+        title={t('settings.adjustBalance')}
+        size="sm"
+      >
+        {balanceAdjustAccount && (
+          <form onSubmit={(e) => { e.preventDefault(); handleBalanceAdjust() }} className="space-y-4">
+            <div>
+              <p className="text-sm text-[rgb(var(--text-secondary))] mb-3">
+                {t('settings.adjustBalanceDesc', { account: balanceAdjustAccount.name })}
+              </p>
+              <Input
+                label={t('settings.currentBalance')}
+                type="number"
+                step="0.01"
+                value={balanceAdjustValue}
+                onChange={(e) => setBalanceAdjustValue(e.target.value)}
+                placeholder="0.00"
+                autoFocus
+                required
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex-1"
+                onClick={() => {
+                  setBalanceAdjustAccount(null)
+                  setBalanceAdjustValue('')
+                }}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={savingBalance}
+              >
+                {savingBalance ? t('common.loading') : t('settings.updateBalance')}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
 
       {/* Modals */}
       <AccountModal
