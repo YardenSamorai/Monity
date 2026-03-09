@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { DashboardClient } from './DashboardClient'
 import { getMonthRange, serializePrismaData } from '@/lib/utils'
-import { unstable_cache } from 'next/cache'
+import { unstable_cache, revalidateTag } from 'next/cache'
 import { processUserPendingItems } from '@/lib/auto-process'
 
 // Force dynamic rendering to prevent stale data
@@ -220,7 +220,13 @@ export default async function DashboardPage() {
   
   // Process any pending recurring income, transactions, and credit card billing
   // before fetching dashboard data so the user sees up-to-date numbers
-  await processUserPendingItems(user.id)
+  const processResults = await processUserPendingItems(user.id)
+  const hadUpdates = processResults.recurringIncome > 0 
+    || processResults.recurringTransactions > 0 
+    || processResults.creditCardBilling > 0
+  if (hadUpdates) {
+    revalidateTag('dashboard')
+  }
   
   const now = new Date()
   const currentMonth = now.getMonth() + 1
