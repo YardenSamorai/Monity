@@ -8,6 +8,14 @@
     {
       "path": "/api/recurring-transactions/process",
       "schedule": "0 1 * * *"
+    },
+    {
+      "path": "/api/credit-cards/process-billing",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/auto-process",
+      "schedule": "0 3 * * *"
     }
   ]
 }

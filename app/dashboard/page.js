@@ -5,6 +5,7 @@ import AppShell from '@/components/AppShell'
 import { DashboardClient } from './DashboardClient'
 import { getMonthRange, serializePrismaData } from '@/lib/utils'
 import { unstable_cache } from 'next/cache'
+import { processUserPendingItems } from '@/lib/auto-process'
 
 // Force dynamic rendering to prevent stale data
 export const dynamic = 'force-dynamic'
@@ -216,6 +217,10 @@ export default async function DashboardPage() {
   if (!user) {
     redirect('/sign-in')
   }
+  
+  // Process any pending recurring income, transactions, and credit card billing
+  // before fetching dashboard data so the user sees up-to-date numbers
+  await processUserPendingItems(user.id)
   
   const now = new Date()
   const currentMonth = now.getMonth() + 1
