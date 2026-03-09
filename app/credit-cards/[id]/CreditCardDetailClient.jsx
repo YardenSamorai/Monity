@@ -145,64 +145,102 @@ export function CreditCardDetailClient({ cardId }) {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-5 h-5 text-rose-500" />
+        {/* Pending Charges */}
+        <Card className="p-4 relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center">
+              <Clock className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <p className="text-xs font-medium text-[rgb(var(--text-tertiary))] uppercase tracking-wide">
+              {t('creditCards.pendingCharges')}
+            </p>
           </div>
-          <p className="text-xs text-[rgb(var(--text-tertiary))]">
-            {t('creditCards.pendingCharges')}
-          </p>
-          <p className="text-xl font-bold text-rose-600 dark:text-rose-400">
+          <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 tabular-nums" dir="ltr">
             {formatCurrency(card.pendingAmount, { locale: localeString, symbol: currencySymbol })}
           </p>
         </Card>
 
-        <Card className="p-4">
-          <div className="flex items-center gap-2 mb-2">
-            <Calendar className="w-5 h-5 text-blue-500" />
+        {/* Billing Date */}
+        <Card className="p-4 relative overflow-hidden">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <p className="text-xs font-medium text-[rgb(var(--text-tertiary))] uppercase tracking-wide">
+              {t('creditCards.billingDate')}
+            </p>
           </div>
-          <p className="text-xs text-[rgb(var(--text-tertiary))]">
-            {t('creditCards.billingDate')}
-          </p>
-          <p className="text-xl font-bold text-[rgb(var(--text-primary))]">
-            {t('creditCards.dayOfMonth', { day: card.billingDay })}
-          </p>
-          <p className="text-xs text-[rgb(var(--text-tertiary))] mt-1">
-            {t('creditCards.inDays', { days: card.daysUntilBilling })}
-          </p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="text-2xl font-bold text-[rgb(var(--text-primary))]">
+              {card.billingDay}
+            </span>
+            <span className="text-sm text-[rgb(var(--text-secondary))]">
+              {t('creditCards.ofEveryMonth')}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-2">
+            <div className="flex-1 h-1.5 bg-blue-100 dark:bg-blue-900/20 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-blue-500 rounded-full transition-all"
+                style={{ width: `${Math.max(5, Math.round(((30 - card.daysUntilBilling) / 30) * 100))}%` }}
+              />
+            </div>
+            <span className="text-xs font-medium text-blue-600 dark:text-blue-400 whitespace-nowrap">
+              {t('creditCards.inDays', { days: card.daysUntilBilling })}
+            </span>
+          </div>
         </Card>
 
         {card.creditLimit && (
           <>
-            <Card className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <TrendingDown className="w-5 h-5 text-amber-500" />
+            {/* Limit Used */}
+            <Card className="p-4 relative overflow-hidden">
+              <div className="flex items-center gap-2 mb-3">
+                <div className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center",
+                  isNearLimit 
+                    ? "bg-amber-100 dark:bg-amber-900/30" 
+                    : "bg-emerald-100 dark:bg-emerald-900/30"
+                )}>
+                  <TrendingDown className={cn(
+                    "w-4 h-4",
+                    isNearLimit 
+                      ? "text-amber-600 dark:text-amber-400" 
+                      : "text-emerald-600 dark:text-emerald-400"
+                  )} />
+                </div>
+                <p className="text-xs font-medium text-[rgb(var(--text-tertiary))] uppercase tracking-wide">
+                  {t('creditCards.limitUsed')}
+                </p>
               </div>
-              <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                {t('creditCards.limitUsed')}
-              </p>
               <p className={cn(
-                "text-xl font-bold",
+                "text-2xl font-bold tabular-nums",
                 isNearLimit ? "text-amber-600 dark:text-amber-400" : "text-[rgb(var(--text-primary))]"
               )}>
                 {limitUsedPercent}%
               </p>
               {isNearLimit && (
-                <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-1">
+                <p className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 mt-2">
                   <AlertTriangle className="w-3 h-3" />
                   {t('creditCards.nearingLimit')}
                 </p>
               )}
             </Card>
 
-            <Card className="p-4">
-              <p className="text-xs text-[rgb(var(--text-tertiary))]">
-                {t('creditCards.creditLimit')}
-              </p>
-              <p className="text-xl font-bold text-[rgb(var(--text-primary))]">
+            {/* Credit Limit */}
+            <Card className="p-4 relative overflow-hidden">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-lg bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
+                  <CreditCardIcon className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+                </div>
+                <p className="text-xs font-medium text-[rgb(var(--text-tertiary))] uppercase tracking-wide">
+                  {t('creditCards.creditLimit')}
+                </p>
+              </div>
+              <p className="text-2xl font-bold text-[rgb(var(--text-primary))] tabular-nums" dir="ltr">
                 {formatCurrency(card.creditLimit, { locale: localeString, symbol: currencySymbol })}
               </p>
-              <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-2">
+              <div className="h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mt-3">
                 <div 
                   className={cn(
                     "h-full rounded-full transition-all",
