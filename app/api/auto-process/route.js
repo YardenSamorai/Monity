@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCardDisplayName, getOrCreateCreditCategory } from '@/lib/auto-process'
 
 // Processes all pending recurring income, recurring transactions, and credit card billing
 // Called by cron as a safety net, and by dashboard page load for immediate catch-up
@@ -187,16 +188,7 @@ export async function POST(request) {
 
     // --- 3. Process credit card billing ---
     const currentDay = now.getDate()
-    const cardsDueToday = await prisma.creditCard.findMany({
-      where: { billingDay: currentDay, isActive: true },
-      include: {
-        linkedAccount: true,
-        user: { select: { id: true, preferredCurrency: true } },
-      },
-    })
 
-    // Also find cards whose billing day has passed but weren't processed
-    // (catch-up for missed days)
     const allActiveCards = await prisma.creditCard.findMany({
       where: { isActive: true },
       include: {
@@ -205,11 +197,9 @@ export async function POST(request) {
       },
     })
 
-    const cardsToProcess = allActiveCards.filter(card => {
-      return card.billingDay <= currentDay
-    })
-
+    const cardsToProcess = allActiveCards.filter(card => card.billingDay <= currentDay)
     const processedCardIds = new Set()
+    const creditCategoryCache = {}
 
     for (const card of cardsToProcess) {
       if (processedCardIds.has(card.id)) continue
@@ -231,17 +221,24 @@ export async function POST(request) {
           continue
         }
 
+        if (!creditCategoryCache[card.userId]) {
+          creditCategoryCache[card.userId] = await getOrCreateCreditCategory(card.userId)
+        }
+        const creditCategory = creditCategoryCache[card.userId]
+
         const totalAmount = pendingTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
+        const displayName = getCardDisplayName(card.name)
 
         const bankTransaction = await prisma.transaction.create({
           data: {
             userId: card.userId,
             accountId: card.linkedAccountId,
+            categoryId: creditCategory?.id || null,
             type: 'expense',
             amount: totalAmount,
-            description: `Credit card charge – ${card.name} ••••${card.lastFourDigits}`,
+            description: `חיוב ${displayName} ••••${card.lastFourDigits}`,
             date: now,
-            notes: `Automatic charge for ${pendingTransactions.length} credit card transactions`,
+            notes: `חיוב אוטומטי עבור ${pendingTransactions.length} עסקאות אשראי`,
           },
         })
 
@@ -265,8 +262,8 @@ export async function POST(request) {
           data: {
             userId: card.userId,
             type: 'credit_card_billed',
-            title: 'Credit Card Charged',
-            message: `Your ${card.name} card was charged ${totalAmount.toFixed(2)} for ${pendingTransactions.length} transactions.`,
+            title: 'חיוב כרטיס אשראי',
+            message: `כרטיס ${displayName} ••••${card.lastFourDigits} חויב ב-${totalAmount.toFixed(2)} עבור ${pendingTransactions.length} עסקאות.`,
             metadata: JSON.stringify({
               cardId: card.id,
               cardName: card.name,

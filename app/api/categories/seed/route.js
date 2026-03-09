@@ -19,6 +19,7 @@ const DEFAULT_CATEGORIES = [
   { name: 'טיפוח', type: 'expense', icon: '💅', color: '#D946EF' },
   { name: 'ביטוחים', type: 'expense', icon: '🛡️', color: '#64748B' },
   { name: 'מיסים', type: 'expense', icon: '🏛️', color: '#78716C' },
+  { name: 'חיובי אשראי', type: 'expense', icon: '💳', color: '#6366F1' },
   { name: 'אחר', type: 'expense', icon: '📦', color: '#94A3B8' },
   
   // Income categories

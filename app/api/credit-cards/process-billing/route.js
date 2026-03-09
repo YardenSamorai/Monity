@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { getCardDisplayName, getOrCreateCreditCategory } from '@/lib/auto-process'
 
 function verifyCron(request) {
   const authHeader = request.headers.get('authorization')
@@ -25,6 +26,7 @@ async function processCreditCardBilling() {
   })
 
   const results = []
+  const creditCategoryCache = {}
 
   for (const card of cardsDueToday) {
     try {
@@ -45,20 +47,27 @@ async function processCreditCardBilling() {
         continue
       }
 
+      if (!creditCategoryCache[card.userId]) {
+        creditCategoryCache[card.userId] = await getOrCreateCreditCategory(card.userId)
+      }
+      const creditCategory = creditCategoryCache[card.userId]
+
       const totalAmount = pendingTransactions.reduce(
         (sum, t) => sum + Number(t.amount),
         0
       )
+      const displayName = getCardDisplayName(card.name)
 
       const bankTransaction = await prisma.transaction.create({
         data: {
           userId: card.userId,
           accountId: card.linkedAccountId,
+          categoryId: creditCategory?.id || null,
           type: 'expense',
           amount: totalAmount,
-          description: `Credit card charge – ${card.name} ••••${card.lastFourDigits}`,
+          description: `חיוב ${displayName} ••••${card.lastFourDigits}`,
           date: today,
-          notes: `Automatic charge for ${pendingTransactions.length} credit card transactions`,
+          notes: `חיוב אוטומטי עבור ${pendingTransactions.length} עסקאות אשראי`,
         },
       })
 
@@ -83,8 +92,8 @@ async function processCreditCardBilling() {
         data: {
           userId: card.userId,
           type: 'credit_card_billed',
-          title: 'Credit Card Charged',
-          message: `Your ${card.name} card was charged ${totalAmount.toFixed(2)} for ${pendingTransactions.length} transactions.`,
+          title: 'חיוב כרטיס אשראי',
+          message: `כרטיס ${displayName} ••••${card.lastFourDigits} חויב ב-${totalAmount.toFixed(2)} עבור ${pendingTransactions.length} עסקאות.`,
           metadata: JSON.stringify({
             cardId: card.id,
             cardName: card.name,
