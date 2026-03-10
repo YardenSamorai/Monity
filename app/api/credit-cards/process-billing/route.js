@@ -57,7 +57,7 @@ async function processCreditCardBilling() {
         0
       )
       const displayName = getCardDisplayName(card.name)
-      const billingDate = new Date(today.getFullYear(), today.getMonth(), card.billingDay - 1)
+      const billingDate = new Date(today.getFullYear(), today.getMonth(), 0)
 
       const bankTransaction = await prisma.transaction.create({
         data: {

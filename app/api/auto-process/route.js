@@ -232,7 +232,7 @@ export async function POST(request) {
 
         const totalAmount = pendingTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
         const displayName = getCardDisplayName(card.name)
-        const billingDate = new Date(now.getFullYear(), now.getMonth(), card.billingDay - 1)
+        const billingDate = new Date(now.getFullYear(), now.getMonth(), 0)
 
         const bankTransaction = await prisma.transaction.create({
           data: {

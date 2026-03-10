@@ -91,40 +91,28 @@ async function fixTransactionDates() {
 
   for (const tx of ccTransactions) {
     try {
-      const lastFourMatch = tx.description.match(/••••(\d+)/)
-      if (!lastFourMatch) continue
-
-      const lastFour = lastFourMatch[1]
-      const card = await prisma.creditCard.findFirst({
-        where: { lastFourDigits: lastFour, userId: tx.userId },
-      })
-      if (!card) continue
-
       const txDate = new Date(tx.date)
       const txDay = txDate.getDate()
-      const expectedDay = card.billingDay - 1
+      const txMonth = txDate.getMonth()
+      const txYear = txDate.getFullYear()
 
-      // Check if already correct (idempotent)
-      let alreadyCorrect = false
-      if (expectedDay === 0) {
-        // billingDay=1: correct date is the last day of some month
-        const lastDay = new Date(txDate.getFullYear(), txDate.getMonth() + 1, 0).getDate()
-        alreadyCorrect = txDay === lastDay
-      } else {
-        alreadyCorrect = txDay === expectedDay
-      }
+      // Correct date = last day of the previous month relative to the billing month.
+      // The billing happens in month M; we want the last day of month M-1.
+      // If the transaction is already on the last day of its month, check if the
+      // NEXT day would be the 1st of the next month (meaning it's already correct).
+      const lastDayOfCurrentMonth = new Date(txYear, txMonth + 1, 0).getDate()
+      const isLastDayOfMonth = txDay === lastDayOfCurrentMonth
 
-      if (alreadyCorrect) continue
+      // If the date is already the last day of a month, it's correct
+      if (isLastDayOfMonth) continue
 
-      // Determine which billing event month this transaction belongs to
-      let billingYear = txDate.getFullYear()
-      let billingMonth = txDate.getMonth()
-      if (txDay < card.billingDay) {
-        billingMonth += 1
-        if (billingMonth > 11) { billingMonth = 0; billingYear += 1 }
-      }
-
-      const correctDate = new Date(billingYear, billingMonth, card.billingDay - 1)
+      // The transaction is in the wrong spot. Determine the billing month:
+      // If the current date is on or after billingDay, the billing month is the current month.
+      // Otherwise, billing month is the current month (the tx was placed near billingDay).
+      // Either way, the correct date is the last day of the month BEFORE the billing month.
+      // Since the tx was created around the billing event, the correct date is
+      // the last day of the previous month from the tx date.
+      const correctDate = new Date(txYear, txMonth, 0) // last day of previous month
 
       await prisma.transaction.update({
         where: { id: tx.id },
