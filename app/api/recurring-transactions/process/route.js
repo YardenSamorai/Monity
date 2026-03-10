@@ -63,6 +63,8 @@ async function processRecurringTransactions() {
         continue
       }
 
+      const scheduledDate = new Date(now.getFullYear(), now.getMonth(), recurring.dayOfMonth)
+
       const transaction = await prisma.transaction.create({
         data: {
           userId: recurring.userId,
@@ -71,7 +73,7 @@ async function processRecurringTransactions() {
           type: recurring.type,
           amount: recurring.amount,
           description: recurring.description,
-          date: now,
+          date: scheduledDate,
           notes: `Automatic recurring ${recurring.type}`,
           recurringTransactionId: recurring.id,
           householdId: recurring.householdId,

@@ -53,6 +53,8 @@ export async function POST(request) {
           continue
         }
 
+        const scheduledDate = new Date(now.getFullYear(), now.getMonth(), income.dayOfMonth)
+
         const transaction = await prisma.transaction.create({
           data: {
             userId: income.userId,
@@ -61,7 +63,7 @@ export async function POST(request) {
             type: 'income',
             amount: income.amount,
             description: income.description,
-            date: now,
+            date: scheduledDate,
             notes: 'Automatic recurring income',
             recurringIncomeId: income.id,
             householdId: income.householdId,
@@ -141,6 +143,8 @@ export async function POST(request) {
           continue
         }
 
+        const scheduledDate = new Date(now.getFullYear(), now.getMonth(), recurring.dayOfMonth)
+
         const transaction = await prisma.transaction.create({
           data: {
             userId: recurring.userId,
@@ -149,7 +153,7 @@ export async function POST(request) {
             type: recurring.type,
             amount: recurring.amount,
             description: recurring.description,
-            date: now,
+            date: scheduledDate,
             notes: `Automatic recurring ${recurring.type}`,
             recurringTransactionId: recurring.id,
             householdId: recurring.householdId,
@@ -228,6 +232,7 @@ export async function POST(request) {
 
         const totalAmount = pendingTransactions.reduce((sum, t) => sum + Number(t.amount), 0)
         const displayName = getCardDisplayName(card.name)
+        const billingDate = new Date(now.getFullYear(), now.getMonth(), card.billingDay)
 
         const bankTransaction = await prisma.transaction.create({
           data: {
@@ -237,7 +242,7 @@ export async function POST(request) {
             type: 'expense',
             amount: totalAmount,
             description: `חיוב ${displayName} ••••${card.lastFourDigits}`,
-            date: now,
+            date: billingDate,
             notes: `חיוב אוטומטי עבור ${pendingTransactions.length} עסקאות אשראי`,
           },
         })
@@ -253,7 +258,7 @@ export async function POST(request) {
           },
           data: {
             status: 'billed',
-            billedDate: now,
+            billedDate: billingDate,
             bankTransactionId: bankTransaction.id,
           },
         })

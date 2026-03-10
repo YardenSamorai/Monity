@@ -57,6 +57,7 @@ async function processCreditCardBilling() {
         0
       )
       const displayName = getCardDisplayName(card.name)
+      const billingDate = new Date(today.getFullYear(), today.getMonth(), card.billingDay)
 
       const bankTransaction = await prisma.transaction.create({
         data: {
@@ -66,7 +67,7 @@ async function processCreditCardBilling() {
           type: 'expense',
           amount: totalAmount,
           description: `חיוב ${displayName} ••••${card.lastFourDigits}`,
-          date: today,
+          date: billingDate,
           notes: `חיוב אוטומטי עבור ${pendingTransactions.length} עסקאות אשראי`,
         },
       })
@@ -83,7 +84,7 @@ async function processCreditCardBilling() {
         },
         data: {
           status: 'billed',
-          billedDate: today,
+          billedDate: billingDate,
           bankTransactionId: bankTransaction.id,
         },
       })
