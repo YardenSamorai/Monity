@@ -60,10 +60,9 @@ export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, re
   // Regular expenses (non-recurring) - sorted by date, newest first
   // IMPORTANT: Filter out recurring expense transactions to avoid double counting
   const regularExpenses = localExpenses
-    .filter(e => !recurringExpenseTransactionIds.has(e.id)) // Exclude recurring expense transactions
+    .filter(e => !recurringExpenseTransactionIds.has(e.id))
     .map(e => ({ ...e, isRecurring: false, isPending: false }))
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 5) // Only show last 5 regular expenses
 
   // Combine: recurring expenses first, then regular expenses
   const allExpenses = [
