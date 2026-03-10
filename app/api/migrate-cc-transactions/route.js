@@ -101,15 +101,16 @@ async function fixTransactionDates() {
       if (!card) continue
 
       const txDate = new Date(tx.date)
-      const correctDate = new Date(txDate.getFullYear(), txDate.getMonth(), card.billingDay)
+      // Billing transaction should be dated to the last day of the cycle it covers
+      // (the day before the billing day), so it appears in the previous month's expenses
+      const correctDate = new Date(txDate.getFullYear(), txDate.getMonth(), card.billingDay - 1)
 
-      if (txDate.getDate() !== card.billingDay) {
+      if (txDate.getTime() !== correctDate.getTime()) {
         await prisma.transaction.update({
           where: { id: tx.id },
           data: { date: correctDate },
         })
 
-        // Also fix billedDate on the linked CreditCardTransactions
         await prisma.creditCardTransaction.updateMany({
           where: { bankTransactionId: tx.id },
           data: { billedDate: correctDate },
