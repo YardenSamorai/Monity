@@ -101,23 +101,42 @@ async function fixTransactionDates() {
       if (!card) continue
 
       const txDate = new Date(tx.date)
-      // Billing transaction should be dated to the last day of the cycle it covers
-      // (the day before the billing day), so it appears in the previous month's expenses
-      const correctDate = new Date(txDate.getFullYear(), txDate.getMonth(), card.billingDay - 1)
+      const txDay = txDate.getDate()
+      const expectedDay = card.billingDay - 1
 
-      if (txDate.getTime() !== correctDate.getTime()) {
-        await prisma.transaction.update({
-          where: { id: tx.id },
-          data: { date: correctDate },
-        })
-
-        await prisma.creditCardTransaction.updateMany({
-          where: { bankTransactionId: tx.id },
-          data: { billedDate: correctDate },
-        })
-
-        ccFixed++
+      // Check if already correct (idempotent)
+      let alreadyCorrect = false
+      if (expectedDay === 0) {
+        // billingDay=1: correct date is the last day of some month
+        const lastDay = new Date(txDate.getFullYear(), txDate.getMonth() + 1, 0).getDate()
+        alreadyCorrect = txDay === lastDay
+      } else {
+        alreadyCorrect = txDay === expectedDay
       }
+
+      if (alreadyCorrect) continue
+
+      // Determine which billing event month this transaction belongs to
+      let billingYear = txDate.getFullYear()
+      let billingMonth = txDate.getMonth()
+      if (txDay < card.billingDay) {
+        billingMonth += 1
+        if (billingMonth > 11) { billingMonth = 0; billingYear += 1 }
+      }
+
+      const correctDate = new Date(billingYear, billingMonth, card.billingDay - 1)
+
+      await prisma.transaction.update({
+        where: { id: tx.id },
+        data: { date: correctDate },
+      })
+
+      await prisma.creditCardTransaction.updateMany({
+        where: { bankTransactionId: tx.id },
+        data: { billedDate: correctDate },
+      })
+
+      ccFixed++
     } catch (err) {
       console.error(`Failed to fix CC transaction date ${tx.id}:`, err)
     }
