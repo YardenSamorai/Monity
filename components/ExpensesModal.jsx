@@ -6,13 +6,13 @@ import { Badge } from './ui/Badge'
 import { Button } from './ui/Button'
 import { TransactionModal } from './forms/TransactionModal'
 import { ConfirmDialog } from './ui/ConfirmDialog'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, getBillingCycleRange, getBillingCycleForDate } from '@/lib/utils'
 import { ArrowDownCircle, Repeat, Edit, Trash2 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n-context'
 import { useToast } from '@/lib/toast-context'
 import { useDataRefresh, EVENTS } from '@/lib/realtime-context'
 
-export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, recurringExpenseDefinitions = [], accounts = [], categories = [], onExpenseUpdated }) {
+export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, recurringExpenseDefinitions = [], accounts = [], categories = [], monthStartDay = 1, onExpenseUpdated }) {
   const { t, currencySymbol, localeString } = useI18n()
   const { toast } = useToast()
   const [editingExpense, setEditingExpense] = useState(null)
@@ -84,8 +84,10 @@ export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, re
     try {
       // Get current month range
       const now = new Date()
-      const startDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-      const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString()
+      const { year, month } = getBillingCycleForDate(now, monthStartDay)
+      const { start, end } = getBillingCycleRange(year, month, monthStartDay)
+      const startDate = start.toISOString()
+      const endDate = end.toISOString()
       
       const response = await fetch(`/api/transactions?type=expense&startDate=${startDate}&endDate=${endDate}`, { cache: 'no-store' })
       if (response.ok) {
@@ -95,7 +97,7 @@ export function ExpensesModal({ isOpen, onClose, expenses, recurringExpenses, re
     } catch (error) {
       console.error('Error fetching expenses:', error)
     }
-  }, [isOpen])
+  }, [isOpen, monthStartDay])
 
   // Real-time updates using centralized hook
   useDataRefresh({

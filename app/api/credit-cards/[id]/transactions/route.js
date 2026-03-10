@@ -27,6 +27,8 @@ export async function GET(request, { params }) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status') // 'pending', 'billed', or null
     const limit = parseInt(searchParams.get('limit') || '50')
+    const startDate = searchParams.get('startDate')
+    const endDate = searchParams.get('endDate')
 
     // Verify card ownership
     const card = await prisma.creditCard.findFirst({
@@ -40,10 +42,15 @@ export async function GET(request, { params }) {
       )
     }
 
+    const dateFilter = {}
+    if (startDate) dateFilter.gte = new Date(startDate)
+    if (endDate) dateFilter.lte = new Date(endDate)
+
     const transactions = await prisma.creditCardTransaction.findMany({
       where: {
         creditCardId: id,
         ...(status && { status }),
+        ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
       },
       include: {
         category: {

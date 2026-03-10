@@ -3,7 +3,7 @@ import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { DashboardClient } from './DashboardClient'
-import { getMonthRange, serializePrismaData } from '@/lib/utils'
+import { getMonthRange, getBillingCycleRange, getBillingCycleForDate, serializePrismaData } from '@/lib/utils'
 import { unstable_cache, revalidateTag } from 'next/cache'
 import { processUserPendingItems } from '@/lib/auto-process'
 
@@ -13,16 +13,15 @@ export const revalidate = 0
 
 // Cache dashboard data per user with tag-based invalidation
 const getDashboardData = unstable_cache(
-  async (userId) => {
+  async (userId, monthStartDay) => {
     const now = new Date()
-    const currentMonth = now.getMonth() + 1
-    const currentYear = now.getFullYear()
-    const { start, end } = getMonthRange(currentYear, currentMonth)
+    const { year: currentYear, month: currentMonth } = getBillingCycleForDate(now, monthStartDay)
+    const { start, end } = getBillingCycleRange(currentYear, currentMonth, monthStartDay)
     
-    // Get previous month range
+    // Get previous billing cycle range
     const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
     const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear
-    const { start: prevStart, end: prevEnd } = getMonthRange(prevYear, prevMonth)
+    const { start: prevStart, end: prevEnd } = getBillingCycleRange(prevYear, prevMonth, monthStartDay)
     
     const [
       accounts,
@@ -229,9 +228,9 @@ export default async function DashboardPage() {
   }
   
   const now = new Date()
-  const currentMonth = now.getMonth() + 1
-  const currentYear = now.getFullYear()
-  const { start, end } = getMonthRange(currentYear, currentMonth)
+  const monthStartDay = user.monthStartDay || 1
+  const { year: currentYear, month: currentMonth } = getBillingCycleForDate(now, monthStartDay)
+  const { start, end } = getBillingCycleRange(currentYear, currentMonth, monthStartDay)
   
   // Get cached data
   const {
@@ -246,7 +245,7 @@ export default async function DashboardPage() {
     goals,
     creditCardTransactions,
     recentCreditCardTransactions,
-  } = await getDashboardData(user.id)
+  } = await getDashboardData(user.id, monthStartDay)
   
   // Check if user needs onboarding
   if (!user.hasCompletedOnboarding && accounts.length === 0) {
@@ -424,6 +423,7 @@ export default async function DashboardPage() {
         netCashFlow={netCashFlow}
         pendingCreditCardAmount={pendingCreditCardAmount}
         projectedBalance={projectedBalance}
+        monthStartDay={monthStartDay}
         accounts={serializePrismaData(accounts)}
         recentTransactions={serializePrismaData(allRecentTransactions)}
         currentDate={now.toISOString()}

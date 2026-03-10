@@ -54,6 +54,7 @@ export function DashboardClient({
   netCashFlow,
   pendingCreditCardAmount = 0,
   projectedBalance,
+  monthStartDay = 1,
   accounts,
   recentTransactions,
   currentDate,
@@ -1051,6 +1052,7 @@ export function DashboardClient({
         recurringExpenseDefinitions={recurringExpenseDefinitions}
         accounts={accounts}
         categories={categories}
+        monthStartDay={monthStartDay}
         onExpenseUpdated={() => window.location.reload()}
       />
 

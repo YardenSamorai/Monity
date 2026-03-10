@@ -16,7 +16,8 @@ export function SwipeableTransactionItem({
   onLinkGoal,
   onView,
   currencySymbol,
-  localeString 
+  localeString,
+  balanceAfter,
 }) {
   const { isRTL, t } = useI18n()
   const [translateX, setTranslateX] = useState(0)
@@ -254,7 +255,7 @@ export function SwipeableTransactionItem({
           </div>
           
           {/* Amount */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 text-end">
             <div
               className={cn(
                 "font-bold text-lg tabular-nums whitespace-nowrap",
@@ -267,6 +268,11 @@ export function SwipeableTransactionItem({
               {transaction.type === 'income' ? '+' : '-'}
               {formatCurrency(Number(transaction.amount), { locale: localeString, symbol: currencySymbol })}
             </div>
+            {balanceAfter != null && !transaction.isCreditCard && (
+              <div className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums whitespace-nowrap" dir="ltr">
+                {t('transactions.balance')}: {formatCurrency(balanceAfter, { locale: localeString, symbol: currencySymbol })}
+              </div>
+            )}
           </div>
         </div>
       </div>

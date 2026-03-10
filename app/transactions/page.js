@@ -3,7 +3,7 @@ import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import AppShell from '@/components/AppShell'
 import { TransactionsClient } from './TransactionsClient'
-import { serializePrismaData } from '@/lib/utils'
+import { serializePrismaData, getBillingCycleRange, getBillingCycleForDate } from '@/lib/utils'
 
 // Force dynamic rendering - no caching for instant updates
 export const dynamic = 'force-dynamic'
@@ -28,10 +28,14 @@ export default async function TransactionsPage() {
     redirect('/sign-in')
   }
   
+  const monthStartDay = user.monthStartDay || 1
+  const now = new Date()
+  const { year, month } = getBillingCycleForDate(now, monthStartDay)
+  const { start, end } = getBillingCycleRange(year, month, monthStartDay)
+
   const [transactions, creditCardTransactions, accounts, categories, creditCards] = await Promise.all([
     prisma.transaction.findMany({
-      where: { userId: user.id },
-      take: 100,
+      where: { userId: user.id, date: { gte: start, lte: end } },
       orderBy: { date: 'desc' },
       select: {
         id: true,
@@ -47,10 +51,8 @@ export default async function TransactionsPage() {
         tags: { select: { tag: { select: { id: true, name: true, color: true } } } },
       },
     }),
-    // Also fetch credit card transactions
     prisma.creditCardTransaction.findMany({
-      where: { userId: user.id },
-      take: 100,
+      where: { userId: user.id, date: { gte: start, lte: end } },
       orderBy: { date: 'desc' },
       select: {
         id: true,
@@ -99,10 +101,8 @@ export default async function TransactionsPage() {
     tags: [],
   }))
 
-  // Merge and sort all transactions by date
   const allTransactions = [...transactions, ...transformedCCTransactions]
     .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 100)
 
   return (
     <AppShell>
@@ -111,6 +111,7 @@ export default async function TransactionsPage() {
         accounts={serializePrismaData(accounts)}
         categories={serializePrismaData(categories)}
         creditCards={serializePrismaData(creditCards)}
+        monthStartDay={monthStartDay}
       />
     </AppShell>
   )
