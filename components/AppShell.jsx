@@ -149,95 +149,10 @@ export default function AppShell({ children }) {
   return (
     <RealtimeProvider userId={user?.id} householdId={household?.id}>
       <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
-        {/* Desktop Sidebar */}
-      <aside className={cn(
-        "hidden lg:fixed lg:inset-y-0 lg:flex lg:w-56 lg:flex-col",
-        isRTL ? "lg:right-0 lg:border-l" : "lg:left-0 lg:border-r",
-        "border-[rgb(var(--border-primary))] bg-[rgb(var(--bg-secondary))]"
-      )}>
-        <div className="flex flex-col flex-1 overflow-y-auto">
-          {/* Logo */}
-          <div className="flex items-center h-16 px-4 border-b border-[rgb(var(--border-primary))]">
-            <Link href="/dashboard" className="flex items-center gap-3">
-              <Image 
-                src="/MonityLogo.svg" 
-                alt="Monity" 
-                width={42} 
-                height={42} 
-                className="rounded-xl"
-              />
-              <span className="text-xl font-bold text-[rgb(var(--text-primary))]">Monity</span>
-            </Link>
-          </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-3 py-4 space-y-1">
-            {navigation.map((item) => {
-              const Icon = item.icon
-              const isActive = pathname === item.href
-              return (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  prefetch={true}
-                  className={cn(
-                    'flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                    isActive
-                      ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5'
-                      : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
-                  )}
-                >
-                  <Icon className="w-4 h-4 flex-shrink-0" />
-                  {item.name}
-                </Link>
-              )
-            })}
-
-            {/* Settings with submenu */}
-            <div className="pt-4 mt-4 border-t border-[rgb(var(--border-secondary))]">
-              <button
-                onClick={() => setSettingsExpanded(!settingsExpanded)}
-                className={cn(
-                  'w-full flex items-center justify-between px-3 py-2.5 rounded-md text-sm font-medium transition-colors',
-                  isSettingsActive
-                    ? 'text-[rgb(var(--accent))] bg-[rgb(var(--accent))]/5'
-                    : 'text-[rgb(var(--text-secondary))] hover:text-[rgb(var(--text-primary))] hover:bg-[rgb(var(--bg-tertiary))]'
-                )}
-              >
-                <div className="flex items-center gap-3">
-                  <Settings className="w-4 h-4 flex-shrink-0" />
-                  {t('nav.settings')}
-                </div>
-                <ChevronDown className={cn(
-                  "w-4 h-4 transition-transform",
-                  settingsExpanded && "rotate-180"
-                )} />
-              </button>
-              <Suspense fallback={null}>
-                <SettingsSubNav 
-                  isSettingsActive={isSettingsActive} 
-                  settingsExpanded={settingsExpanded} 
-                  isRTL={isRTL} 
-                  t={t} 
-                />
-              </Suspense>
-            </div>
-          </nav>
-
-          {/* User section */}
-          <div className="p-3 border-t border-[rgb(var(--border-primary))]">
-            <div className="flex items-center justify-between">
-              <UserButton afterSignOutUrl="/sign-in" />
-              <ThemeToggle />
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Mobile Header */}
-      <header className="lg:hidden sticky top-0 z-40 bg-[rgb(var(--bg-secondary))] border-b border-[rgb(var(--border-primary))] safe-area-top">
+      {/* Header (all screen sizes) */}
+      <header className="sticky top-0 z-40 bg-[rgb(var(--bg-secondary))] border-b border-[rgb(var(--border-primary))] safe-area-top">
         <div className="flex items-center justify-between h-14 px-4">
-          {/* Hamburger Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-[rgb(var(--bg-tertiary))] transition-colors touch-target"
@@ -257,23 +172,24 @@ export default function AppShell({ children }) {
             <span className="text-lg font-bold text-[rgb(var(--text-primary))]">Monity</span>
           </Link>
 
-          <div className="flex items-center">
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
             <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </div>
       </header>
 
-      {/* Mobile Drawer Overlay */}
+      {/* Drawer Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Mobile Drawer */}
+      {/* Navigation Drawer (all screen sizes) */}
       <aside className={cn(
-        "lg:hidden fixed inset-y-0 z-50 w-72 bg-[rgb(var(--bg-secondary))] shadow-xl transition-transform duration-300 ease-out",
+        "fixed inset-y-0 z-50 w-72 bg-[rgb(var(--bg-secondary))] shadow-xl transition-transform duration-300 ease-out",
         isRTL ? "right-0" : "left-0",
         mobileMenuOpen 
           ? "translate-x-0" 
@@ -406,10 +322,7 @@ export default function AppShell({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className={cn(
-        "min-h-screen pb-20 lg:pb-0",
-        isRTL ? "lg:mr-56" : "lg:ml-56"
-      )}>
+      <main className="min-h-screen pb-20 lg:pb-0">
         {children}
       </main>
 
