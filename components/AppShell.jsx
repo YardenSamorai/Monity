@@ -150,8 +150,8 @@ export default function AppShell({ children }) {
     <RealtimeProvider userId={user?.id} householdId={household?.id}>
       <div className="min-h-screen bg-[rgb(var(--bg-primary))]">
 
-      {/* Header (all screen sizes) */}
-      <header className="sticky top-0 z-40 bg-[rgb(var(--bg-secondary))] border-b border-[rgb(var(--border-primary))] safe-area-top">
+      {/* Mobile Header */}
+      <header className="lg:hidden sticky top-0 z-40 bg-[rgb(var(--bg-secondary))] border-b border-[rgb(var(--border-primary))] safe-area-top">
         <div className="flex items-center justify-between h-14 px-4">
           <button
             onClick={() => setMobileMenuOpen(true)}
@@ -172,28 +172,28 @@ export default function AppShell({ children }) {
             <span className="text-lg font-bold text-[rgb(var(--text-primary))]">Monity</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <ThemeToggle />
+          <div className="flex items-center">
             <UserButton afterSignOutUrl="/sign-in" />
           </div>
         </div>
       </header>
 
-      {/* Drawer Overlay */}
+      {/* Mobile Drawer Overlay */}
       {mobileMenuOpen && (
         <div 
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          className="lg:hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* Navigation Drawer (all screen sizes) */}
+      {/* Mobile Drawer (slides in) + Desktop Sidebar (always visible) */}
       <aside className={cn(
-        "fixed inset-y-0 z-50 w-72 bg-[rgb(var(--bg-secondary))] shadow-xl transition-transform duration-300 ease-out",
-        isRTL ? "right-0" : "left-0",
-        mobileMenuOpen 
-          ? "translate-x-0" 
-          : isRTL ? "translate-x-full" : "-translate-x-full"
+        "fixed inset-y-0 z-50 w-72 bg-[rgb(var(--bg-secondary))] transition-transform duration-300 ease-out",
+        isRTL ? "right-0 lg:border-l" : "left-0 lg:border-r",
+        "border-[rgb(var(--border-primary))]",
+        "lg:translate-x-0 lg:shadow-none lg:z-30",
+        !mobileMenuOpen && (isRTL ? "max-lg:translate-x-full" : "max-lg:-translate-x-full"),
+        mobileMenuOpen && "shadow-xl"
       )}>
         <div className="flex flex-col h-full">
           {/* Drawer Header */}
@@ -322,7 +322,10 @@ export default function AppShell({ children }) {
       </aside>
 
       {/* Main Content */}
-      <main className="min-h-screen pb-20 lg:pb-0">
+      <main className={cn(
+        "min-h-screen pb-20 lg:pb-0",
+        isRTL ? "lg:mr-72" : "lg:ml-72"
+      )}>
         {children}
       </main>
 
