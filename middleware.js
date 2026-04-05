@@ -9,7 +9,6 @@ const isPublicRoute = createRouteMatcher([
   '/quick-add(.*)',
   '/api/webhook(.*)',
   '/api/cron(.*)',
-  '/mobile-auth(.*)',
 ])
 
 // Define protected routes that MUST have auth
