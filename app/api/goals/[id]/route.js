@@ -78,7 +78,7 @@ export async function PUT(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('goals')
     revalidateTag('dashboard')
-    notifyGoalChange(user.clerkUserId, 'updated', updated).catch((err) => console.error('Pusher error:', err))
+    notifyGoalChange(user.id, 'updated', updated).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ goal: updated })
   } catch (error) {
@@ -143,7 +143,7 @@ export async function DELETE(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('goals')
     revalidateTag('dashboard')
-    notifyGoalChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
+    notifyGoalChange(user.id, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
     
     return NextResponse.json({ success: true, message: 'Goal deleted successfully' })
   } catch (error) {

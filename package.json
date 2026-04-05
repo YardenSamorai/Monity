@@ -16,9 +16,9 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.36.5",
     "@getbrevo/brevo": "^3.0.1",
     "@prisma/client": "^5.19.0",
+    "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
     "framer-motion": "^12.24.11",

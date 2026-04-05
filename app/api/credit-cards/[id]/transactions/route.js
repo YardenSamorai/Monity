@@ -158,7 +158,7 @@ export async function POST(request, { params }) {
     
     // Trigger real-time updates (non-blocking)
     // Use clerkUserId for Pusher channel (must match client-side user.id from Clerk)
-    const pusherUserId = user.clerkUserId
+    const pusherUserId = user.id
     console.log('[API] Triggering Pusher events for clerkUserId:', pusherUserId)
     notifyDashboardUpdate(pusherUserId, { action: 'credit_card_transaction' })
       .then(() => console.log('[API] notifyDashboardUpdate sent successfully'))

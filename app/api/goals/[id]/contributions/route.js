@@ -118,15 +118,15 @@ export async function POST(request, { params }) {
     revalidateTag('goals')
     revalidateTag('dashboard')
     revalidateTag('transactions')
-    notifyGoalChange(user.clerkUserId, 'contribution', { 
+    notifyGoalChange(user.id, 'contribution', { 
       ...updatedGoal, 
       amount: validated.amount 
     }).catch((err) => console.error('Pusher error:', err))
     
     if (transaction) {
-      notifyDashboardUpdate(user.clerkUserId, { action: 'transaction_created' }).catch((err) => console.error('Pusher error:', err))
+      notifyDashboardUpdate(user.id, { action: 'transaction_created' }).catch((err) => console.error('Pusher error:', err))
       if (validated.paymentMethod === 'account') {
-        notifyTransactionChange(user.clerkUserId, 'created', transaction, null).catch((err) => console.error('Pusher error:', err))
+        notifyTransactionChange(user.id, 'created', transaction, null).catch((err) => console.error('Pusher error:', err))
       }
     }
 

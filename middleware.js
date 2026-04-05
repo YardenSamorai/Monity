@@ -1,49 +1,37 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 
-// Define public routes that don't need auth
-const isPublicRoute = createRouteMatcher([
+const PUBLIC_PATHS = [
   '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/install(.*)',
-  '/quick-add(.*)',
-  '/api/webhook(.*)',
-  '/api/cron(.*)',
-])
+  '/sign-in',
+  '/sign-up',
+  '/install',
+  '/quick-add',
+]
 
-// Define protected routes that MUST have auth
-const isProtectedRoute = createRouteMatcher([
-  '/dashboard(.*)',
-  '/transactions(.*)',
-  '/analytics(.*)',
-  '/budget(.*)',
-  '/goals(.*)',
-  '/settings(.*)',
-  '/family(.*)',
-  '/notifications(.*)',
-  '/insights(.*)',
-  '/onboarding(.*)',
-  '/credit-cards(.*)',
-])
+function isPublic(pathname) {
+  if (pathname.startsWith('/api/')) return true
+  if (pathname.startsWith('/_next/')) return true
+  return PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+}
 
-export default clerkMiddleware(async (auth, req) => {
-  // Allow public routes without auth
-  if (isPublicRoute(req)) {
-    return
+export function middleware(request) {
+  const { pathname } = request.nextUrl
+
+  if (isPublic(pathname)) {
+    return NextResponse.next()
   }
-  
-  // Protect specific routes
-  if (isProtectedRoute(req)) {
-    await auth.protect()
+
+  const token = request.cookies.get('session_token')?.value
+  if (!token) {
+    const signInUrl = new URL('/sign-in', request.url)
+    return NextResponse.redirect(signInUrl)
   }
-  
-  // API routes: let them through - they handle auth internally
-  // This prevents redirect loops
-})
+
+  return NextResponse.next()
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and static files
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|webmanifest)$).*)',
   ],
 }

@@ -4,7 +4,7 @@ import { useState, Suspense, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname, useSearchParams, useRouter } from 'next/navigation'
-import { UserButton, useUser } from '@clerk/nextjs'
+import { useAuth } from '@/lib/auth-context'
 import { RealtimeProvider, useRealtime, useDashboardRefresh } from '@/lib/realtime-context'
 import { 
   LayoutDashboard, 
@@ -80,7 +80,7 @@ export default function AppShell({ children }) {
   const [accounts, setAccounts] = useState([])
   const [categories, setCategories] = useState([])
   const [household, setHousehold] = useState(null)
-  const { user } = useUser()
+  const { user, logout } = useAuth()
   const { t, isRTL } = useI18n()
 
   // Fetch accounts, categories, and household for the transaction modal
@@ -173,7 +173,13 @@ export default function AppShell({ children }) {
           </Link>
 
           <div className="flex items-center">
-            <UserButton afterSignOutUrl="/sign-in" />
+            <button
+              onClick={logout}
+              className="w-8 h-8 rounded-full bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] flex items-center justify-center text-sm font-semibold"
+              title={user?.name || user?.email || ''}
+            >
+              {(user?.name?.[0] || user?.email?.[0] || '?').toUpperCase()}
+            </button>
           </div>
         </div>
       </header>
@@ -310,9 +316,15 @@ export default function AppShell({ children }) {
           <div className="p-4 border-t border-[rgb(var(--border-primary))]">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <UserButton afterSignOutUrl="/sign-in" />
+                <button
+                  onClick={logout}
+                  className="w-8 h-8 rounded-full bg-[rgb(var(--accent))]/20 text-[rgb(var(--accent))] flex items-center justify-center text-sm font-semibold"
+                  title={t('nav.signOut')}
+                >
+                  {(user?.name?.[0] || user?.email?.[0] || '?').toUpperCase()}
+                </button>
                 <span className="text-sm text-[rgb(var(--text-secondary))]">
-                  {t('nav.account')}
+                  {user?.name || user?.email || t('nav.account')}
                 </span>
               </div>
               <ThemeToggle />

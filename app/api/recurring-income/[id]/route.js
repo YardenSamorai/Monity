@@ -108,8 +108,8 @@ export async function PUT(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('recurring-income')
     revalidateTag('dashboard')
-    notifyRecurringIncomeChange(user.clerkUserId, 'updated', recurringIncome).catch((err) => console.error('Pusher error:', err))
-    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_income_updated' }).catch((err) => console.error('Pusher error:', err))
+    notifyRecurringIncomeChange(user.id, 'updated', recurringIncome).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_updated' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ recurringIncome })
   } catch (error) {
@@ -157,8 +157,8 @@ export async function PATCH(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('recurring-income')
     revalidateTag('dashboard')
-    notifyRecurringIncomeChange(user.clerkUserId, 'updated', recurringIncome).catch((err) => console.error('Pusher error:', err))
-    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_income_toggled' }).catch((err) => console.error('Pusher error:', err))
+    notifyRecurringIncomeChange(user.id, 'updated', recurringIncome).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_toggled' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ recurringIncome })
   } catch (error) {
@@ -226,8 +226,8 @@ export async function DELETE(request, { params }) {
     revalidateTag('recurring-income')
     revalidateTag('dashboard')
     revalidateTag('transactions')
-    notifyRecurringIncomeChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
-    notifyDashboardUpdate(user.clerkUserId, { action: 'recurring_income_deleted' }).catch((err) => console.error('Pusher error:', err))
+    notifyRecurringIncomeChange(user.id, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.id, { action: 'recurring_income_deleted' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ 
       success: true,

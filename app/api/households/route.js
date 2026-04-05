@@ -171,7 +171,7 @@ export async function POST(request) {
 
     // Revalidate cache and notify
     revalidateTag('household')
-    notifyDashboardUpdate(user.clerkUserId, { action: 'household_created' }).catch((err) => console.error('Pusher error:', err))
+    notifyDashboardUpdate(user.id, { action: 'household_created' }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({
       household: {

@@ -151,7 +151,7 @@ export async function POST(request) {
     // Revalidate cache and notify
     revalidateTag('credit-cards')
     revalidateTag('dashboard')
-    notifyCreditCardChange(user.clerkUserId, 'created', creditCard).catch((err) => console.error('Pusher error:', err))
+    notifyCreditCardChange(user.id, 'created', creditCard).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ creditCard }, { status: 201 })
   } catch (error) {

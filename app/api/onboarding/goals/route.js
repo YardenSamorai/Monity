@@ -1,26 +1,17 @@
 import { NextResponse } from 'next/server'
-import { auth } from '@clerk/nextjs/server'
+import { getOrCreateUser } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 export async function POST(request) {
   try {
-    const { userId: clerkUserId } = await auth()
+    const user = await getOrCreateUser()
 
-    if (!clerkUserId) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const body = await request.json()
     const { goals } = body
-
-    // Find user
-    const user = await prisma.user.findUnique({
-      where: { clerkUserId },
-    })
-
-    if (!user) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
 
     // Update financial goals (stored as JSON string)
     const updatedUser = await prisma.user.update({

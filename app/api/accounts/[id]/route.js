@@ -41,7 +41,7 @@ export async function PUT(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('accounts')
     revalidateTag('dashboard')
-    notifyAccountChange(user.clerkUserId, 'updated', updated).catch((err) => console.error('Pusher error:', err))
+    notifyAccountChange(user.id, 'updated', updated).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ account: updated })
   } catch (error) {
@@ -91,7 +91,7 @@ export async function PATCH(request, { params }) {
 
     revalidateTag('accounts')
     revalidateTag('dashboard')
-    notifyAccountChange(user.clerkUserId, 'updated', updated).catch((err) => console.error('Pusher error:', err))
+    notifyAccountChange(user.id, 'updated', updated).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ account: updated })
   } catch (error) {
@@ -159,7 +159,7 @@ export async function DELETE(request, { params }) {
     // Revalidate cache and notify
     revalidateTag('accounts')
     revalidateTag('dashboard')
-    notifyAccountChange(user.clerkUserId, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
+    notifyAccountChange(user.id, 'deleted', { id }).catch((err) => console.error('Pusher error:', err))
 
     return NextResponse.json({ 
       success: true,

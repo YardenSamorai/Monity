@@ -130,7 +130,7 @@ export async function DELETE(request, { params }) {
     if (household) {
       for (const m of household.members) {
         if (m.user?.clerkUserId) {
-          notifyDashboardUpdate(m.user.clerkUserId, { 
+          notifyDashboardUpdate(m.user.id, { 
             action: 'household_deleted',
             householdId: id,
           }).catch((err) => console.error('Pusher error:', err))

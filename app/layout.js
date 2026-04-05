@@ -1,9 +1,9 @@
-import { ClerkProvider } from '@clerk/nextjs'
 import { Inter } from 'next/font/google'
 import { ThemeProvider } from '@/lib/theme-context'
 import { ToastProvider } from '@/lib/toast-context'
 import { LoadingProvider } from '@/lib/loading-context'
 import { I18nProvider } from '@/lib/i18n-context'
+import { AuthProvider } from '@/lib/auth-context'
 import './globals.css'
 
 const inter = Inter({
@@ -49,8 +49,7 @@ export const viewport = {
 
 export default function RootLayout({ children }) {
   return (
-    <ClerkProvider>
-      <html lang="en" className={inter.variable} suppressHydrationWarning>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
         <head>
           {/* iOS PWA Meta Tags */}
           <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -156,17 +155,18 @@ export default function RootLayout({ children }) {
           />
         </head>
         <body className="font-sans antialiased">
-          <ThemeProvider>
-            <I18nProvider>
-              <LoadingProvider>
-                <ToastProvider>
-                  {children}
-                </ToastProvider>
-              </LoadingProvider>
-            </I18nProvider>
-          </ThemeProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              <I18nProvider>
+                <LoadingProvider>
+                  <ToastProvider>
+                    {children}
+                  </ToastProvider>
+                </LoadingProvider>
+              </I18nProvider>
+            </ThemeProvider>
+          </AuthProvider>
         </body>
       </html>
-    </ClerkProvider>
   )
 }

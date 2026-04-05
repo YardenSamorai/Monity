@@ -32,9 +32,6 @@ const STATIC_ASSETS = [
 // URLs to never cache
 const NEVER_CACHE = [
   /\/api\/.*/,
-  /clerk/,
-  /\.clerk\./,
-  /accounts\.google\.com/,
   /__nextjs/,
 ]
 
